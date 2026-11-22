@@ -1,0 +1,1043 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/revslaughter/atlas-carries-us/schema/atlas.schema.json",
+  "title": "Atlas Carries Us data, version 1",
+  "description": "The language-neutral description of a code base that adapters write and the viewer reads. docs/schema.md explains every field.",
+  "type": "object",
+  "required": [
+    "version",
+    "meta",
+    "containers",
+    "symbols",
+    "edges"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "meta": {
+      "$ref": "#/$defs/meta"
+    },
+    "project": {
+      "$ref": "#/$defs/project"
+    },
+    "containers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/container"
+      }
+    },
+    "symbols": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/symbol"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    },
+    "entryPoints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entryPoint"
+      }
+    },
+    "tests": {
+      "type": "object",
+      "description": "Test usage, keyed by the ID of the symbol that the tests use.",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/testUse"
+        }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/region"
+      }
+    },
+    "layout": {
+      "$ref": "#/$defs/layout"
+    },
+    "tour": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tourStep"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A stable identifier, derived from qualified names. See docs/schema.md, section IDs."
+    },
+    "inline": {
+      "type": "string",
+      "description": "Text in the inline subset: `code`, [label](url), [label](sym:ID), *emphasis* and **strong**. A backslash escapes the next character."
+    },
+    "location": {
+      "type": "object",
+      "required": [
+        "path",
+        "line"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "File path relative to the repository root, with forward slashes."
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Marks text that a program drafted. The viewer labels it until a person edits it and removes the mark.",
+      "required": [
+        "by",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "type": "string",
+          "description": "The program or model that drafted the text."
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "tool",
+        "generated",
+        "languages",
+        "adapters"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "tool": {
+          "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        },
+        "generated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "adapters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "version",
+              "language"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "language": {
+                "type": "string"
+              },
+              "root": {
+                "type": "string",
+                "description": "The folder the adapter read, relative to the repository root."
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Limits of this run, in plain words."
+              }
+            }
+          }
+        }
+      }
+    },
+    "linkTemplates": {
+      "type": "object",
+      "description": "URL templates. Placeholders: {repo}, {commit}, {path}, {line}, {endLine}.",
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "string"
+        },
+        "range": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string",
+          "description": "For example owner/name."
+        },
+        "links": {
+          "$ref": "#/$defs/linkTemplates"
+        },
+        "description": {
+          "$ref": "#/$defs/inline",
+          "description": "The overview text. Paragraphs split at blank lines."
+        },
+        "descriptionDrafted": {
+          "$ref": "#/$defs/provenance"
+        },
+        "autolinks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "pattern",
+              "url"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "description": "A JavaScript regular expression, applied to plain text in docs."
+              },
+              "url": {
+                "type": "string",
+                "description": "Target URL. $1 to $9 insert groups. {repo} and {commit} insert project values."
+              }
+            }
+          }
+        },
+        "entryPointNotes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "$ref": "#/$defs/entryPointKind"
+              },
+              "pathPrefix": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "text": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Path patterns that the adapters left out, shown in the help text."
+        }
+      }
+    },
+    "block": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "text"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "paragraph"
+            },
+            "text": {
+              "$ref": "#/$defs/inline"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "text",
+            "level"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "heading"
+            },
+            "level": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "text": {
+              "$ref": "#/$defs/inline"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "ordered",
+            "items"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "list"
+            },
+            "ordered": {
+              "type": "boolean"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "code"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "code"
+            },
+            "code": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "text"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "quote"
+            },
+            "text": {
+              "$ref": "#/$defs/inline"
+            }
+          }
+        }
+      ]
+    },
+    "doc": {
+      "type": "object",
+      "required": [
+        "raw",
+        "format",
+        "summary",
+        "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "raw": {
+          "type": "string",
+          "description": "The comment text as written, without comment markers."
+        },
+        "format": {
+          "enum": [
+            "godoc",
+            "jsdoc",
+            "tsdoc",
+            "xmldoc",
+            "rustdoc",
+            "docstring-google",
+            "docstring-numpy",
+            "docstring-sphinx",
+            "markdown",
+            "plain"
+          ]
+        },
+        "summary": {
+          "$ref": "#/$defs/inline",
+          "description": "The first sentence."
+        },
+        "description": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          }
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/inline"
+          }
+        },
+        "typeParams": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/inline"
+          }
+        },
+        "returns": {
+          "$ref": "#/$defs/inline"
+        },
+        "throws": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "text": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "code"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "language": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "seeAlso": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inline"
+          }
+        },
+        "deprecated": {
+          "$ref": "#/$defs/inline",
+          "description": "Present when the item is deprecated. May hold an empty string."
+        },
+        "since": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Other block tags, kept for display.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "text": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          }
+        }
+      }
+    },
+    "param": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type as a reader sees it."
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "description": "IDs of symbols that the type names."
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "rest": {
+          "type": "boolean"
+        },
+        "default": {
+          "type": "string"
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "required": [
+        "params",
+        "results"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "typeParams": {
+          "type": "string"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/param"
+          }
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/param"
+          }
+        },
+        "text": {
+          "type": "string",
+          "description": "The whole signature as the language writes it."
+        }
+      }
+    },
+    "typeText": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "container": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "languageKind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "module",
+            "package",
+            "namespace",
+            "directory",
+            "file"
+          ]
+        },
+        "languageKind": {
+          "type": "string",
+          "description": "The word the language uses, shown to readers."
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path relative to the repository root."
+        },
+        "parent": {
+          "$ref": "#/$defs/id"
+        },
+        "language": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "boolean",
+          "description": "True for the containers that the overview draws as boxes and that open a unit focus."
+        },
+        "doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "externalImports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "symbolKind": {
+      "enum": [
+        "class",
+        "struct",
+        "interface",
+        "trait",
+        "enum",
+        "type",
+        "type_alias",
+        "function",
+        "method",
+        "constructor",
+        "field",
+        "property",
+        "constant",
+        "variable",
+        "event",
+        "macro",
+        "namespace"
+      ]
+    },
+    "symbol": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "languageKind",
+        "name",
+        "parent",
+        "exported",
+        "location"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "$ref": "#/$defs/symbolKind"
+        },
+        "languageKind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "$ref": "#/$defs/id",
+          "description": "The enclosing symbol or container."
+        },
+        "language": {
+          "type": "string"
+        },
+        "exported": {
+          "type": "boolean",
+          "description": "True when code outside the enclosing unit may use it."
+        },
+        "location": {
+          "$ref": "#/$defs/location"
+        },
+        "doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "typeParams": {
+          "type": "string",
+          "description": "Type parameters of a generic type, as written, for example [T any]."
+        },
+        "signature": {
+          "$ref": "#/$defs/signature"
+        },
+        "type": {
+          "$ref": "#/$defs/typeText",
+          "description": "The declared type of a field, property, constant or variable, or the target of a type alias."
+        },
+        "value": {
+          "type": "string",
+          "description": "The value of a constant, shortened."
+        },
+        "group": {
+          "type": "string",
+          "description": "Declarations written together share a group key, unique within a file."
+        },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Words such as static, async, abstract, readonly, optional."
+        },
+        "annotations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Decorators, attributes or field tags, as written."
+        },
+        "satisfies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Well-known outside interfaces that the symbol satisfies."
+        }
+      }
+    },
+    "edgeKind": {
+      "enum": [
+        "calls",
+        "implements",
+        "extends",
+        "field_type",
+        "param_type",
+        "return_type",
+        "imports",
+        "overrides"
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "kind",
+        "confidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/id",
+          "description": "The user."
+        },
+        "to": {
+          "$ref": "#/$defs/id",
+          "description": "The thing used."
+        },
+        "kind": {
+          "$ref": "#/$defs/edgeKind"
+        },
+        "confidence": {
+          "enum": [
+            "exact",
+            "heuristic"
+          ]
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The first line where the use happens, in the file of 'from'."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many places make this use."
+        }
+      }
+    },
+    "entryPointKind": {
+      "enum": [
+        "http",
+        "cli",
+        "message",
+        "job",
+        "grpc"
+      ]
+    },
+    "entryPoint": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "handler",
+        "registeredAt",
+        "plugin"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "$ref": "#/$defs/entryPointKind"
+        },
+        "name": {
+          "type": "string",
+          "description": "For example 'GET /posts/{id}' or 'serve'."
+        },
+        "method": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "handler": {
+          "$ref": "#/$defs/id",
+          "description": "The function or method that serves it."
+        },
+        "inline": {
+          "type": "boolean",
+          "description": "True when the handler sits inline inside the registering code."
+        },
+        "externalHandler": {
+          "type": "string",
+          "description": "The handler, when it lives outside the code base (for example pprof.Index). 'handler' then names the registering function."
+        },
+        "registrar": {
+          "$ref": "#/$defs/id"
+        },
+        "registeredAt": {
+          "$ref": "#/$defs/location"
+        },
+        "plugin": {
+          "type": "string"
+        }
+      }
+    },
+    "testUse": {
+      "type": "object",
+      "required": [
+        "name",
+        "location"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/location"
+        }
+      }
+    },
+    "region": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "containers"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "An index into the viewer's colour-blind-safe region palette."
+        },
+        "containers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "description": {
+          "$ref": "#/$defs/inline"
+        },
+        "readingTip": {
+          "$ref": "#/$defs/inline"
+        },
+        "drafted": {
+          "$ref": "#/$defs/provenance"
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "view": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "view"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "view": {
+              "const": "overview"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "view",
+            "id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "view": {
+              "enum": [
+                "region",
+                "unit",
+                "symbol"
+              ]
+            },
+            "id": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "view",
+            "entryPoint"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "view": {
+              "const": "trace"
+            },
+            "entryPoint": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "view",
+            "symbol"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "view": {
+              "const": "trace"
+            },
+            "symbol": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      ]
+    },
+    "tourStep": {
+      "type": "object",
+      "required": [
+        "title",
+        "text",
+        "open"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "text": {
+          "$ref": "#/$defs/inline"
+        },
+        "open": {
+          "$ref": "#/$defs/view"
+        },
+        "drafted": {
+          "$ref": "#/$defs/provenance"
+        }
+      }
+    }
+  }
+}

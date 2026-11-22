@@ -1,0 +1,17 @@
+{
+  "name": "atlas-carries-us-workspace",
+  "private": true,
+  "description": "Development workspace for Atlas Carries Us: the viewer and the end-to-end tests.",
+  "license": "MIT",
+  "workspaces": [
+    "viewer",
+    "tests/e2e"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
