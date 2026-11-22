@@ -1,0 +1,3393 @@
+{
+ "version": 1,
+ "meta": {
+  "schemaVersion": 1,
+  "tool": {
+   "name": "acu-adapter-go",
+   "version": "0.1.0"
+  },
+  "generated": "2000-01-01T00:00:00Z",
+  "languages": [
+   "go"
+  ],
+  "adapters": [
+   {
+    "name": "go",
+    "version": "0.1.0",
+    "language": "go",
+    "notes": [
+     "Calls through function values, closures passed as arguments, and reflection do not appear.",
+     "A call through an interface points at the interface method."
+    ]
+   }
+  ]
+ },
+ "containers": [
+  {
+   "id": "go:file:cmd/lendd/main.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "main.go",
+   "path": "cmd/lendd/main.go",
+   "parent": "go:pkg:example.com/lending/cmd/lendd",
+   "language": "go"
+  },
+  {
+   "id": "go:file:internal/domain/domain.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "domain.go",
+   "path": "internal/domain/domain.go",
+   "parent": "go:pkg:example.com/lending/internal/domain",
+   "language": "go"
+  },
+  {
+   "id": "go:file:internal/domain/status.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "status.go",
+   "path": "internal/domain/status.go",
+   "parent": "go:pkg:example.com/lending/internal/domain",
+   "language": "go"
+  },
+  {
+   "id": "go:file:internal/httpapi/httpapi.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "httpapi.go",
+   "path": "internal/httpapi/httpapi.go",
+   "parent": "go:pkg:example.com/lending/internal/httpapi",
+   "language": "go"
+  },
+  {
+   "id": "go:file:internal/service/lending.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "lending.go",
+   "path": "internal/service/lending.go",
+   "parent": "go:pkg:example.com/lending/internal/service",
+   "language": "go"
+  },
+  {
+   "id": "go:file:internal/store/filestore/filestore.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "filestore.go",
+   "path": "internal/store/filestore/filestore.go",
+   "parent": "go:pkg:example.com/lending/internal/store/filestore",
+   "language": "go"
+  },
+  {
+   "id": "go:file:internal/store/memory/memory.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "memory.go",
+   "path": "internal/store/memory/memory.go",
+   "parent": "go:pkg:example.com/lending/internal/store/memory",
+   "language": "go"
+  },
+  {
+   "id": "go:file:internal/store/store.go",
+   "kind": "file",
+   "languageKind": "file",
+   "name": "store.go",
+   "path": "internal/store/store.go",
+   "parent": "go:pkg:example.com/lending/internal/store",
+   "language": "go"
+  },
+  {
+   "id": "go:mod:example.com/lending",
+   "kind": "module",
+   "languageKind": "module",
+   "name": "example.com/lending",
+   "language": "go"
+  },
+  {
+   "id": "go:pkg:example.com/lending/cmd/lendd",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "cmd/lendd",
+   "path": "cmd/lendd",
+   "parent": "go:mod:example.com/lending",
+   "language": "go",
+   "unit": true,
+   "doc": {
+    "raw": "Command lendd runs the lending library server.",
+    "format": "godoc",
+    "summary": "Command lendd runs the lending library server.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Command lendd runs the lending library server."
+     }
+    ]
+   },
+   "externalImports": [
+    "github.com/spf13/cobra"
+   ]
+  },
+  {
+   "id": "go:pkg:example.com/lending/internal/domain",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "internal/domain",
+   "path": "internal/domain",
+   "parent": "go:mod:example.com/lending",
+   "language": "go",
+   "unit": true,
+   "doc": {
+    "raw": "Package domain holds the shared vocabulary of the lending library: books,\nmembers, loans, and the errors that every layer returns.\n\nDomain types hold data and small pure rules. They import nothing else in\nthe module, so every other package can use them.",
+    "format": "godoc",
+    "summary": "Package domain holds the shared vocabulary of the lending library: books, members, loans, and the errors that every layer returns.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Package domain holds the shared vocabulary of the lending library: books, members, loans, and the errors that every layer returns."
+     },
+     {
+      "type": "paragraph",
+      "text": "Domain types hold data and small pure rules. They import nothing else in the module, so every other package can use them."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:pkg:example.com/lending/internal/httpapi",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "internal/httpapi",
+   "path": "internal/httpapi",
+   "parent": "go:mod:example.com/lending",
+   "language": "go",
+   "unit": true,
+   "doc": {
+    "raw": "Package httpapi turns HTTP requests into service calls. Handlers decode,\ncall one service method, and encode.",
+    "format": "godoc",
+    "summary": "Package httpapi turns HTTP requests into service calls.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Package httpapi turns HTTP requests into service calls. Handlers decode, call one service method, and encode."
+     }
+    ]
+   },
+   "externalImports": [
+    "github.com/go-chi/chi/v5"
+   ]
+  },
+  {
+   "id": "go:pkg:example.com/lending/internal/service",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "internal/service",
+   "path": "internal/service",
+   "parent": "go:mod:example.com/lending",
+   "language": "go",
+   "unit": true,
+   "doc": {
+    "raw": "Package service holds the lending rules. It checks each request and calls\nstorage in the right order.",
+    "format": "godoc",
+    "summary": "Package service holds the lending rules.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Package service holds the lending rules. It checks each request and calls storage in the right order."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:pkg:example.com/lending/internal/store",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "internal/store",
+   "path": "internal/store",
+   "parent": "go:mod:example.com/lending",
+   "language": "go",
+   "unit": true,
+   "doc": {
+    "raw": "Package store defines the storage contracts that the services use. Two\nstores implement them: [memory.Store] and [filestore.Store].\n\nEvery store follows these rules:\n\n 1. ctx comes first.\n 2. Values go in and out, never shared pointers.\n 3. Errors wrap the sentinels in package domain, such as [domain.ErrNotFound].\n\nA typical read:\n\n\tb, err := s.Book(ctx, id)\n\tif errors.Is(err, domain.ErrNotFound) { … }",
+    "format": "godoc",
+    "summary": "Package store defines the storage contracts that the services use.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Package store defines the storage contracts that the services use. Two stores implement them: [memory.Store](sym:go:example.com/lending/internal/store/memory#Store) and [filestore.Store](sym:go:example.com/lending/internal/store/filestore#Store)."
+     },
+     {
+      "type": "paragraph",
+      "text": "Every store follows these rules:"
+     },
+     {
+      "type": "list",
+      "ordered": true,
+      "items": [
+       "ctx comes first.",
+       "Values go in and out, never shared pointers.",
+       "Errors wrap the sentinels in package domain, such as [domain.ErrNotFound](sym:go:example.com/lending/internal/domain#ErrNotFound)."
+      ]
+     },
+     {
+      "type": "paragraph",
+      "text": "A typical read:"
+     },
+     {
+      "type": "code",
+      "code": "b, err := s.Book(ctx, id)\nif errors.Is(err, domain.ErrNotFound) { … }"
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:pkg:example.com/lending/internal/store/filestore",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "internal/store/filestore",
+   "path": "internal/store/filestore",
+   "parent": "go:mod:example.com/lending",
+   "language": "go",
+   "unit": true,
+   "doc": {
+    "raw": "Package filestore keeps the tables in JSON files in one folder.",
+    "format": "godoc",
+    "summary": "Package filestore keeps the tables in JSON files in one folder.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Package filestore keeps the tables in JSON files in one folder."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:pkg:example.com/lending/internal/store/memory",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "internal/store/memory",
+   "path": "internal/store/memory",
+   "parent": "go:mod:example.com/lending",
+   "language": "go",
+   "unit": true,
+   "doc": {
+    "raw": "Package memory keeps every table in process memory. Tests and local runs\nuse it.",
+    "format": "godoc",
+    "summary": "Package memory keeps every table in process memory.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Package memory keeps every table in process memory. Tests and local runs use it."
+     }
+    ]
+   }
+  }
+ ],
+ "symbols": [
+  {
+   "id": "go:example.com/lending/cmd/lendd#init@main.go:26",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "init",
+   "parent": "go:file:cmd/lendd/main.go",
+   "exported": false,
+   "location": {
+    "path": "cmd/lendd/main.go",
+    "line": 26,
+    "endLine": 29
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "func init()"
+   }
+  },
+  {
+   "id": "go:example.com/lending/cmd/lendd#main",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "main",
+   "parent": "go:file:cmd/lendd/main.go",
+   "exported": false,
+   "location": {
+    "path": "cmd/lendd/main.go",
+    "line": 31,
+    "endLine": 35
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "func main()"
+   }
+  },
+  {
+   "id": "go:example.com/lending/cmd/lendd#openStore",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "openStore",
+   "parent": "go:file:cmd/lendd/main.go",
+   "exported": false,
+   "location": {
+    "path": "cmd/lendd/main.go",
+    "line": 38,
+    "endLine": 43
+   },
+   "doc": {
+    "raw": "openStore picks the store from the LEND_STORE variable.",
+    "format": "godoc",
+    "summary": "openStore picks the store from the LEND_STORE variable.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "openStore picks the store from the LEND_STORE variable."
+     }
+    ]
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "store.Store",
+      "refs": [
+       "go:example.com/lending/internal/store#Store"
+      ]
+     }
+    ],
+    "text": "func openStore() store.Store"
+   }
+  },
+  {
+   "id": "go:example.com/lending/cmd/lendd#rootCmd",
+   "kind": "variable",
+   "languageKind": "var",
+   "name": "rootCmd",
+   "parent": "go:file:cmd/lendd/main.go",
+   "exported": false,
+   "location": {
+    "path": "cmd/lendd/main.go",
+    "line": 18,
+    "endLine": 18
+   },
+   "type": {
+    "text": "*cobra.Command"
+   },
+   "value": "&cobra.Command{…}",
+   "group": "main.go:18"
+  },
+  {
+   "id": "go:example.com/lending/cmd/lendd#serve",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "serve",
+   "parent": "go:file:cmd/lendd/main.go",
+   "exported": false,
+   "location": {
+    "path": "cmd/lendd/main.go",
+    "line": 45,
+    "endLine": 49
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "cmd",
+      "type": "*cobra.Command"
+     },
+     {
+      "name": "args",
+      "type": "[]string"
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func serve(cmd *cobra.Command, args []string) error"
+   }
+  },
+  {
+   "id": "go:example.com/lending/cmd/lendd#serveCmd",
+   "kind": "variable",
+   "languageKind": "var",
+   "name": "serveCmd",
+   "parent": "go:file:cmd/lendd/main.go",
+   "exported": false,
+   "location": {
+    "path": "cmd/lendd/main.go",
+    "line": 20,
+    "endLine": 24
+   },
+   "type": {
+    "text": "*cobra.Command"
+   },
+   "value": "&cobra.Command{…}",
+   "group": "main.go:20"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Book",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Book",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 29,
+    "endLine": 35
+   },
+   "doc": {
+    "raw": "Book is one copy of a title on the shelves.",
+    "format": "godoc",
+    "summary": "Book is one copy of a title on the shelves.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Book is one copy of a title on the shelves."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Book.Author",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Author",
+   "parent": "go:example.com/lending/internal/domain#Book",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 33
+   },
+   "type": {
+    "text": "string"
+   },
+   "annotations": [
+    "`json:\"author\"`"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Book.ID",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "ID",
+   "parent": "go:example.com/lending/internal/domain#Book",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 31
+   },
+   "doc": {
+    "raw": "ID identifies the copy.",
+    "format": "godoc",
+    "summary": "ID identifies the copy.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "ID identifies the copy."
+     }
+    ]
+   },
+   "type": {
+    "text": "BookID",
+    "refs": [
+     "go:example.com/lending/internal/domain#BookID"
+    ]
+   },
+   "annotations": [
+    "`json:\"id\"`"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Book.Status",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Status",
+   "parent": "go:example.com/lending/internal/domain#Book",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 34
+   },
+   "type": {
+    "text": "Status",
+    "refs": [
+     "go:example.com/lending/internal/domain#Status"
+    ]
+   },
+   "annotations": [
+    "`json:\"status\"`"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Book.Title",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Title",
+   "parent": "go:example.com/lending/internal/domain#Book",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 32
+   },
+   "type": {
+    "text": "string"
+   },
+   "annotations": [
+    "`json:\"title\"`"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#BookID",
+   "kind": "type",
+   "languageKind": "type",
+   "name": "BookID",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 26,
+    "endLine": 26
+   },
+   "doc": {
+    "raw": "BookID identifies a book.",
+    "format": "godoc",
+    "summary": "BookID identifies a book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "BookID identifies a book."
+     }
+    ]
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Borrowed",
+   "kind": "constant",
+   "languageKind": "const",
+   "name": "Borrowed",
+   "parent": "go:file:internal/domain/status.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/status.go",
+    "line": 9,
+    "endLine": 9
+   },
+   "doc": {
+    "raw": "with a member",
+    "format": "godoc",
+    "summary": "with a member",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "with a member"
+     }
+    ]
+   },
+   "type": {
+    "text": "Status",
+    "refs": [
+     "go:example.com/lending/internal/domain#Status"
+    ]
+   },
+   "value": "1",
+   "group": "status.go:7"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Describe",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "Describe",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 65,
+    "endLine": 65
+   },
+   "doc": {
+    "raw": "Describe returns a one-line description of b.",
+    "format": "godoc",
+    "summary": "Describe returns a one-line description of b.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Describe returns a one-line description of b."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "b",
+      "type": "Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "func Describe(b Book) string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#ErrNotFound",
+   "kind": "variable",
+   "languageKind": "var",
+   "name": "ErrNotFound",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 17,
+    "endLine": 17
+   },
+   "doc": {
+    "raw": "ErrNotFound reports a missing book, member or loan.",
+    "format": "godoc",
+    "summary": "ErrNotFound reports a missing book, member or loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "ErrNotFound reports a missing book, member or loan."
+     }
+    ]
+   },
+   "type": {
+    "text": "error"
+   },
+   "value": "errors.New(\"not found\")",
+   "group": "domain.go:15"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#ErrOnLoan",
+   "kind": "variable",
+   "languageKind": "var",
+   "name": "ErrOnLoan",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 19,
+    "endLine": 19
+   },
+   "doc": {
+    "raw": "ErrOnLoan reports a book that another member holds.",
+    "format": "godoc",
+    "summary": "ErrOnLoan reports a book that another member holds.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "ErrOnLoan reports a book that another member holds."
+     }
+    ]
+   },
+   "type": {
+    "text": "error"
+   },
+   "value": "errors.New(\"book on loan\")",
+   "group": "domain.go:15"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Loan",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Loan",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 44,
+    "endLine": 48
+   },
+   "doc": {
+    "raw": "Loan records that a member holds a book until a due date.",
+    "format": "godoc",
+    "summary": "Loan records that a member holds a book until a due date.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Loan records that a member holds a book until a due date."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Loan.Book",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Book",
+   "parent": "go:example.com/lending/internal/domain#Loan",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 45
+   },
+   "type": {
+    "text": "BookID",
+    "refs": [
+     "go:example.com/lending/internal/domain#BookID"
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Loan.Due",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Due",
+   "parent": "go:example.com/lending/internal/domain#Loan",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 47
+   },
+   "type": {
+    "text": "time.Time"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Loan.Member",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Member",
+   "parent": "go:example.com/lending/internal/domain#Loan",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 46
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Loan.Overdue",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Overdue",
+   "parent": "go:example.com/lending/internal/domain#Loan",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 51,
+    "endLine": 51
+   },
+   "doc": {
+    "raw": "Overdue reports whether the loan has passed its due date at now.",
+    "format": "godoc",
+    "summary": "Overdue reports whether the loan has passed its due date at now.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Overdue reports whether the loan has passed its due date at now."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "now",
+      "type": "time.Time"
+     }
+    ],
+    "results": [
+     {
+      "type": "bool"
+     }
+    ],
+    "text": "func (l Loan) Overdue(now time.Time) bool"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Lost",
+   "kind": "constant",
+   "languageKind": "const",
+   "name": "Lost",
+   "parent": "go:file:internal/domain/status.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/status.go",
+    "line": 10,
+    "endLine": 10
+   },
+   "doc": {
+    "raw": "missing after an overdue loan",
+    "format": "godoc",
+    "summary": "missing after an overdue loan",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "missing after an overdue loan"
+     }
+    ]
+   },
+   "type": {
+    "text": "Status",
+    "refs": [
+     "go:example.com/lending/internal/domain#Status"
+    ]
+   },
+   "value": "2",
+   "group": "status.go:7"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#MaxLoans",
+   "kind": "constant",
+   "languageKind": "const",
+   "name": "MaxLoans",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 23,
+    "endLine": 23
+   },
+   "doc": {
+    "raw": "MaxLoans caps the books one member may hold at once.",
+    "format": "godoc",
+    "summary": "MaxLoans caps the books one member may hold at once.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "MaxLoans caps the books one member may hold at once."
+     }
+    ]
+   },
+   "type": {
+    "text": "untyped int"
+   },
+   "value": "5",
+   "group": "domain.go:23"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Member",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Member",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 38,
+    "endLine": 41
+   },
+   "doc": {
+    "raw": "Member is a person who may borrow books.",
+    "format": "godoc",
+    "summary": "Member is a person who may borrow books.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Member is a person who may borrow books."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Member.ID",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "ID",
+   "parent": "go:example.com/lending/internal/domain#Member",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 39
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Member.Name",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Name",
+   "parent": "go:example.com/lending/internal/domain#Member",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 40
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#OnShelf",
+   "kind": "constant",
+   "languageKind": "const",
+   "name": "OnShelf",
+   "parent": "go:file:internal/domain/status.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/status.go",
+    "line": 8,
+    "endLine": 8
+   },
+   "doc": {
+    "raw": "on the shelf, free to borrow",
+    "format": "godoc",
+    "summary": "on the shelf, free to borrow",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "on the shelf, free to borrow"
+     }
+    ]
+   },
+   "type": {
+    "text": "Status",
+    "refs": [
+     "go:example.com/lending/internal/domain#Status"
+    ]
+   },
+   "value": "0",
+   "group": "status.go:7"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Page",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Page",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 54,
+    "endLine": 57
+   },
+   "doc": {
+    "raw": "Page holds one page of results from a list call.",
+    "format": "godoc",
+    "summary": "Page holds one page of results from a list call.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Page holds one page of results from a list call."
+     }
+    ]
+   },
+   "typeParams": "[T any]"
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Page.Items",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Items",
+   "parent": "go:example.com/lending/internal/domain#Page",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 55
+   },
+   "type": {
+    "text": "[]T"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Page.Next",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Next",
+   "parent": "go:example.com/lending/internal/domain#Page",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 56
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Status",
+   "kind": "type",
+   "languageKind": "type",
+   "name": "Status",
+   "parent": "go:file:internal/domain/status.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/status.go",
+    "line": 4,
+    "endLine": 4
+   },
+   "doc": {
+    "raw": "Status says where a book sits.",
+    "format": "godoc",
+    "summary": "Status says where a book sits.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Status says where a book sits."
+     }
+    ]
+   },
+   "type": {
+    "text": "int"
+   },
+   "satisfies": [
+    "fmt.Stringer"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Status.String",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "String",
+   "parent": "go:example.com/lending/internal/domain#Status",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/status.go",
+    "line": 14,
+    "endLine": 22
+   },
+   "doc": {
+    "raw": "String returns the status as a word.",
+    "format": "godoc",
+    "summary": "String returns the status as a word.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "String returns the status as a word."
+     }
+    ]
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "func (s Status) String() string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/domain#Timestamp",
+   "kind": "type_alias",
+   "languageKind": "type alias",
+   "name": "Timestamp",
+   "parent": "go:file:internal/domain/domain.go",
+   "exported": true,
+   "location": {
+    "path": "internal/domain/domain.go",
+    "line": 62,
+    "endLine": 62
+   },
+   "doc": {
+    "raw": "Timestamp is an alias kept for older callers.\n\nDeprecated: use [time.Time] directly.",
+    "format": "godoc",
+    "summary": "Timestamp is an alias kept for older callers.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Timestamp is an alias kept for older callers."
+     }
+    ],
+    "deprecated": "use [time.Time](https://pkg.go.dev/time#Time) directly."
+   },
+   "type": {
+    "text": "time.Time"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Handler",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Handler",
+   "parent": "go:file:internal/httpapi/httpapi.go",
+   "exported": true,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 22,
+    "endLine": 24
+   },
+   "doc": {
+    "raw": "Handler serves the lending API.",
+    "format": "godoc",
+    "summary": "Handler serves the lending API.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Handler serves the lending API."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Handler.Lending",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Lending",
+   "parent": "go:example.com/lending/internal/httpapi#Handler",
+   "exported": true,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 23
+   },
+   "type": {
+    "text": "Lender",
+    "refs": [
+     "go:example.com/lending/internal/httpapi#Lender"
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Routes",
+   "parent": "go:example.com/lending/internal/httpapi#Handler",
+   "exported": true,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 27,
+    "endLine": 35
+   },
+   "doc": {
+    "raw": "Routes registers every route of the API. The router mounts them under /api.",
+    "format": "godoc",
+    "summary": "Routes registers every route of the API.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Routes registers every route of the API. The router mounts them under /api."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "r",
+      "type": "chi.Router"
+     }
+    ],
+    "results": [],
+    "text": "func (h *Handler) Routes(r chi.Router)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Handler.borrow",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "borrow",
+   "parent": "go:example.com/lending/internal/httpapi#Handler",
+   "exported": false,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 56,
+    "endLine": 68
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "w",
+      "type": "http.ResponseWriter"
+     },
+     {
+      "name": "r",
+      "type": "*http.Request"
+     }
+    ],
+    "results": [],
+    "text": "func (h *Handler) borrow(w http.ResponseWriter, r *http.Request)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Handler.getBook",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "getBook",
+   "parent": "go:example.com/lending/internal/httpapi#Handler",
+   "exported": false,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 47,
+    "endLine": 54
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "w",
+      "type": "http.ResponseWriter"
+     },
+     {
+      "name": "r",
+      "type": "*http.Request"
+     }
+    ],
+    "results": [],
+    "text": "func (h *Handler) getBook(w http.ResponseWriter, r *http.Request)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Handler.memberLoans",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "memberLoans",
+   "parent": "go:example.com/lending/internal/httpapi#Handler",
+   "exported": false,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 70,
+    "endLine": 70
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "w",
+      "type": "http.ResponseWriter"
+     },
+     {
+      "name": "r",
+      "type": "*http.Request"
+     }
+    ],
+    "results": [],
+    "text": "func (h *Handler) memberLoans(w http.ResponseWriter, r *http.Request)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Handler.status",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "status",
+   "parent": "go:example.com/lending/internal/httpapi#Handler",
+   "exported": false,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 72,
+    "endLine": 72
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "w",
+      "type": "http.ResponseWriter"
+     },
+     {
+      "name": "r",
+      "type": "*http.Request"
+     }
+    ],
+    "results": [],
+    "text": "func (h *Handler) status(w http.ResponseWriter, r *http.Request)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Lender",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Lender",
+   "parent": "go:file:internal/httpapi/httpapi.go",
+   "exported": true,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 16,
+    "endLine": 19
+   },
+   "doc": {
+    "raw": "Lender holds what the handlers need from the service layer.",
+    "format": "godoc",
+    "summary": "Lender holds what the handlers need from the service layer.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lender holds what the handlers need from the service layer."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Lender.Book",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Book",
+   "parent": "go:example.com/lending/internal/httpapi#Lender",
+   "exported": true,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 18
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "id",
+      "type": "domain.BookID",
+      "refs": [
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func Book(ctx context.Context, id domain.BookID) (domain.Book, error)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#Lender.Borrow",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Borrow",
+   "parent": "go:example.com/lending/internal/httpapi#Lender",
+   "exported": true,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 17
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "member",
+      "type": "string"
+     },
+     {
+      "name": "id",
+      "type": "domain.BookID",
+      "refs": [
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Loan",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func Borrow(ctx context.Context, member string, id domain.BookID) (domain.Loan, error)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#NewMux",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "NewMux",
+   "parent": "go:file:internal/httpapi/httpapi.go",
+   "exported": true,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 38,
+    "endLine": 45
+   },
+   "doc": {
+    "raw": "NewMux builds the top-level mux: /health at the root, the API below /api.",
+    "format": "godoc",
+    "summary": "NewMux builds the top-level mux: /health at the root, the API below /api.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "NewMux builds the top-level mux: /health at the root, the API below /api."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "h",
+      "type": "*Handler",
+      "refs": [
+       "go:example.com/lending/internal/httpapi#Handler"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "*http.ServeMux"
+     }
+    ],
+    "text": "func NewMux(h *Handler) *http.ServeMux"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#health",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "health",
+   "parent": "go:file:internal/httpapi/httpapi.go",
+   "exported": false,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 74,
+    "endLine": 74
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "w",
+      "type": "http.ResponseWriter"
+     },
+     {
+      "name": "r",
+      "type": "*http.Request"
+     }
+    ],
+    "results": [],
+    "text": "func health(w http.ResponseWriter, r *http.Request)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/httpapi#writeJSON",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "writeJSON",
+   "parent": "go:file:internal/httpapi/httpapi.go",
+   "exported": false,
+   "location": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 76,
+    "endLine": 79
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "w",
+      "type": "http.ResponseWriter"
+     },
+     {
+      "name": "v",
+      "type": "any"
+     }
+    ],
+    "results": [],
+    "text": "func writeJSON(w http.ResponseWriter, v any)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/service#Lending",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Lending",
+   "parent": "go:file:internal/service/lending.go",
+   "exported": true,
+   "location": {
+    "path": "internal/service/lending.go",
+    "line": 18,
+    "endLine": 22
+   },
+   "doc": {
+    "raw": "Lending applies the lending rules.",
+    "format": "godoc",
+    "summary": "Lending applies the lending rules.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lending applies the lending rules."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/service#Lending.Book",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Book",
+   "parent": "go:example.com/lending/internal/service#Lending",
+   "exported": true,
+   "location": {
+    "path": "internal/service/lending.go",
+    "line": 50,
+    "endLine": 52
+   },
+   "doc": {
+    "raw": "Book returns one book.",
+    "format": "godoc",
+    "summary": "Book returns one book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Book returns one book."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "id",
+      "type": "domain.BookID",
+      "refs": [
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (l *Lending) Book(ctx context.Context, id domain.BookID) (domain.Book, error)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/service#Lending.Borrow",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Borrow",
+   "parent": "go:example.com/lending/internal/service#Lending",
+   "exported": true,
+   "location": {
+    "path": "internal/service/lending.go",
+    "line": 26,
+    "endLine": 47
+   },
+   "doc": {
+    "raw": "Borrow lends a book to a member. It fails when the book sits with another\nmember, or when the member already holds [domain.MaxLoans] books.",
+    "format": "godoc",
+    "summary": "Borrow lends a book to a member.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Borrow lends a book to a member. It fails when the book sits with another member, or when the member already holds [domain.MaxLoans](sym:go:example.com/lending/internal/domain#MaxLoans) books."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "member",
+      "type": "string"
+     },
+     {
+      "name": "id",
+      "type": "domain.BookID",
+      "refs": [
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Loan",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (l *Lending) Borrow(ctx context.Context, member string, id domain.BookID) (domain.Loan, error)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/service#Lending.Now",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Now",
+   "parent": "go:example.com/lending/internal/service#Lending",
+   "exported": true,
+   "location": {
+    "path": "internal/service/lending.go",
+    "line": 21
+   },
+   "doc": {
+    "raw": "Now returns the current time. Tests replace it.",
+    "format": "godoc",
+    "summary": "Now returns the current time.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Now returns the current time. Tests replace it."
+     }
+    ]
+   },
+   "type": {
+    "text": "func() time.Time"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/service#Lending.Store",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Store",
+   "parent": "go:example.com/lending/internal/service#Lending",
+   "exported": true,
+   "location": {
+    "path": "internal/service/lending.go",
+    "line": 19
+   },
+   "type": {
+    "text": "store.Store",
+    "refs": [
+     "go:example.com/lending/internal/store#Store"
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/service#LoanPeriod",
+   "kind": "constant",
+   "languageKind": "const",
+   "name": "LoanPeriod",
+   "parent": "go:file:internal/service/lending.go",
+   "exported": true,
+   "location": {
+    "path": "internal/service/lending.go",
+    "line": 15,
+    "endLine": 15
+   },
+   "doc": {
+    "raw": "LoanPeriod sets how long a member keeps a book.",
+    "format": "godoc",
+    "summary": "LoanPeriod sets how long a member keeps a book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "LoanPeriod sets how long a member keeps a book."
+     }
+    ]
+   },
+   "type": {
+    "text": "time.Duration"
+   },
+   "value": "1209600000000000",
+   "group": "lending.go:15"
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Books",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Books",
+   "parent": "go:file:internal/store/store.go",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 23,
+    "endLine": 28
+   },
+   "doc": {
+    "raw": "Books reads and writes books.",
+    "format": "godoc",
+    "summary": "Books reads and writes books.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Books reads and writes books."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Books.Book",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Book",
+   "parent": "go:example.com/lending/internal/store#Books",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 25
+   },
+   "doc": {
+    "raw": "Book returns one book, or an error that wraps domain.ErrNotFound.",
+    "format": "godoc",
+    "summary": "Book returns one book, or an error that wraps domain.ErrNotFound.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Book returns one book, or an error that wraps domain.ErrNotFound."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "id",
+      "type": "domain.BookID",
+      "refs": [
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func Book(ctx context.Context, id domain.BookID) (domain.Book, error)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Books.PutBook",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "PutBook",
+   "parent": "go:example.com/lending/internal/store#Books",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 27
+   },
+   "doc": {
+    "raw": "PutBook stores b as given.",
+    "format": "godoc",
+    "summary": "PutBook stores b as given.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "PutBook stores b as given."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "b",
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func PutBook(ctx context.Context, b domain.Book) error"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Loans",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Loans",
+   "parent": "go:file:internal/store/store.go",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 31,
+    "endLine": 36
+   },
+   "doc": {
+    "raw": "Loans reads and writes loans.",
+    "format": "godoc",
+    "summary": "Loans reads and writes loans.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Loans reads and writes loans."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Loans.ForMember",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "ForMember",
+   "parent": "go:example.com/lending/internal/store#Loans",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 35
+   },
+   "doc": {
+    "raw": "ForMember lists the open loans of one member.",
+    "format": "godoc",
+    "summary": "ForMember lists the open loans of one member.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "ForMember lists the open loans of one member."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Page[domain.Loan]",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan",
+       "go:example.com/lending/internal/domain#Page"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func ForMember(ctx context.Context, member string) (domain.Page[domain.Loan], error)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Loans.Open",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Open",
+   "parent": "go:example.com/lending/internal/store#Loans",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 33
+   },
+   "doc": {
+    "raw": "Open records a new loan.",
+    "format": "godoc",
+    "summary": "Open records a new loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Open records a new loan."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "l",
+      "type": "domain.Loan",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func Open(ctx context.Context, l domain.Loan) error"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Store",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Store",
+   "parent": "go:file:internal/store/store.go",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 39,
+    "endLine": 42
+   },
+   "doc": {
+    "raw": "Store holds every contract. See [Books] and [Loans].",
+    "format": "godoc",
+    "summary": "Store holds every contract.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Store holds every contract. See [Books](sym:go:example.com/lending/internal/store#Books) and [Loans](sym:go:example.com/lending/internal/store#Loans)."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Store.embeds:Books",
+   "kind": "field",
+   "languageKind": "embedded interface",
+   "name": "Books",
+   "parent": "go:example.com/lending/internal/store#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 40
+   },
+   "type": {
+    "text": "Books",
+    "refs": [
+     "go:example.com/lending/internal/store#Books"
+    ]
+   },
+   "modifiers": [
+    "embedded"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/store#Store.embeds:Loans",
+   "kind": "field",
+   "languageKind": "embedded interface",
+   "name": "Loans",
+   "parent": "go:example.com/lending/internal/store#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/store.go",
+    "line": 41
+   },
+   "type": {
+    "text": "Loans",
+    "refs": [
+     "go:example.com/lending/internal/store#Loans"
+    ]
+   },
+   "modifiers": [
+    "embedded"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Store",
+   "parent": "go:file:internal/store/filestore/filestore.go",
+   "exported": true,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 14,
+    "endLine": 17
+   },
+   "doc": {
+    "raw": "Store implements store.Store on files.",
+    "format": "godoc",
+    "summary": "Store implements store.Store on files.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Store implements store.Store on files."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store.Book",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Book",
+   "parent": "go:example.com/lending/internal/store/filestore#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 20,
+    "endLine": 30
+   },
+   "doc": {
+    "raw": "Book reads one book from books.json.",
+    "format": "godoc",
+    "summary": "Book reads one book from books.json.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Book reads one book from books.json."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "id",
+      "type": "domain.BookID",
+      "refs": [
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s Store) Book(ctx context.Context, id domain.BookID) (domain.Book, error)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store.Dir",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "Dir",
+   "parent": "go:example.com/lending/internal/store/filestore#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 16
+   },
+   "doc": {
+    "raw": "Dir holds one file per table.",
+    "format": "godoc",
+    "summary": "Dir holds one file per table.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Dir holds one file per table."
+     }
+    ]
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store.ForMember",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "ForMember",
+   "parent": "go:example.com/lending/internal/store/filestore#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 46,
+    "endLine": 48
+   },
+   "doc": {
+    "raw": "ForMember returns no loans.",
+    "format": "godoc",
+    "summary": "ForMember returns no loans.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "ForMember returns no loans."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Page[domain.Loan]",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan",
+       "go:example.com/lending/internal/domain#Page"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s Store) ForMember(ctx context.Context, member string) (domain.Page[domain.Loan], error)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store.Open",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Open",
+   "parent": "go:example.com/lending/internal/store/filestore#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 43,
+    "endLine": 43
+   },
+   "doc": {
+    "raw": "Open is not supported by the file store yet.",
+    "format": "godoc",
+    "summary": "Open is not supported by the file store yet.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Open is not supported by the file store yet."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "l",
+      "type": "domain.Loan",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s Store) Open(ctx context.Context, l domain.Loan) error"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store.PutBook",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "PutBook",
+   "parent": "go:example.com/lending/internal/store/filestore#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 33,
+    "endLine": 40
+   },
+   "doc": {
+    "raw": "PutBook writes one book to books.json.",
+    "format": "godoc",
+    "summary": "PutBook writes one book to books.json.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "PutBook writes one book to books.json."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "b",
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s Store) PutBook(ctx context.Context, b domain.Book) error"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store.read",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "read",
+   "parent": "go:example.com/lending/internal/store/filestore#Store",
+   "exported": false,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 50,
+    "endLine": 57
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "map[domain.BookID]domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book",
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s Store) read() (map[domain.BookID]domain.Book, error)"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/filestore#Store.write",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "write",
+   "parent": "go:example.com/lending/internal/store/filestore#Store",
+   "exported": false,
+   "location": {
+    "path": "internal/store/filestore/filestore.go",
+    "line": 59,
+    "endLine": 62
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "m",
+      "type": "map[domain.BookID]domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book",
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s Store) write(m map[domain.BookID]domain.Book) error"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#New",
+   "kind": "function",
+   "languageKind": "func",
+   "name": "New",
+   "parent": "go:file:internal/store/memory/memory.go",
+   "exported": true,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 21,
+    "endLine": 21
+   },
+   "doc": {
+    "raw": "New returns an empty Store.",
+    "format": "godoc",
+    "summary": "New returns an empty Store.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "New returns an empty Store."
+     }
+    ]
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "*Store",
+      "refs": [
+       "go:example.com/lending/internal/store/memory#Store"
+      ]
+     }
+    ],
+    "text": "func New() *Store"
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store",
+   "kind": "struct",
+   "languageKind": "struct",
+   "name": "Store",
+   "parent": "go:file:internal/store/memory/memory.go",
+   "exported": true,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 14,
+    "endLine": 18
+   },
+   "doc": {
+    "raw": "Store implements store.Store in memory.",
+    "format": "godoc",
+    "summary": "Store implements store.Store in memory.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Store implements store.Store in memory."
+     }
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store.Book",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Book",
+   "parent": "go:example.com/lending/internal/store/memory#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 24,
+    "endLine": 32
+   },
+   "doc": {
+    "raw": "Book returns one book.",
+    "format": "godoc",
+    "summary": "Book returns one book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Book returns one book."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "id",
+      "type": "domain.BookID",
+      "refs": [
+       "go:example.com/lending/internal/domain#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s *Store) Book(ctx context.Context, id domain.BookID) (domain.Book, error)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store.ForMember",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "ForMember",
+   "parent": "go:example.com/lending/internal/store/memory#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 51,
+    "endLine": 59
+   },
+   "doc": {
+    "raw": "ForMember lists the loans of one member.",
+    "format": "godoc",
+    "summary": "ForMember lists the loans of one member.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "ForMember lists the loans of one member."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "domain.Page[domain.Loan]",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan",
+       "go:example.com/lending/internal/domain#Page"
+      ]
+     },
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s *Store) ForMember(ctx context.Context, member string) (domain.Page[domain.Loan], error)"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store.Open",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "Open",
+   "parent": "go:example.com/lending/internal/store/memory#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 43,
+    "endLine": 48
+   },
+   "doc": {
+    "raw": "Open records a loan.",
+    "format": "godoc",
+    "summary": "Open records a loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Open records a loan."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "l",
+      "type": "domain.Loan",
+      "refs": [
+       "go:example.com/lending/internal/domain#Loan"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s *Store) Open(ctx context.Context, l domain.Loan) error"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store.PutBook",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "PutBook",
+   "parent": "go:example.com/lending/internal/store/memory#Store",
+   "exported": true,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 35,
+    "endLine": 40
+   },
+   "doc": {
+    "raw": "PutBook stores b.",
+    "format": "godoc",
+    "summary": "PutBook stores b.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "PutBook stores b."
+     }
+    ]
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "ctx",
+      "type": "context.Context"
+     },
+     {
+      "name": "b",
+      "type": "domain.Book",
+      "refs": [
+       "go:example.com/lending/internal/domain#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "error"
+     }
+    ],
+    "text": "func (s *Store) PutBook(ctx context.Context, b domain.Book) error"
+   },
+   "modifiers": [
+    "pointer receiver"
+   ]
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store.books",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "books",
+   "parent": "go:example.com/lending/internal/store/memory#Store",
+   "exported": false,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 16
+   },
+   "type": {
+    "text": "map[domain.BookID]domain.Book",
+    "refs": [
+     "go:example.com/lending/internal/domain#Book",
+     "go:example.com/lending/internal/domain#BookID"
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store.loans",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "loans",
+   "parent": "go:example.com/lending/internal/store/memory#Store",
+   "exported": false,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 17
+   },
+   "type": {
+    "text": "[]domain.Loan",
+    "refs": [
+     "go:example.com/lending/internal/domain#Loan"
+    ]
+   }
+  },
+  {
+   "id": "go:example.com/lending/internal/store/memory#Store.mu",
+   "kind": "field",
+   "languageKind": "field",
+   "name": "mu",
+   "parent": "go:example.com/lending/internal/store/memory#Store",
+   "exported": false,
+   "location": {
+    "path": "internal/store/memory/memory.go",
+    "line": 15
+   },
+   "type": {
+    "text": "sync.Mutex"
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": "go:example.com/lending/cmd/lendd#openStore",
+   "to": "go:example.com/lending/internal/store#Store",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 38
+  },
+  {
+   "from": "go:example.com/lending/cmd/lendd#openStore",
+   "to": "go:example.com/lending/internal/store/memory#New",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 42
+  },
+  {
+   "from": "go:example.com/lending/cmd/lendd#serve",
+   "to": "go:example.com/lending/cmd/lendd#openStore",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 46
+  },
+  {
+   "from": "go:example.com/lending/cmd/lendd#serve",
+   "to": "go:example.com/lending/internal/httpapi#NewMux",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 48
+  },
+  {
+   "from": "go:example.com/lending/internal/domain#Book.ID",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 31
+  },
+  {
+   "from": "go:example.com/lending/internal/domain#Book.Status",
+   "to": "go:example.com/lending/internal/domain#Status",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 34
+  },
+  {
+   "from": "go:example.com/lending/internal/domain#Describe",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 65
+  },
+  {
+   "from": "go:example.com/lending/internal/domain#Loan.Book",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 45
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Handler.Lending",
+   "to": "go:example.com/lending/internal/httpapi#Lender",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 23
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Handler.borrow",
+   "to": "go:example.com/lending/internal/httpapi#Lender.Borrow",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 62
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Handler.borrow",
+   "to": "go:example.com/lending/internal/httpapi#writeJSON",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 67
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Handler.getBook",
+   "to": "go:example.com/lending/internal/httpapi#Lender.Book",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 48
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Handler.getBook",
+   "to": "go:example.com/lending/internal/httpapi#writeJSON",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 53
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Handler.memberLoans",
+   "to": "go:example.com/lending/internal/httpapi#writeJSON",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 70
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Handler.status",
+   "to": "go:example.com/lending/internal/httpapi#writeJSON",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 72
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Lender.Book",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 18
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Lender.Book",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 18
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Lender.Borrow",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#Lender.Borrow",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#NewMux",
+   "to": "go:example.com/lending/internal/httpapi#Handler",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 38
+  },
+  {
+   "from": "go:example.com/lending/internal/httpapi#NewMux",
+   "to": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 42
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending",
+   "to": "go:example.com/lending/internal/httpapi#Lender",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Book",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 50
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Book",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 50
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Book",
+   "to": "go:example.com/lending/internal/store#Books.Book",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 51
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Borrow",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 26
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Borrow",
+   "to": "go:example.com/lending/internal/domain#Describe",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 32
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Borrow",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 26
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Borrow",
+   "to": "go:example.com/lending/internal/store#Books.Book",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 27
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Borrow",
+   "to": "go:example.com/lending/internal/store#Books.PutBook",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 43
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Borrow",
+   "to": "go:example.com/lending/internal/store#Loans.ForMember",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 34
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Borrow",
+   "to": "go:example.com/lending/internal/store#Loans.Open",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 46
+  },
+  {
+   "from": "go:example.com/lending/internal/service#Lending.Store",
+   "to": "go:example.com/lending/internal/store#Store",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 19
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Books.Book",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 25
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Books.Book",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 25
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Books.PutBook",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 27
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Loans.ForMember",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 35
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Loans.ForMember",
+   "to": "go:example.com/lending/internal/domain#Page",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 35
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Loans.Open",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 33
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Store",
+   "to": "go:example.com/lending/internal/store#Books",
+   "kind": "extends",
+   "confidence": "exact",
+   "line": 40
+  },
+  {
+   "from": "go:example.com/lending/internal/store#Store",
+   "to": "go:example.com/lending/internal/store#Loans",
+   "kind": "extends",
+   "confidence": "exact",
+   "line": 41
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store",
+   "to": "go:example.com/lending/internal/store#Books",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store",
+   "to": "go:example.com/lending/internal/store#Loans",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store",
+   "to": "go:example.com/lending/internal/store#Store",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.Book",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 20
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.Book",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 20
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.Book",
+   "to": "go:example.com/lending/internal/store/filestore#Store.read",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 21
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.ForMember",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 46
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.ForMember",
+   "to": "go:example.com/lending/internal/domain#Page",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 46
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.Open",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 43
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.PutBook",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 33
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.PutBook",
+   "to": "go:example.com/lending/internal/store/filestore#Store.read",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 34
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.PutBook",
+   "to": "go:example.com/lending/internal/store/filestore#Store.write",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 39
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.read",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 50
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.read",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 50
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.write",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 59
+  },
+  {
+   "from": "go:example.com/lending/internal/store/filestore#Store.write",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 59
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#New",
+   "to": "go:example.com/lending/internal/store/memory#Store",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 21
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store",
+   "to": "go:example.com/lending/internal/store#Books",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store",
+   "to": "go:example.com/lending/internal/store#Loans",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store",
+   "to": "go:example.com/lending/internal/store#Store",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.Book",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 24
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.Book",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 24
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.ForMember",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 51
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.ForMember",
+   "to": "go:example.com/lending/internal/domain#Page",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 51
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.Open",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 43
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.PutBook",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 35
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.books",
+   "to": "go:example.com/lending/internal/domain#Book",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 16
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.books",
+   "to": "go:example.com/lending/internal/domain#BookID",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 16
+  },
+  {
+   "from": "go:example.com/lending/internal/store/memory#Store.loans",
+   "to": "go:example.com/lending/internal/domain#Loan",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "go:pkg:example.com/lending/cmd/lendd",
+   "to": "go:pkg:example.com/lending/internal/httpapi",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/cmd/lendd",
+   "to": "go:pkg:example.com/lending/internal/service",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/cmd/lendd",
+   "to": "go:pkg:example.com/lending/internal/store",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/cmd/lendd",
+   "to": "go:pkg:example.com/lending/internal/store/filestore",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/cmd/lendd",
+   "to": "go:pkg:example.com/lending/internal/store/memory",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/internal/httpapi",
+   "to": "go:pkg:example.com/lending/internal/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/internal/service",
+   "to": "go:pkg:example.com/lending/internal/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/internal/service",
+   "to": "go:pkg:example.com/lending/internal/store",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/internal/store",
+   "to": "go:pkg:example.com/lending/internal/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/internal/store/filestore",
+   "to": "go:pkg:example.com/lending/internal/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "go:pkg:example.com/lending/internal/store/memory",
+   "to": "go:pkg:example.com/lending/internal/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  }
+ ],
+ "entryPoints": [
+  {
+   "id": "cli:serve",
+   "kind": "cli",
+   "name": "serve",
+   "handler": "go:example.com/lending/cmd/lendd#serve",
+   "registrar": "go:example.com/lending/cmd/lendd#serveCmd",
+   "registeredAt": {
+    "path": "cmd/lendd/main.go",
+    "line": 20
+   },
+   "plugin": "cobra"
+  },
+  {
+   "id": "cli:version",
+   "kind": "cli",
+   "name": "version",
+   "handler": "go:example.com/lending/cmd/lendd#init@main.go:26",
+   "inline": true,
+   "registrar": "go:example.com/lending/cmd/lendd#init@main.go:26",
+   "registeredAt": {
+    "path": "cmd/lendd/main.go",
+    "line": 28
+   },
+   "plugin": "cobra"
+  },
+  {
+   "id": "http:GET /api/books/{id}",
+   "kind": "http",
+   "name": "GET /api/books/{id}",
+   "method": "GET",
+   "path": "/api/books/{id}",
+   "handler": "go:example.com/lending/internal/httpapi#Handler.getBook",
+   "registrar": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "registeredAt": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 28
+   },
+   "plugin": "go-chi"
+  },
+  {
+   "id": "http:POST /api/loans",
+   "kind": "http",
+   "name": "POST /api/loans",
+   "method": "POST",
+   "path": "/api/loans",
+   "handler": "go:example.com/lending/internal/httpapi#Handler.borrow",
+   "registrar": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "registeredAt": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 29
+   },
+   "plugin": "go-chi"
+  },
+  {
+   "id": "http:GET /api/members/{id}/loans",
+   "kind": "http",
+   "name": "GET /api/members/{id}/loans",
+   "method": "GET",
+   "path": "/api/members/{id}/loans",
+   "handler": "go:example.com/lending/internal/httpapi#Handler.memberLoans",
+   "registrar": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "registeredAt": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 31
+   },
+   "plugin": "go-chi"
+  },
+  {
+   "id": "http:DELETE /api/members/{id}",
+   "kind": "http",
+   "name": "DELETE /api/members/{id}",
+   "method": "DELETE",
+   "path": "/api/members/{id}",
+   "handler": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "inline": true,
+   "registrar": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "registeredAt": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 32
+   },
+   "plugin": "go-chi"
+  },
+  {
+   "id": "http:GET /api/status",
+   "kind": "http",
+   "name": "GET /api/status",
+   "method": "GET",
+   "path": "/api/status",
+   "handler": "go:example.com/lending/internal/httpapi#Handler.status",
+   "registrar": "go:example.com/lending/internal/httpapi#Handler.Routes",
+   "registeredAt": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 34
+   },
+   "plugin": "go-chi"
+  },
+  {
+   "id": "http:GET /health",
+   "kind": "http",
+   "name": "GET /health",
+   "method": "GET",
+   "path": "/health",
+   "handler": "go:example.com/lending/internal/httpapi#health",
+   "registrar": "go:example.com/lending/internal/httpapi#NewMux",
+   "registeredAt": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 40
+   },
+   "plugin": "go-nethttp"
+  },
+  {
+   "id": "http:ANY /api/",
+   "kind": "http",
+   "name": "ANY /api/",
+   "method": "ANY",
+   "path": "/api/",
+   "handler": "go:example.com/lending/internal/httpapi#NewMux",
+   "externalHandler": "http.StripPrefix(\"/api\", r)",
+   "registrar": "go:example.com/lending/internal/httpapi#NewMux",
+   "registeredAt": {
+    "path": "internal/httpapi/httpapi.go",
+    "line": 43
+   },
+   "plugin": "go-nethttp"
+  }
+ ],
+ "tests": {
+  "go:example.com/lending/internal/domain#Book": [
+   {
+    "name": "TestBorrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 13
+    }
+   }
+  ],
+  "go:example.com/lending/internal/domain#ErrNotFound": [
+   {
+    "name": "TestMissingBook",
+    "location": {
+     "path": "internal/store/memory/memory_test.go",
+     "line": 11
+    }
+   }
+  ],
+  "go:example.com/lending/internal/service#Lending": [
+   {
+    "name": "TestBorrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 13
+    }
+   },
+   {
+    "name": "ExampleLending_Borrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 22
+    }
+   }
+  ],
+  "go:example.com/lending/internal/service#Lending.Borrow": [
+   {
+    "name": "TestBorrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 13
+    }
+   },
+   {
+    "name": "ExampleLending_Borrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 22
+    }
+   }
+  ],
+  "go:example.com/lending/internal/store/memory#New": [
+   {
+    "name": "TestBorrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 13
+    }
+   },
+   {
+    "name": "ExampleLending_Borrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 22
+    }
+   },
+   {
+    "name": "TestMissingBook",
+    "location": {
+     "path": "internal/store/memory/memory_test.go",
+     "line": 11
+    }
+   }
+  ],
+  "go:example.com/lending/internal/store/memory#Store.Book": [
+   {
+    "name": "TestMissingBook",
+    "location": {
+     "path": "internal/store/memory/memory_test.go",
+     "line": 11
+    }
+   }
+  ],
+  "go:example.com/lending/internal/store/memory#Store.PutBook": [
+   {
+    "name": "TestBorrow",
+    "location": {
+     "path": "internal/service/lending_test.go",
+     "line": 13
+    }
+   }
+  ]
+ }
+}
