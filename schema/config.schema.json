@@ -4,43 +4,86 @@
   "title": "Atlas Carries Us project config (atlas.yaml), version 1",
   "description": "Tells the acu command what to read and how to present it. docs/config.md explains every field.",
   "type": "object",
-  "required": ["version", "project", "languages"],
+  "required": [
+    "version",
+    "project",
+    "languages"
+  ],
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "const": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
     "project": {
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name": { "type": "string" },
-        "repo": { "type": "string", "description": "owner/name on the code host." },
+        "name": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string",
+          "description": "owner/name on the code host."
+        },
         "links": {
           "description": "A preset name, or explicit URL templates.",
           "oneOf": [
-            { "enum": ["github", "gitlab", "none"] },
+            {
+              "enum": [
+                "github",
+                "gitlab",
+                "none"
+              ]
+            },
             {
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "file": { "type": "string" },
-                "line": { "type": "string" },
-                "range": { "type": "string" },
-                "folder": { "type": "string" }
+                "file": {
+                  "type": "string"
+                },
+                "line": {
+                  "type": "string"
+                },
+                "range": {
+                  "type": "string"
+                },
+                "folder": {
+                  "type": "string"
+                }
               }
             }
           ]
         },
-        "description": { "type": "string" },
-        "descriptionDrafted": { "$ref": "#/$defs/provenance" },
+        "description": {
+          "type": "string"
+        },
+        "descriptionDrafted": {
+          "$ref": "#/$defs/provenance"
+        },
         "autolinks": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["pattern", "url"],
+            "required": [
+              "pattern",
+              "url"
+            ],
             "additionalProperties": false,
-            "properties": { "pattern": { "type": "string" }, "url": { "type": "string" } }
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
           }
         }
       }
@@ -50,20 +93,49 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["adapter"],
+        "required": [
+          "adapter"
+        ],
         "additionalProperties": false,
         "properties": {
-          "adapter": { "type": "string", "description": "typescript, rust, go, or the name of an adapter on PATH." },
-          "root": { "type": "string", "description": "Folder to read, relative to this config file. Default: the config file's folder." },
+          "adapter": {
+            "type": "string",
+            "description": "typescript, rust, go, or the name of an adapter on PATH."
+          },
+          "root": {
+            "type": "string",
+            "description": "Folder to read, relative to this config file. Default: the config file's folder."
+          },
           "command": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Run this program instead of the default adapter. The first item names the program."
           },
-          "include": { "type": "array", "items": { "type": "string" } },
-          "exclude": { "type": "array", "items": { "type": "string" } },
-          "tests": { "type": "array", "items": { "type": "string" }, "description": "Globs that mark test files." },
-          "options": { "type": "object", "description": "Options that only this adapter reads." }
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Globs that mark test files."
+          },
+          "options": {
+            "type": "object",
+            "description": "Options that only this adapter reads."
+          }
         }
       }
     },
@@ -71,21 +143,39 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["plugin"],
+        "required": [
+          "plugin"
+        ],
         "additionalProperties": false,
         "properties": {
-          "plugin": { "type": "string" },
-          "options": { "type": "object" },
+          "plugin": {
+            "type": "string"
+          },
+          "adapter": {
+            "type": "string",
+            "description": "The adapter that runs this plugin. The acu command knows the adapter of each built-in plugin, so this field matters only for other plugins."
+          },
+          "options": {
+            "type": "object"
+          },
           "notes": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["text"],
+              "required": [
+                "text"
+              ],
               "additionalProperties": false,
               "properties": {
-                "pathPrefix": { "type": "string" },
-                "title": { "type": "string" },
-                "text": { "type": "string" }
+                "pathPrefix": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
               }
             }
           }
@@ -96,21 +186,44 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "name"],
+        "required": [
+          "id",
+          "name"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
-          "name": { "type": "string" },
-          "color": { "type": "integer", "minimum": 0, "maximum": 8 },
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8
+          },
           "paths": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Globs over unit paths (relative to the repository root). A unit goes to the first region that matches."
           },
-          "default": { "type": "boolean", "description": "Units that match no region go here." },
-          "description": { "type": "string" },
-          "readingTip": { "type": "string" },
-          "drafted": { "$ref": "#/$defs/provenance" }
+          "default": {
+            "type": "boolean",
+            "description": "Units that match no region go here."
+          },
+          "description": {
+            "type": "string"
+          },
+          "readingTip": {
+            "type": "string"
+          },
+          "drafted": {
+            "$ref": "#/$defs/provenance"
+          }
         }
       }
     },
@@ -118,20 +231,40 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       }
     },
     "tour": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["title", "text", "open"],
+        "required": [
+          "title",
+          "text",
+          "open"
+        ],
         "additionalProperties": false,
         "properties": {
-          "title": { "type": "string" },
-          "text": { "type": "string" },
-          "open": { "$ref": "#/$defs/open" },
-          "drafted": { "$ref": "#/$defs/provenance" }
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "open": {
+            "$ref": "#/$defs/open"
+          },
+          "drafted": {
+            "$ref": "#/$defs/provenance"
+          }
         }
       }
     }
@@ -139,25 +272,57 @@
   "$defs": {
     "provenance": {
       "type": "object",
-      "required": ["by", "at"],
+      "required": [
+        "by",
+        "at"
+      ],
       "additionalProperties": false,
       "properties": {
-        "by": { "type": "string" },
-        "at": { "type": "string" }
+        "by": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string"
+        }
       }
     },
     "open": {
       "description": "The view a tour step opens. Name targets by ID, or by a name that the command resolves.",
       "type": "object",
-      "required": ["view"],
+      "required": [
+        "view"
+      ],
       "additionalProperties": false,
       "properties": {
-        "view": { "enum": ["overview", "region", "unit", "symbol", "trace"] },
-        "id": { "type": "string", "description": "An exact ID (region, unit or symbol)." },
-        "path": { "type": "string", "description": "A unit's path, relative to the repository root." },
-        "name": { "type": "string", "description": "A symbol's qualified name, such as Immer.produce. It must match one symbol." },
-        "entryPoint": { "type": "string", "description": "An entry point's ID or name, such as 'GET /posts/{id}'." },
-        "symbol": { "type": "string", "description": "For a trace: the ID or qualified name of the function or method to start from." }
+        "view": {
+          "enum": [
+            "overview",
+            "region",
+            "unit",
+            "symbol",
+            "trace"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "description": "An exact ID (region, unit or symbol)."
+        },
+        "path": {
+          "type": "string",
+          "description": "A unit's path, relative to the repository root."
+        },
+        "name": {
+          "type": "string",
+          "description": "A symbol's qualified name, such as Immer.produce. It must match one symbol."
+        },
+        "entryPoint": {
+          "type": "string",
+          "description": "An entry point's ID or name, such as 'GET /posts/{id}'."
+        },
+        "symbol": {
+          "type": "string",
+          "description": "For a trace: the ID or qualified name of the function or method to start from."
+        }
       }
     }
   }
