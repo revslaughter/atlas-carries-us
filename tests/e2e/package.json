@@ -1,0 +1,14 @@
+{
+  "name": "@atlas-carries-us/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "End-to-end smoke tests: open each view of a built site in Chromium and fail on console errors.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

@@ -285,7 +285,7 @@
   {
    "id": "go:example.com/lending/cmd/lendd#init@main.go:26",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "init",
    "parent": "go:file:cmd/lendd/main.go",
    "exported": false,
@@ -303,7 +303,7 @@
   {
    "id": "go:example.com/lending/cmd/lendd#main",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "main",
    "parent": "go:file:cmd/lendd/main.go",
    "exported": false,
@@ -321,7 +321,7 @@
   {
    "id": "go:example.com/lending/cmd/lendd#openStore",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "openStore",
    "parent": "go:file:cmd/lendd/main.go",
    "exported": false,
@@ -357,7 +357,7 @@
   {
    "id": "go:example.com/lending/cmd/lendd#rootCmd",
    "kind": "variable",
-   "languageKind": "var",
+   "languageKind": "variable",
    "name": "rootCmd",
    "parent": "go:file:cmd/lendd/main.go",
    "exported": false,
@@ -375,7 +375,7 @@
   {
    "id": "go:example.com/lending/cmd/lendd#serve",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "serve",
    "parent": "go:file:cmd/lendd/main.go",
    "exported": false,
@@ -406,7 +406,7 @@
   {
    "id": "go:example.com/lending/cmd/lendd#serveCmd",
    "kind": "variable",
-   "languageKind": "var",
+   "languageKind": "variable",
    "name": "serveCmd",
    "parent": "go:file:cmd/lendd/main.go",
    "exported": false,
@@ -564,7 +564,7 @@
   {
    "id": "go:example.com/lending/internal/domain#Borrowed",
    "kind": "constant",
-   "languageKind": "const",
+   "languageKind": "constant",
    "name": "Borrowed",
    "parent": "go:file:internal/domain/status.go",
    "exported": true,
@@ -596,7 +596,7 @@
   {
    "id": "go:example.com/lending/internal/domain#Describe",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "Describe",
    "parent": "go:file:internal/domain/domain.go",
    "exported": true,
@@ -637,7 +637,7 @@
   {
    "id": "go:example.com/lending/internal/domain#ErrNotFound",
    "kind": "variable",
-   "languageKind": "var",
+   "languageKind": "variable",
    "name": "ErrNotFound",
    "parent": "go:file:internal/domain/domain.go",
    "exported": true,
@@ -666,7 +666,7 @@
   {
    "id": "go:example.com/lending/internal/domain#ErrOnLoan",
    "kind": "variable",
-   "languageKind": "var",
+   "languageKind": "variable",
    "name": "ErrOnLoan",
    "parent": "go:file:internal/domain/domain.go",
    "exported": true,
@@ -805,7 +805,7 @@
   {
    "id": "go:example.com/lending/internal/domain#Lost",
    "kind": "constant",
-   "languageKind": "const",
+   "languageKind": "constant",
    "name": "Lost",
    "parent": "go:file:internal/domain/status.go",
    "exported": true,
@@ -837,7 +837,7 @@
   {
    "id": "go:example.com/lending/internal/domain#MaxLoans",
    "kind": "constant",
-   "languageKind": "const",
+   "languageKind": "constant",
    "name": "MaxLoans",
    "parent": "go:file:internal/domain/domain.go",
    "exported": true,
@@ -920,7 +920,7 @@
   {
    "id": "go:example.com/lending/internal/domain#OnShelf",
    "kind": "constant",
-   "languageKind": "const",
+   "languageKind": "constant",
    "name": "OnShelf",
    "parent": "go:file:internal/domain/status.go",
    "exported": true,
@@ -1403,7 +1403,7 @@
   {
    "id": "go:example.com/lending/internal/httpapi#NewMux",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "NewMux",
    "parent": "go:file:internal/httpapi/httpapi.go",
    "exported": true,
@@ -1444,7 +1444,7 @@
   {
    "id": "go:example.com/lending/internal/httpapi#health",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "health",
    "parent": "go:file:internal/httpapi/httpapi.go",
    "exported": false,
@@ -1471,7 +1471,7 @@
   {
    "id": "go:example.com/lending/internal/httpapi#writeJSON",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "writeJSON",
    "parent": "go:file:internal/httpapi/httpapi.go",
    "exported": false,
@@ -1678,7 +1678,7 @@
   {
    "id": "go:example.com/lending/internal/service#LoanPeriod",
    "kind": "constant",
-   "languageKind": "const",
+   "languageKind": "constant",
    "name": "LoanPeriod",
    "parent": "go:file:internal/service/lending.go",
    "exported": true,
@@ -2307,7 +2307,7 @@
   {
    "id": "go:example.com/lending/internal/store/memory#New",
    "kind": "function",
-   "languageKind": "func",
+   "languageKind": "function",
    "name": "New",
    "parent": "go:file:internal/store/memory/memory.go",
    "exported": true,

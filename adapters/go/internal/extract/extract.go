@@ -527,9 +527,9 @@ func (ex *extractor) collectFile(p *packages.Package, f *ast.File, rel string, q
 						}
 						_, line := ex.rel(fset, n.Pos())
 						_, end := ex.rel(fset, vs.End())
-						kind, lk := "variable", "var"
+						kind, lk := "variable", "variable"
 						if d.Tok == token.CONST {
-							kind, lk = "constant", "const"
+							kind, lk = "constant", "constant"
 						}
 						s := ex.addSym(&schema.Symbol{ID: symID(p.PkgPath, n.Name), Kind: kind, LanguageKind: lk,
 							Name: n.Name, Parent: parent, Exported: obj.Exported(),
@@ -564,7 +564,7 @@ func (ex *extractor) collectFile(p *packages.Package, f *ast.File, rel string, q
 			if obj.Name() == "init" || obj.Name() == "_" {
 				id = symID(p.PkgPath, fmt.Sprintf("%s@%s:%d", obj.Name(), base, line))
 			}
-			s := ex.addSym(&schema.Symbol{ID: id, Kind: "function", LanguageKind: "func", Name: obj.Name(),
+			s := ex.addSym(&schema.Symbol{ID: id, Kind: "function", LanguageKind: "function", Name: obj.Name(),
 				Parent: parent, Exported: obj.Exported(), Location: schema.Location{Path: rel, Line: line, EndLine: end},
 				Signature: ex.signature(obj.Name(), "", sig, q)})
 			ex.queueDoc(docText(d.Doc), p.PkgPath, func(dd *schema.Doc) { s.Doc = dd })
