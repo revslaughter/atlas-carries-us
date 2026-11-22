@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atlas Carries Us</title>
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/ahro-mark-coin.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="title">Atlas Carries Us</h1>
+    <div class="nav">
+      <button class="btn" id="back" title="Back (Backspace)" aria-label="Back" disabled>←</button>
+      <button class="btn" id="fwd" title="Forward" aria-label="Forward" disabled>→</button>
+      <button class="btn" id="home" title="Overview of all regions (0)">Overview</button>
+    </div>
+    <div class="search" role="search">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke-width="1.6"></circle><path d="M11 11l3.5 3.5" stroke-width="1.6" stroke-linecap="round"></path></svg>
+      <input id="q" type="search" placeholder="Find an item, entry point or folder  ( / )" autocomplete="off" spellcheck="false" aria-label="Search the code" role="combobox" aria-controls="results" aria-expanded="false" aria-autocomplete="list">
+      <div id="results" role="listbox" aria-label="Search results" hidden></div>
+    </div>
+    <div class="tools">
+      <button class="btn primary" id="tourBtn" title="A guided walk through the code (T)">Tour</button>
+      <button class="btn" id="routesBtn" title="Every entry point, with a trace of each">Entry points</button>
+      <button class="btn" id="legendBtn" aria-pressed="true">Legend</button>
+      <button class="btn" id="aboutBtn">How to read</button>
+      <button class="btn" id="themeBtn">Light theme</button>
+    </div>
+  </header>
+  <main id="stage">
+    <canvas id="map" tabindex="0" aria-label="Map of the code. Tab here, then use the arrow keys to move between boxes, Enter to open one, and Space to read its docs. Every item also appears as a link in the side panel." aria-describedby="announce"></canvas>
+    <div id="loading">We are reading the code map while you wait.</div>
+    <nav id="crumbs" aria-label="Where you are"></nav>
+    <div id="hint" hidden></div>
+    <canvas id="minimap" aria-label="Overview of the current view. Click to move there."></canvas>
+    <div id="legend" aria-label="Legend"></div>
+    <div id="tour" hidden role="dialog" aria-label="Tour"></div>
+    <div id="announce" class="sr" aria-live="polite"></div>
+  </main>
+  <aside id="panel" aria-label="Documentation"></aside>
+  <footer id="status">
+    <div id="statustext"></div>
+    <a class="mark" href="https://github.com/revslaughter/atlas-carries-us" target="_blank" rel="noopener" title="Atlas Carries Us, an Ahro tool"><img src="assets/ahro-mark-coin.svg" alt="Ahro" width="20" height="20"></a>
+    <div class="byline">Atlas Carries Us</div>
+  </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

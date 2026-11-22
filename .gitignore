@@ -1,0 +1,19 @@
+# Build output
+/target/
+node_modules/
+dist/
+dist-test/
+/out/
+/site/
+*.tsbuildinfo
+
+# Generated data and screenshots
+/examples/*/atlas.json
+/tests/e2e/screenshots/
+/test-results/
+/playwright-report/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/

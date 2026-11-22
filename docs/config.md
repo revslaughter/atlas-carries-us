@@ -1,0 +1,168 @@
+# atlas.yaml
+
+`atlas.yaml` tells `acu` what to read and how to present it. It lives beside
+the code it describes, or anywhere else: every relative path in it resolves
+against the folder that holds it. `schema/config.schema.json` holds the same
+rules for editors and for `acu check`.
+
+The files in [`examples/`](../examples) show complete configs.
+
+## Top level
+
+| Field | Required | Holds |
+| --- | --- | --- |
+| `version` | yes | The number `1`. |
+| `project` | yes | Name, repository and overview text. |
+| `languages` | yes | One entry per adapter run. |
+| `entryPoints` | no | Plugins that find HTTP routes, CLI commands and other ways in. |
+| `regions` | no | Groups of units for the overview. |
+| `layout` | no | Where the regions sit. |
+| `tour` | no | Guided steps. |
+
+## project
+
+```yaml
+project:
+  name: chi, an HTTP router for Go
+  repo: go-chi/chi
+  links: github          # github, gitlab, none, or templates (below)
+  description: |
+    Overview text. A blank line starts a new paragraph.
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+```
+
+1. `links` turns locations into source links. The presets cover GitHub and
+   GitLab. For another host, give templates with the placeholders `{repo}`,
+   `{commit}`, `{path}`, `{line}` and `{endLine}`:
+
+   ```yaml
+   links:
+     file: "https://dev.azure.com/org/proj/_git/{repo}?version=GC{commit}&path=/{path}"
+     line: "https://dev.azure.com/org/proj/_git/{repo}?version=GC{commit}&path=/{path}&line={line}"
+   ```
+
+2. `autolinks` turn plain text in doc comments into links. `pattern` holds a
+   JavaScript regular expression; `url` may use `$1` to `$9` and `{repo}`.
+3. `descriptionDrafted` marks a description that a program wrote (see
+   "Drafted text" below).
+
+## languages
+
+```yaml
+languages:
+  - adapter: go
+    root: ../../corpus/go/chi   # default: this file's folder
+    include: ["internal/**"]    # package folders to keep
+    exclude: ["**/features/**"] # package folders to leave out
+    options:
+      buildTags: [grafeo]       # Go: build tags
+```
+
+`acu` finds the program for each adapter in this order: `command` (a list:
+program, then arguments), the variable `ACU_ADAPTER_<NAME>`, a program called
+`acu-adapter-<name>` on the `PATH`, and, inside this repository, the adapter's
+source. [`adapters.md`](adapters.md) describes the protocol.
+
+## entryPoints
+
+```yaml
+entryPoints:
+  - plugin: go-chi
+    options:
+      prefixes:
+        - { inFunc: Routes, prefix: /api }   # routes registered inside Routes() sit under /api
+    notes:
+      - pathPrefix: /api
+        title: Before the handler runs
+        text: Every route under /api passes the Authenticate middleware first.
+  - plugin: go-nethttp
+  - plugin: cobra
+```
+
+The Go adapter offers three plugins:
+
+1. `go-chi` finds `r.Get("/x", h)`, the other verbs, `Method`, `Handle` and
+   `HandleFunc`, and follows `r.Route("/prefix", func(r chi.Router) { … })`.
+   A router that the code mounts under a path (with `Mount` or
+   `http.StripPrefix`) needs a `prefixes` rule, because the mount happens at
+   run time.
+2. `go-nethttp` finds `mux.HandleFunc("GET /x", h)` and `http.Handle("/x", h)`.
+3. `cobra` finds `&cobra.Command{Use: "serve", RunE: run}`.
+
+`notes` show beside every entry point whose path starts with `pathPrefix`.
+
+## regions
+
+```yaml
+regions:
+  - id: storage
+    name: Storage
+    color: 2                 # 0-8, a colour-blind-safe palette; default: by order
+    paths: ["internal/store", "internal/store/**"]
+    description: One storage contract and two stores that implement it.
+    readingTip: Read the contract first; both stores follow it.
+  - id: other
+    name: Everything else
+    default: true            # units that match no region go here
+```
+
+1. Name regions by job, not by folder. Readers navigate by these names.
+2. `paths` match unit paths (a Go package's folder), relative to the
+   repository root or to the language's `root`. A unit joins the first region
+   that matches.
+3. Without any regions, `acu` makes one per top-level folder.
+
+## layout
+
+```yaml
+layout:
+  rows:
+    - [entry, http]
+    - [rules, domain]
+    - [storage]
+```
+
+Rows run top to bottom. Regions that no row names go into extra rows below.
+
+## tour
+
+```yaml
+tour:
+  - title: Follow one request
+    open: { view: trace, entryPoint: "GET /api/books/{id}" }
+    text: The handler calls the service, and the service reads through the store.
+```
+
+Each step opens one view:
+
+| `open` | Opens |
+| --- | --- |
+| `{ view: overview }` | The overview. |
+| `{ view: region, id: storage }` | One region. |
+| `{ view: unit, path: internal/store }` | A unit focus. `id` works too. |
+| `{ view: symbol, name: store.Store }` | An item focus. A member name such as `Mux.Get` opens its owner with the member's docs. `id` works too. |
+| `{ view: trace, entryPoint: "GET /x" }` | A trace from an entry point, by name or ID. |
+| `{ view: trace, symbol: Command.execute }` | A trace from a function or method. |
+
+A name may need its unit to stay unique: `store.Store` rather than `Store`.
+`acu extract` stops with a clear message when a step points at nothing, or at
+more than one thing.
+
+Write tour text in short sentences that a newcomer can follow. Start with the
+overview, follow one concrete request, then name the pattern.
+
+## Drafted text
+
+Text that a program (for example a language model) wrote carries a mark:
+
+```yaml
+  - id: storage
+    name: Storage
+    description: The store reads and writes books.
+    drafted: { by: "a local model", at: "2026-11-22T10:00:00Z" }
+```
+
+The viewer labels such text as machine-drafted. A person who has checked the
+text removes the `drafted` line.

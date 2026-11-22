@@ -1,0 +1,72 @@
+# Config for the Go adapter's test fixture: an invented lending library.
+# The end-to-end tests build the viewer from it.
+version: 1
+project:
+  name: Lending library (fixture)
+  repo: revslaughter/atlas-carries-us
+  links: github
+  description: |
+    An invented lending library that exercises every feature of the Go adapter.
+    A request enters through the HTTP API, the service applies the lending rules,
+    and two stores keep the data.
+  autolinks:
+    - pattern: "(^|\\s)#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$2"
+languages:
+  - adapter: go
+    root: ../../adapters/go/testdata/fixture
+    exclude: ["**/features/**"]
+entryPoints:
+  - plugin: go-chi
+    options:
+      prefixes:
+        - { inFunc: Routes, prefix: /api }
+    notes:
+      - pathPrefix: /api
+        title: Before the handler runs
+        text: NewMux strips the /api prefix and hands the request to the chi router.
+  - plugin: go-nethttp
+  - plugin: cobra
+regions:
+  - id: entry
+    name: Start-up
+    paths: ["cmd/**"]
+    description: The lendd command. It reads its flags, opens a store and serves the API.
+    readingTip: Start here to see how the parts connect.
+  - id: http
+    name: HTTP API
+    paths: ["internal/httpapi"]
+    description: Handlers turn requests into service calls and results into JSON.
+  - id: rules
+    name: Lending rules
+    paths: ["internal/service"]
+    description: The service checks each request and calls storage in order.
+  - id: domain
+    name: Shared vocabulary
+    paths: ["internal/domain"]
+    description: Books, members, loans and the errors that every layer returns.
+  - id: storage
+    name: Storage
+    paths: ["internal/store", "internal/store/**"]
+    description: One storage contract and two stores that implement it.
+layout:
+  rows:
+    - [entry, http]
+    - [rules, domain]
+    - [storage]
+tour:
+  - title: The shape of the program
+    open: { view: overview }
+    text: A request enters at the top and the data lives at the bottom.
+  - title: Follow one request
+    open: { view: trace, entryPoint: "GET /api/books/{id}" }
+    text: The handler calls the service through the Lender interface, and the service reads through the Store interface.
+  - title: The storage contract
+    open: { view: symbol, name: store.Store }
+    text: Store joins Books and Loans. Two stores implement it.
+  - title: The lending rules
+    open: { view: symbol, name: Lending.Borrow }
+    text: Borrow checks the book and the member's loans before it writes.
+  - title: The storage package
+    open: { view: unit, path: internal/store }
+    text: The package doc lists the rules that every store follows.

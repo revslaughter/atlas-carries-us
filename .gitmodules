@@ -1,0 +1,10 @@
+[submodule "corpus/go/chi"]
+	path = corpus/go/chi
+	url = https://github.com/go-chi/chi
+	shallow = true
+	update = none
+[submodule "corpus/go/cobra"]
+	path = corpus/go/cobra
+	url = https://github.com/spf13/cobra
+	shallow = true
+	update = none
