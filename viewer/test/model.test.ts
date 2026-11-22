@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Model } from "../src/model";
 
-const doc = JSON.parse(readFileSync(new URL("../../adapters/go/testdata/golden/fixture.json", import.meta.url), "utf8"));
+const doc = JSON.parse(
+  readFileSync(new URL("../../adapters/go/testdata/golden/fixture.json", import.meta.url), "utf8"),
+);
 const M = new Model(doc);
 const p = "go:example.com/lending/";
 
@@ -23,7 +25,10 @@ test("members belong to their item, and edges roll up to items", () => {
 test("constants and variables group per file", () => {
   const g = M.items.get("values:go:file:internal/domain/status.go");
   assert.ok(g, "a value group for status.go");
-  assert.deepEqual(g!.members.map(m => m.name), ["OnShelf", "Borrowed", "Lost"]);
+  assert.deepEqual(
+    g!.members.map(m => m.name),
+    ["OnShelf", "Borrowed", "Lost"],
+  );
   assert.equal(g!.languageKind, "constants");
 });
 

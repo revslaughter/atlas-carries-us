@@ -11,9 +11,12 @@ let stepIndex = -1;
 
 export function viewToState(v: View): State {
   switch (v.view) {
-    case "overview": return { v: "overview" };
-    case "region": return { v: "overview", region: v.id };
-    case "unit": return { v: "unit", id: v.id };
+    case "overview":
+      return { v: "overview" };
+    case "region":
+      return { v: "overview", region: v.id };
+    case "unit":
+      return { v: "unit", id: v.id };
     case "symbol": {
       const o = M.owner.get(v.id) ?? v.id;
       const m = M.memberName(v.id);
@@ -41,10 +44,23 @@ function show(i: number) {
 }
 
 export const tour = {
-  start() { if (M.doc.tour?.length) show(0); },
-  end() { stepIndex = -1; el.hidden = true; },
-  next() { show(stepIndex + 1); },
-  prev() { show(stepIndex - 1); },
-  go(i: number) { show(i); },
-  active() { return stepIndex >= 0; },
+  start() {
+    if (M.doc.tour?.length) show(0);
+  },
+  end() {
+    stepIndex = -1;
+    el.hidden = true;
+  },
+  next() {
+    show(stepIndex + 1);
+  },
+  prev() {
+    show(stepIndex - 1);
+  },
+  go(i: number) {
+    show(i);
+  },
+  active() {
+    return stepIndex >= 0;
+  },
 };

@@ -7,7 +7,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const [data, snap] = process.argv.slice(2);
 const d = JSON.parse(readFileSync(data, "utf8"));
-const kinds = (list, key) => Object.fromEntries(Object.entries(list.reduce((m, x) => ((m[x[key]] = (m[x[key]] ?? 0) + 1), m), {})).sort());
+const kinds = (list, key) =>
+  Object.fromEntries(Object.entries(list.reduce((m, x) => ((m[x[key]] = (m[x[key]] ?? 0) + 1), m), {})).sort());
 const got = {
   containers: kinds(d.containers, "kind"),
   symbols: kinds(d.symbols, "kind"),
@@ -23,9 +24,12 @@ if (process.argv.includes("--update")) {
   process.exit(0);
 }
 const want = JSON.parse(readFileSync(snap, "utf8"));
-const a = JSON.stringify(got, null, 2), b = JSON.stringify(want, null, 2);
+const a = JSON.stringify(got, null, 2),
+  b = JSON.stringify(want, null, 2);
 if (a !== b) {
-  console.error(`counts: ${data} differs from ${snap}.\n--- got\n${a}\n--- want\n${b}\nRun with --update after a deliberate change.`);
+  console.error(
+    `counts: ${data} differs from ${snap}.\n--- got\n${a}\n--- want\n${b}\nRun with --update after a deliberate change.`,
+  );
   process.exit(1);
 }
 console.log("counts: " + snap + " matches");

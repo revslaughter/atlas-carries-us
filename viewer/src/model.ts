@@ -48,7 +48,11 @@ export interface Rel {
   heuristic: boolean;
 }
 
-export interface Use { u: string; t: string; kind: string }
+export interface Use {
+  u: string;
+  t: string;
+  kind: string;
+}
 
 export interface Route extends EntryPoint {
   item: string;
@@ -128,7 +132,16 @@ export class Model {
   private buildUnits() {
     for (const c of this.doc.containers) {
       if (!c.unit) continue;
-      const u: Unit = { id: c.id, c, name: c.name, path: c.path ?? "", files: [], items: [], imports: [], importedBy: [] };
+      const u: Unit = {
+        id: c.id,
+        c,
+        name: c.name,
+        path: c.path ?? "",
+        files: [],
+        items: [],
+        imports: [],
+        importedBy: [],
+      };
       this.units.set(c.id, u);
       this.unitList.push(u);
     }
@@ -154,8 +167,16 @@ export class Model {
         let g = groups.get(gid);
         if (!g) {
           const fname = file?.name ?? s.location.path.split("/").pop() ?? "";
-          g = { id: gid, kind: "values", languageKind: "", name: "values in " + fname, unit, exported: false,
-            location: { path: s.location.path, line: s.location.line }, members: [] };
+          g = {
+            id: gid,
+            kind: "values",
+            languageKind: "",
+            name: "values in " + fname,
+            unit,
+            exported: false,
+            location: { path: s.location.path, line: s.location.line },
+            members: [],
+          };
           groups.set(gid, g);
           this.items.set(gid, g);
           this.units.get(unit)!.items.push(g);
@@ -166,8 +187,18 @@ export class Model {
         this.owner.set(s.id, gid);
         continue;
       }
-      const it: Item = { id: s.id, sym: s, kind: s.kind, languageKind: s.languageKind, name: s.name, unit,
-        exported: s.exported, doc: s.doc, location: s.location, members: [] };
+      const it: Item = {
+        id: s.id,
+        sym: s,
+        kind: s.kind,
+        languageKind: s.languageKind,
+        name: s.name,
+        unit,
+        exported: s.exported,
+        doc: s.doc,
+        location: s.location,
+        members: [],
+      };
       this.items.set(s.id, it);
       this.owner.set(s.id, s.id);
       this.units.get(unit)!.items.push(it);
@@ -189,7 +220,12 @@ export class Model {
     }
     for (const it of this.items.values()) {
       if (it.kind === "values") continue;
-      it.members.sort((a, b) => Number(b.exported) - Number(a.exported) || a.location.path.localeCompare(b.location.path) || a.location.line - b.location.line);
+      it.members.sort(
+        (a, b) =>
+          Number(b.exported) - Number(a.exported) ||
+          a.location.path.localeCompare(b.location.path) ||
+          a.location.line - b.location.line,
+      );
     }
   }
 
@@ -207,16 +243,26 @@ export class Model {
   private buildRelations() {
     for (const e of this.doc.edges) {
       if (e.kind === "imports") {
-        const a = this.unitOf(e.from), b = this.unitOf(e.to);
+        const a = this.unitOf(e.from),
+          b = this.unitOf(e.to);
         if (a && b && a !== b) {
           this.units.get(a)!.imports.push(b);
           this.units.get(b)!.importedBy.push(a);
         }
         continue;
       }
-      const a = this.owner.get(e.from), b = this.owner.get(e.to);
+      const a = this.owner.get(e.from),
+        b = this.owner.get(e.to);
       if (!a || !b) continue;
-      const r: Rel = { a, am: this.memberName(e.from), b, bm: this.memberName(e.to), kind: e.kind, line: e.line ?? 0, heuristic: e.confidence === "heuristic" };
+      const r: Rel = {
+        a,
+        am: this.memberName(e.from),
+        b,
+        bm: this.memberName(e.to),
+        kind: e.kind,
+        line: e.line ?? 0,
+        heuristic: e.confidence === "heuristic",
+      };
       push(this.out, a, r);
       push(this.inc, b, r);
       if (e.kind === "calls") {
@@ -226,7 +272,14 @@ export class Model {
       if (e.kind === "implements") push(this.implBy, b, a);
       if (e.kind === "overrides") push(this.overriddenBy, b + "\0" + r.bm, r);
       if (a !== b) {
-        const kind = e.kind === "field_type" ? "field" : e.kind === "param_type" ? "param" : e.kind === "return_type" ? "result" : e.kind;
+        const kind =
+          e.kind === "field_type"
+            ? "field"
+            : e.kind === "param_type"
+              ? "param"
+              : e.kind === "return_type"
+                ? "result"
+                : e.kind;
         this.uses.push({ u: a, t: b, kind });
       }
     }
@@ -262,11 +315,14 @@ export class Model {
       for (const t of uses) if (!list.some(x => x.name === t.name && x.location.path === t.location.path)) list.push(t);
       this.tests.set(it, list);
     }
-    for (const l of this.tests.values()) l.sort((a, b) => a.location.path.localeCompare(b.location.path) || a.location.line - b.location.line);
+    for (const l of this.tests.values())
+      l.sort((a, b) => a.location.path.localeCompare(b.location.path) || a.location.line - b.location.line);
   }
 
   private buildRegions() {
-    const given = this.doc.regions?.length ? this.doc.regions : [{ id: "all", name: this.doc.project?.name ?? "All code", containers: this.unitList.map(u => u.id) }];
+    const given = this.doc.regions?.length
+      ? this.doc.regions
+      : [{ id: "all", name: this.doc.project?.name ?? "All code", containers: this.unitList.map(u => u.id) }];
     const placed = new Set<string>();
     given.forEach((r, i) => {
       const units = r.containers.filter(id => this.units.has(id) && !placed.has(id));
@@ -278,7 +334,13 @@ export class Model {
     });
     const rest = this.unitList.filter(u => !placed.has(u.id)).map(u => u.id);
     if (rest.length) {
-      const ri: RegionInfo = { id: "other", name: "Other code", containers: rest, color: this.regions.length % 9, units: rest };
+      const ri: RegionInfo = {
+        id: "other",
+        name: "Other code",
+        containers: rest,
+        color: this.regions.length % 9,
+        units: rest,
+      };
       this.regions.push(ri);
       for (const id of rest) this.regionOfUnit.set(id, ri);
     }

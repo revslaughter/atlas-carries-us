@@ -13,10 +13,12 @@ test("the viewer source names no language-specific constructs", () => {
   const hits: string[] = [];
   for (const f of readdirSync(dir)) {
     if (!/\.(ts|html|css)$/.test(f) || f === "types.ts") continue;
-    readFileSync(new URL(f, dir), "utf8").split("\n").forEach((line, i) => {
-      const m = line.match(FORBIDDEN);
-      if (m) hits.push(`${f}:${i + 1}: ${m[0]}`);
-    });
+    readFileSync(new URL(f, dir), "utf8")
+      .split("\n")
+      .forEach((line, i) => {
+        const m = line.match(FORBIDDEN);
+        if (m) hits.push(`${f}:${i + 1}: ${m[0]}`);
+      });
   }
   assert.deepEqual(hits, []);
 });

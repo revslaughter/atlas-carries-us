@@ -4,15 +4,40 @@
 
 import { M, go, stateName } from "./app";
 import { plural, type Route } from "./model";
-import { ENTRY_KIND, LANES_LEFT, LANES_RIGHT, memberSections, noteFor, rankItems, symbolRelations, traceRoot, isEmbedded, type Bag, type Lane, type State } from "./scene";
+import {
+  ENTRY_KIND,
+  LANES_LEFT,
+  LANES_RIGHT,
+  memberSections,
+  noteFor,
+  rankItems,
+  symbolRelations,
+  traceRoot,
+  isEmbedded,
+  type Bag,
+  type Lane,
+  type State,
+} from "./scene";
 import { EDGE, edgeColor, regionColor } from "./theme";
-import { docHTML, draftedNote, esc, folderURL, inlineHTML, inlinePlain, paragraphsHTML, sourceLink, summary } from "./text";
+import {
+  docHTML,
+  draftedNote,
+  esc,
+  folderURL,
+  inlineHTML,
+  inlinePlain,
+  paragraphsHTML,
+  sourceLink,
+  summary,
+} from "./text";
 import type { Param, Symbol } from "./types";
 import { tour } from "./tour";
 
 const panel = document.getElementById("panel")!;
 
-function word(): string { return M.unitList[0]?.c.languageKind ?? "unit"; }
+function word(): string {
+  return M.unitList[0]?.c.languageKind ?? "unit";
+}
 
 function chip(id: string, extra?: string): string {
   if (!M.items.has(id)) return "";
@@ -27,7 +52,9 @@ function rpill(id: string | undefined): string {
   return r ? `<span class="kindpill" style="color:${regionColor(r.color)}">${esc(r.name)}</span>` : "";
 }
 function topBar(focusBtn: boolean | undefined, st: State): string {
-  return focusBtn ? `<div class="top"><button class="btn primary" data-go='${esc(JSON.stringify(st))}'>Put it in the centre</button></div>` : "";
+  return focusBtn
+    ? `<div class="top"><button class="btn primary" data-go='${esc(JSON.stringify(st))}'>Put it in the centre</button></div>`
+    : "";
 }
 
 /** A type string with links on the names of known symbols. */
@@ -46,7 +73,9 @@ function typeHTML(t: string, refs: string[] | undefined): string {
   });
 }
 function paramsHTML(list: Param[]): string {
-  return list.map(p => (p.name ? esc(p.name) + " " : "") + `<span class="ty">${typeHTML(p.type, p.refs)}</span>`).join(", ");
+  return list
+    .map(p => (p.name ? esc(p.name) + " " : "") + `<span class="ty">${typeHTML(p.type, p.refs)}</span>`)
+    .join(", ");
 }
 
 function testsHTML(id: string): string {
@@ -54,13 +83,19 @@ function testsHTML(id: string): string {
   if (!t?.length) return "";
   return `<h3>Tests that use it</h3><p class="note">A test shows the code in use. Read one for a working example.</p><ul class="plain tests">${t
     .slice(0, 12)
-    .map(x => `<li>${sourceLink(x.name, x.location.path, x.location.line)} <span>${esc(x.location.path.split("/").pop())}</span></li>`)
+    .map(
+      x =>
+        `<li>${sourceLink(x.name, x.location.path, x.location.line)} <span>${esc(x.location.path.split("/").pop())}</span></li>`,
+    )
     .join("")}${t.length > 12 ? `<li><span>+ ${t.length - 12} more</span></li>` : ""}</ul>`;
 }
 
 function routeList(list: Route[]): string {
   return `<ul class="plain routes">${list
-    .map(r => `<li><span class="verb">${esc(r.method ?? ENTRY_KIND[r.kind] ?? r.kind)}</span><button class="linkbtn" data-entry="${esc(r.id)}">${esc(r.path ?? r.name)}</button>${!r.inline && r.member ? `<span class="h">${esc(M.items.get(r.item)!.name + "." + r.member)}</span>` : r.externalHandler ? `<span class="h">${esc(r.externalHandler)}</span>` : ""}</li>`)
+    .map(
+      r =>
+        `<li><span class="verb">${esc(r.method ?? ENTRY_KIND[r.kind] ?? r.kind)}</span><button class="linkbtn" data-entry="${esc(r.id)}">${esc(r.path ?? r.name)}</button>${!r.inline && r.member ? `<span class="h">${esc(M.items.get(r.item)!.name + "." + r.member)}</span>` : r.externalHandler ? `<span class="h">${esc(r.externalHandler)}</span>` : ""}</li>`,
+    )
     .join("")}</ul>`;
 }
 
@@ -79,30 +114,52 @@ export function overview() {
   <h3>Ways in</h3>
   <div class="chips">${steps ? `<button class="chip action" data-tour="1">Take the tour (${steps} steps)</button>` : ""}${M.routes.length ? `<button class="chip action" data-routes="1">Trace an entry point (${M.routes.length})</button>` : ""}<button class="chip action" data-help="1">How to read this map</button></div>
   <h3>Regions</h3><ul class="plain rlist">${M.regions
-    .map(r => `<li><button class="linkbtn" data-region="${esc(r.id)}" style="font-weight:600">${esc(r.name)}</button><div class="s">${esc(inlinePlain(r.description).split(/(?<=[.!?])\s/)[0] ?? "")}</div></li>`)
+    .map(
+      r =>
+        `<li><button class="linkbtn" data-region="${esc(r.id)}" style="font-weight:600">${esc(r.name)}</button><div class="s">${esc(inlinePlain(r.description).split(/(?<=[.!?])\s/)[0] ?? "")}</div></li>`,
+    )
     .join("")}</ul>`;
 }
 
 export function region(id: string) {
   const r = M.regions.find(x => x.id === id);
   if (!r) return overview();
-  const out = new Map<string, Set<string>>(), inc = new Set<string>();
+  const out = new Map<string, Set<string>>(),
+    inc = new Set<string>();
   for (const x of M.uses) {
-    const a = M.regionOfItem(x.u), b = M.regionOfItem(x.t);
+    const a = M.regionOfItem(x.u),
+      b = M.regionOfItem(x.t);
     if (!a || !b || a === b) continue;
-    if (a.id === id) { if (!out.has(b.id)) out.set(b.id, new Set()); out.get(b.id)!.add(x.t); }
+    if (a.id === id) {
+      if (!out.has(b.id)) out.set(b.id, new Set());
+      out.get(b.id)!.add(x.t);
+    }
     if (b.id === id) inc.add(a.id);
   }
   panel.innerHTML = `<div class="eyebrow">Region</div><h2 class="sans">${esc(r.name)}</h2>
   ${r.description ? `<div class="doc">${paragraphsHTML(r.description)}</div>` : ""}
   ${r.readingTip ? `<div class="about"><h4>Reading tip</h4><p>${inlineHTML(r.readingTip)}</p></div>` : ""}${draftedNote(r.drafted)}
   <h3>${esc(plural(word()))}</h3><ul class="plain rlist">${r.units.map(u => `<li>${unitChip(u)}<div class="s">${esc(summary(M.units.get(u)!.c.doc) || `No doc comment on this ${word()}.`)}</div></li>`).join("")}</ul>
-  <h3>What it uses in other regions</h3>${out.size ? [...out].map(([rid, t]) => `<div class="rel"><div class="rh">${rpill(rid)}</div><div class="chips">${[...t].slice(0, 10).map(x => chip(x)).join("")}${t.size > 10 ? `<span class="tag">+${t.size - 10} more</span>` : ""}</div></div>`).join("") : `<p class="nodoc">It uses no other region.</p>`}
+  <h3>What it uses in other regions</h3>${
+    out.size
+      ? [...out]
+          .map(
+            ([rid, t]) =>
+              `<div class="rel"><div class="rh">${rpill(rid)}</div><div class="chips">${[...t]
+                .slice(0, 10)
+                .map(x => chip(x))
+                .join("")}${t.size > 10 ? `<span class="tag">+${t.size - 10} more</span>` : ""}</div></div>`,
+          )
+          .join("")
+      : `<p class="nodoc">It uses no other region.</p>`
+  }
   <h3>Regions that use it</h3><div class="chips">${[...inc].map(rpill).join(" ") || `<span class="nodoc">No other region uses it.</span>`}</div>`;
 }
 
 export function unit(id: string, opt: { focusBtn?: boolean } = {}) {
-  const u = M.units.get(id)!, r = M.regionOfUnit.get(id), kt = M.keyItems(id, 6);
+  const u = M.units.get(id)!,
+    r = M.regionOfUnit.get(id),
+    kt = M.keyItems(id, 6);
   const routes = M.routes.filter(x => M.items.get(x.item)?.unit === id);
   const folder = u.path ? folderURL(u.path) : null;
   panel.innerHTML = `${topBar(opt.focusBtn, { v: "unit", id })}<div class="eyebrow">${esc(u.c.languageKind)} ${rpill(r?.id)}</div><h2>${esc(u.name)}</h2>
@@ -120,8 +177,9 @@ function memberHTML(itemId: string, m: Symbol, actions: boolean): string {
   const callable = !!m.signature;
   const sig = callable
     ? `<span class="nm">${esc(m.name)}</span>(${paramsHTML(m.signature!.params)})${m.signature!.results.length ? " " + (m.signature!.results.length > 1 || m.signature!.results[0].name ? "(" + paramsHTML(m.signature!.results) + ")" : paramsHTML(m.signature!.results)) : ""}`
-    : isEmbedded(m) ? `<span class="nm">${esc(m.type?.text ?? m.name)}</span> <span class="ty">(embedded)</span>`
-    : `<span class="nm">${esc(m.name)}</span> <span class="ty">${m.type ? typeHTML(m.type.text, m.type.refs) : ""}</span>${m.value ? ` = ${esc(m.value)}` : ""}`;
+    : isEmbedded(m)
+      ? `<span class="nm">${esc(m.type?.text ?? m.name)}</span> <span class="ty">(embedded)</span>`
+      : `<span class="nm">${esc(m.name)}</span> <span class="ty">${m.type ? typeHTML(m.type.text, m.type.refs) : ""}</span>${m.value ? ` = ${esc(m.value)}` : ""}`;
   const acts = actions
     ? `<span class="acts">${callable ? `<button class="linkbtn" data-trace="${esc(itemId)}" data-member="${esc(m.name)}">trace</button>` : ""}${sourceLink("source", m.location.path, m.location.line)}</span>`
     : "";
@@ -145,7 +203,9 @@ function lanesHTML(bag: Bag, list: Lane[], title: string): string {
 export function symbol(id: string, opt: { focusBtn?: boolean; member?: string } = {}) {
   const it = M.items.get(id);
   if (!it) return;
-  const u = M.units.get(it.unit)!, r = M.regionOfUnit.get(it.unit), s = it.sym;
+  const u = M.units.get(it.unit)!,
+    r = M.regionOfUnit.get(it.unit),
+    s = it.sym;
   let h = `${topBar(opt.focusBtn, { v: "symbol", id })}<div class="eyebrow"><span>${esc(it.languageKind || it.kind)}</span>${rpill(r?.id)}</div>
   <h2>${esc(it.name)}${esc(s?.typeParams ?? s?.signature?.typeParams ?? "")}</h2>
   <div class="where">in ${unitChip(it.unit)} · ${sourceLink(it.location.path.split("/").pop() + ":" + it.location.line, it.location.path, it.location.line, it.location.endLine)}${it.exported ? "" : ` · not exported (used only inside its ${esc(u.c.languageKind)})`}</div>`;
@@ -157,18 +217,23 @@ export function symbol(id: string, opt: { focusBtn?: boolean; member?: string } 
     }
   }
   h += `<h3>What it is</h3>${docHTML(it.doc)}`;
-  if (it.doc?.raw) h += `<details class="raw"><summary>Show the comment as written</summary><pre>${esc(it.doc.raw)}</pre></details>`;
+  if (it.doc?.raw)
+    h += `<details class="raw"><summary>Show the comment as written</summary><pre>${esc(it.doc.raw)}</pre></details>`;
   const routes = M.routesByHandler.get(id) ?? [];
-  if (routes.length) h += `<h3>Entry points it serves</h3><p class="note">Click one to trace it through the code.</p>${routeList(routes)}`;
+  if (routes.length)
+    h += `<h3>Entry points it serves</h3><p class="note">Click one to trace it through the code.</p>${routeList(routes)}`;
   if (s?.signature && it.kind !== "type" && it.kind !== "type_alias") {
     if (s.signature.text) h += `<h3>Signature</h3><pre class="sig">${esc(s.signature.text)}</pre>`;
     h += `<h3>Parameters</h3>${s.signature.params.length ? s.signature.params.map(p => `<div class="mem"><div class="sig"><span class="nm">${esc(p.name || "_")}</span> <span class="ty">${typeHTML(p.type, p.refs)}</span></div>${it.doc?.params?.[p.name ?? ""] ? `<div class="d">${inlineHTML(it.doc.params[p.name!])}</div>` : ""}</div>`).join("") : `<p class="nodoc">None.</p>`}`;
     h += `<h3>Results</h3>${s.signature.results.length ? s.signature.results.map(p => `<div class="mem"><div class="sig">${p.name ? `<span class="nm">${esc(p.name)}</span> ` : ""}<span class="ty">${typeHTML(p.type, p.refs)}</span></div></div>`).join("") : `<p class="nodoc">None.</p>`}`;
     h += `<div class="chips" style="margin-top:10px"><button class="chip action" data-trace="${esc(id)}" data-member="">Trace the calls from ${esc(it.name)}</button></div>`;
   }
-  if ((it.kind === "type" || it.kind === "type_alias") && s?.type) h += `<h3>Definition</h3><pre class="sig">${it.kind === "type_alias" ? "alias of " : ""}${typeHTML(s.type.text, s.type.refs)}</pre>`;
-  for (const g of memberSections(it)) h += `<h3>${esc(g.title)}</h3>` + g.members.map(m => memberHTML(id, m, true)).join("");
-  if (s?.satisfies?.length) h += `<h3>Satisfies well-known interfaces</h3><div class="chips">${s.satisfies.map(x => `<span class="chip static">${esc(x)}</span>`).join("")}</div>`;
+  if ((it.kind === "type" || it.kind === "type_alias") && s?.type)
+    h += `<h3>Definition</h3><pre class="sig">${it.kind === "type_alias" ? "alias of " : ""}${typeHTML(s.type.text, s.type.refs)}</pre>`;
+  for (const g of memberSections(it))
+    h += `<h3>${esc(g.title)}</h3>` + g.members.map(m => memberHTML(id, m, true)).join("");
+  if (s?.satisfies?.length)
+    h += `<h3>Satisfies well-known interfaces</h3><div class="chips">${s.satisfies.map(x => `<span class="chip static">${esc(x)}</span>`).join("")}</div>`;
   const { L, R } = symbolRelations(M, id);
   h += lanesHTML(L, LANES_LEFT, "What uses it") + lanesHTML(R, LANES_RIGHT, "What it uses");
   h += testsHTML(id);
@@ -178,13 +243,17 @@ export function symbol(id: string, opt: { focusBtn?: boolean; member?: string } 
 function testsOfMember(memberId: string): string {
   const t = M.doc.tests?.[memberId];
   if (!t?.length) return "";
-  return `<p class="note">Tests that use it: ${t.slice(0, 6).map(x => sourceLink(x.name, x.location.path, x.location.line)).join(", ")}${t.length > 6 ? ` and ${t.length - 6} more` : ""}.</p>`;
+  return `<p class="note">Tests that use it: ${t
+    .slice(0, 6)
+    .map(x => sourceLink(x.name, x.location.path, x.location.line))
+    .join(", ")}${t.length > 6 ? ` and ${t.length - 6} more` : ""}.</p>`;
 }
 
 export function trace(st: Extract<State, { v: "trace" }>) {
   const root = traceRoot(M, st);
   if (!root) return;
-  const it = M.items.get(root.item)!, label = root.member ? it.name + "." + root.member : it.name;
+  const it = M.items.get(root.item)!,
+    label = root.member ? it.name + "." + root.member : it.name;
   let h = `<div class="eyebrow">Trace</div><h2>${esc(root.route?.name ?? M.qual(root.item) + (root.member ? "." + root.member : ""))}</h2>
   <p class="lead">This view answers “how does control get from here to the data?” It follows the calls from ${esc(label)} through the code.</p>
   <div class="doc"><ul><li>Columns run left to right by call depth.</li><li>Numbers on the lines give the order of the calls inside each function.</li><li>A dashed line leads from an interface to each implementation that can run.</li><li>Click a box to read its docs. Click it again to put it in the centre.</li></ul></div>`;
@@ -211,17 +280,27 @@ export function route(id: string) {
 export function routesIndex() {
   const groups = new Map<string, Route[]>();
   for (const r of M.routes) {
-    const g = r.kind === "http" ? "/" + ((r.path ?? "").split("/").filter(Boolean)[0] ?? "") : ENTRY_KIND[r.kind] ?? r.kind;
+    const g =
+      r.kind === "http" ? "/" + ((r.path ?? "").split("/").filter(Boolean)[0] ?? "") : (ENTRY_KIND[r.kind] ?? r.kind);
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g)!.push(r);
   }
   panel.innerHTML = `<div class="eyebrow">Index</div><h2 class="sans">Entry points</h2>
   <p class="lead">Every way into the code that the adapters found, grouped by the first part of its path. Click one to trace it from the handler down.</p>
-  ${M.routes.length ? [...groups].sort((a, b) => a[0].localeCompare(b[0])).map(([g, list]) => `<h3>${esc(g)}</h3>${routeList(list)}`).join("") : `<p class="nodoc">The adapters found no entry points. Switch on an entry-point plugin in atlas.yaml.</p>`}`;
+  ${
+    M.routes.length
+      ? [...groups]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([g, list]) => `<h3>${esc(g)}</h3>${routeList(list)}`)
+          .join("")
+      : `<p class="nodoc">The adapters found no entry points. Switch on an entry-point plugin in atlas.yaml.</p>`
+  }`;
 }
 
 export function howTo() {
-  const w = word(), p = M.doc.project, meta = M.doc.meta;
+  const w = word(),
+    p = M.doc.project,
+    meta = M.doc.meta;
   const notes = meta.adapters.flatMap(a => a.notes ?? []);
   panel.innerHTML = `<div class="eyebrow">Help</div><h2 class="sans">How to read this map</h2>
   <div class="doc">
@@ -238,13 +317,18 @@ export function howTo() {
 }
 
 panel.addEventListener("click", e => {
-  const t = (e.target as HTMLElement).closest<HTMLElement>("[data-sym],[data-unit],[data-go],[data-entry],[data-trace],[data-region],[data-tour],[data-routes],[data-help],[data-memberdoc]");
+  const t = (e.target as HTMLElement).closest<HTMLElement>(
+    "[data-sym],[data-unit],[data-go],[data-entry],[data-trace],[data-region],[data-tour],[data-routes],[data-help],[data-memberdoc]",
+  );
   if (!t) return;
   const d = t.dataset;
   if (d.go) go(JSON.parse(d.go));
   else if (d.trace !== undefined) go({ v: "trace", sym: d.trace, member: d.member || "" });
-  else if (d.memberdoc) { const o = M.owner.get(d.memberdoc)!; symbol(o, { member: M.memberName(d.memberdoc) }); panel.scrollTop = 0; }
-  else if (d.sym) go({ v: "symbol", id: d.sym });
+  else if (d.memberdoc) {
+    const o = M.owner.get(d.memberdoc)!;
+    symbol(o, { member: M.memberName(d.memberdoc) });
+    panel.scrollTop = 0;
+  } else if (d.sym) go({ v: "symbol", id: d.sym });
   else if (d.unit) go({ v: "unit", id: d.unit });
   else if (d.entry) go({ v: "trace", entry: d.entry });
   else if (d.region) go({ v: "overview", region: d.region });
