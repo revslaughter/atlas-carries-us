@@ -1,0 +1,14 @@
+# Keep the build context small: sources only.
+.git
+**/node_modules
+target
+viewer/dist
+viewer/dist-test
+out
+site
+corpus
+examples/*/atlas.json
+tests/e2e/screenshots
+test-results
+playwright-report
+.devcontainer

@@ -1,5 +1,9 @@
 name: CI
 
+# Every check runs inside the "toolchain" stage of the Dockerfile, the same
+# container that the VS Code devcontainer uses, so CI and development share
+# one pinned set of tools.
+
 on:
   push:
     branches: [main]
@@ -9,83 +13,23 @@ permissions:
   contents: read
 
 jobs:
-  adapter-go:
-    name: Go adapter
+  check:
+    name: All checks, in the toolchain container
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the toolchain image
+        uses: docker/build-push-action@v6
         with:
-          go-version: "1.24"
-          cache-dependency-path: adapters/go/go.sum
-      - name: Vet and test (golden file, schema, facts)
-        working-directory: adapters/go
-        run: |
-          test -z "$(gofmt -l .)" || { gofmt -l .; echo "run gofmt"; exit 1; }
-          go vet ./...
-          go test ./...
-
-  viewer-and-cli:
-    name: Viewer and acu
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-      - run: npm ci
-      - name: Viewer type check, unit tests and build
-        run: |
-          npm run check -w viewer
-          npm test -w viewer
-          npm run build -w viewer
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-      - name: acu format, lint and tests
-        run: |
-          cargo fmt --check
-          cargo clippy --all-targets -- -D warnings
-          cargo test
-
-  end-to-end:
-    name: Extract, build and smoke-test the examples
-    runs-on: ubuntu-latest
-    needs: [adapter-go, viewer-and-cli]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Fetch the public test corpus (shallow)
-        run: git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-          cache-dependency-path: adapters/go/go.sum
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run build -w viewer
-      - run: cargo build --release
-      - name: Install the Go adapter
-        working-directory: adapters/go
-        run: go install ./cmd/acu-adapter-go
-      - name: Each example
-        run: |
-          for ex in lending chi cobra; do
-            echo "::group::$ex"
-            ./target/release/acu extract -c examples/$ex/atlas.yaml -o out/$ex.json
-            node tests/e2e/counts.mjs out/$ex.json examples/$ex/counts.json
-            ./target/release/acu build -d out/$ex.json -o out/site-$ex
-            node tests/e2e/smoke.mjs out/site-$ex out/shot-$ex
-            node tests/e2e/smoke.mjs out/site-$ex out/shot-$ex-light --light
-            echo "::endgroup::"
-          done
+          context: .
+          target: toolchain
+          tags: acu-toolchain:ci
+          load: true
+          cache-from: type=gha,scope=toolchain
+          cache-to: type=gha,scope=toolchain,mode=max
+      - name: Run scripts/check.sh
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/workspace" acu-toolchain:ci scripts/check.sh
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,3 +37,25 @@ jobs:
           name: screenshots
           path: out/*.png
           if-no-files-found: ignore
+
+  image:
+    name: Runtime image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          tags: acu:ci
+          load: true
+          cache-from: |
+            type=gha,scope=toolchain
+            type=gha,scope=runtime
+          cache-to: type=gha,scope=runtime,mode=max
+      - name: Map the fixture with the image
+        run: |
+          docker run --rm acu:ci --version
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending/atlas.yaml -o out/lending.json
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending.json
