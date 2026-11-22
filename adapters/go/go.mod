@@ -2,6 +2,8 @@ module github.com/revslaughter/atlas-carries-us/adapters/go
 
 go 1.24.0
 
+toolchain go1.26.11
+
 require golang.org/x/tools v0.38.0
 
 require (

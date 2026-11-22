@@ -31,7 +31,17 @@ Phase 1 of 4 works today:
 
 ## Try it
 
-You need Go 1.24 or later, Node 20 or later, and a Rust toolchain.
+The quickest way builds the container image. It holds `acu`,
+the Go adapter and the Go toolchain:
+
+```sh
+docker build -t acu .
+docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.0.0:4321
+```
+
+To build from source instead, you need Go 1.24 or later, Node 20 or later,
+and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
+`.node-version` and `rust-toolchain.toml`.
 
 1. Build the viewer:
 
@@ -76,6 +86,28 @@ You need Go 1.24 or later, Node 20 or later, and a Rust toolchain.
 `acu check` reports problems, such as a tour step that points at code that no
 longer exists, without writing anything.
 
+## Develop
+
+One container definition, the `toolchain` stage of the [`Dockerfile`](Dockerfile),
+pins Go, Node, Rust and the Chromium that the smoke test uses, each base image
+by digest. Three places use it:
+
+1. **VS Code.** Open the folder and choose "Reopen in Container". The
+   devcontainer installs the dependencies, fetches the test corpus and
+   installs the Go adapter.
+2. **The command line.**
+
+   ```sh
+   docker build --target toolchain -t acu-toolchain .
+   docker run --rm -v "$PWD:/workspace" acu-toolchain scripts/check.sh
+   ```
+
+3. **CI**, which runs the same `scripts/check.sh` in the same container.
+
+`scripts/check.sh` runs every check: formatting, lints, unit tests, golden
+files, count snapshots and the smoke test. `scripts/check.sh --quick` skips the
+end-to-end run.
+
 ## Repository layout
 
 | Path | Holds |
@@ -87,6 +119,8 @@ longer exists, without writing anything.
 | `examples/` | Configs for the test fixture and for the public corpus. |
 | `corpus/` | Public projects pinned as shallow submodules, for testing. A plain clone leaves them out. |
 | `tests/e2e/` | The smoke test: opens every view in Chromium and fails on console errors. |
+| `Dockerfile`, `.devcontainer/` | The pinned toolchain, the release image and the VS Code devcontainer. |
+| `scripts/check.sh` | Every check that CI runs. |
 | `docs/` | The data format, the config, adapter notes, and the research behind the design. |
 
 ## Design

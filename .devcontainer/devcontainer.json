@@ -1,0 +1,39 @@
+{
+  // The development container: the "toolchain" stage of the Dockerfile, with
+  // the same Go, Node, Rust and Chromium versions that CI uses.
+  "name": "Atlas Carries Us",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "toolchain"
+  },
+  "remoteUser": "dev",
+  "updateRemoteUserUID": true,
+  "postCreateCommand": "npm ci --no-audit --no-fund && git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra && (cd adapters/go && go install ./cmd/acu-adapter-go)",
+  "forwardPorts": [4321],
+  "portsAttributes": {
+    "4321": { "label": "acu serve", "onAutoForward": "notify" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "rust-lang.rust-analyzer",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml",
+        "ms-playwright.playwright"
+      ],
+      "settings": {
+        "yaml.schemas": {
+          "./schema/config.schema.json": ["atlas.yaml", "**/atlas.yaml"]
+        },
+        "json.schemas": [
+          { "fileMatch": ["atlas.json", "**/golden/*.json", "out/*.json"], "url": "./schema/atlas.schema.json" }
+        ],
+        "rust-analyzer.check.command": "clippy",
+        "go.toolsManagement.autoUpdate": false,
+        "files.exclude": { "**/target": true, "**/node_modules": true }
+      }
+    }
+  }
+}
