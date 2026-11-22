@@ -98,6 +98,10 @@ fn run(cli: Cli) -> Result<()> {
             } else {
                 serde_json::to_vec(&doc)?
             };
+            if let Some(dir) = out.parent().filter(|d| !d.as_os_str().is_empty()) {
+                std::fs::create_dir_all(dir)
+                    .with_context(|| format!("create {}", dir.display()))?;
+            }
             std::fs::write(&out, bytes).with_context(|| format!("write {}", out.display()))?;
             summary(&doc, &out.display().to_string());
             Ok(())

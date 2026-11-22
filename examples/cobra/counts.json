@@ -1,0 +1,29 @@
+{
+  "containers": {
+    "file": 18,
+    "module": 1,
+    "package": 2
+  },
+  "symbols": {
+    "constant": 43,
+    "field": 98,
+    "function": 105,
+    "interface": 1,
+    "method": 164,
+    "struct": 10,
+    "type": 4,
+    "type_alias": 2,
+    "variable": 13
+  },
+  "edges": {
+    "calls": 556,
+    "field_type": 32,
+    "imports": 1,
+    "param_type": 67,
+    "return_type": 37
+  },
+  "entryPoints": 5,
+  "symbolsWithTests": 131,
+  "regions": 2,
+  "tourSteps": 9
+}
