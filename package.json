@@ -9,9 +9,14 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "format": "prettier --write viewer tests/e2e",
+    "format:check": "prettier --check viewer tests/e2e"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
   }
 }

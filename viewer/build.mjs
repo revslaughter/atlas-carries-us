@@ -14,8 +14,19 @@ const require = createRequire(import.meta.url);
 if (process.argv.includes("--tests")) {
   const out = join(here, "dist-test");
   rmSync(out, { recursive: true, force: true });
-  const entries = readdirSync(join(here, "test")).filter(f => f.endsWith(".test.ts")).map(f => join(here, "test", f));
-  await build({ entryPoints: entries, outdir: out, bundle: true, platform: "node", format: "esm", outExtension: { ".js": ".mjs" }, target: "node20", logLevel: "warning" });
+  const entries = readdirSync(join(here, "test"))
+    .filter(f => f.endsWith(".test.ts"))
+    .map(f => join(here, "test", f));
+  await build({
+    entryPoints: entries,
+    outdir: out,
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    outExtension: { ".js": ".mjs" },
+    target: "node20",
+    logLevel: "warning",
+  });
   process.exit(0);
 }
 
@@ -40,8 +51,17 @@ cpSync(join(here, "src/styles.css"), join(dist, "styles.css"));
 cpSync(join(here, "assets/ahro-mark-coin.svg"), join(dist, "assets/ahro-mark-coin.svg"));
 
 const fonts = {
-  "@fontsource/inter": ["inter-latin-400-normal.woff2", "inter-latin-500-normal.woff2", "inter-latin-600-normal.woff2", "inter-latin-700-normal.woff2"],
-  "@fontsource/jetbrains-mono": ["jetbrains-mono-latin-400-normal.woff2", "jetbrains-mono-latin-600-normal.woff2", "jetbrains-mono-latin-700-normal.woff2"],
+  "@fontsource/inter": [
+    "inter-latin-400-normal.woff2",
+    "inter-latin-500-normal.woff2",
+    "inter-latin-600-normal.woff2",
+    "inter-latin-700-normal.woff2",
+  ],
+  "@fontsource/jetbrains-mono": [
+    "jetbrains-mono-latin-400-normal.woff2",
+    "jetbrains-mono-latin-600-normal.woff2",
+    "jetbrains-mono-latin-700-normal.woff2",
+  ],
   "@fontsource-variable/fraunces": ["fraunces-latin-wght-normal.woff2", "fraunces-latin-wght-italic.woff2"],
 };
 let licences = "The fonts in this folder carry the SIL Open Font License, Version 1.1.\n";

@@ -108,6 +108,12 @@ by digest. Three places use it:
 files, count snapshots and the smoke test. `scripts/check.sh --quick` skips the
 end-to-end run.
 
+## Contribute
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) describes the set-up, the workflow, and
+the conventions that keep the languages consistent. Coding agents read
+[`AGENTS.md`](AGENTS.md). The roadmap lives in issue #2.
+
 ## Repository layout
 
 | Path | Holds |

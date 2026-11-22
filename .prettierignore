@@ -1,0 +1,5 @@
+# Prettier formats the TypeScript, JavaScript, CSS, HTML and JSON of the
+# viewer and the end-to-end tests. Go and Rust have their own formatters.
+node_modules/
+dist/
+dist-test/

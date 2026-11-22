@@ -4,8 +4,12 @@ import { inlineHTML, inlinePlain, setTextEnv, sourceURL } from "../src/text";
 
 setTextEnv({
   project: {
-    name: "x", repo: "o/r",
-    links: { line: "https://example.com/{repo}/{commit}/{path}#L{line}", file: "https://example.com/{repo}/{commit}/{path}" },
+    name: "x",
+    repo: "o/r",
+    links: {
+      line: "https://example.com/{repo}/{commit}/{path}#L{line}",
+      file: "https://example.com/{repo}/{commit}/{path}",
+    },
     autolinks: [{ pattern: "(?<![\\w/])#(\\d+)\\b", url: "https://example.com/{repo}/issues/$1" }],
   },
   commit: "abc",
@@ -17,7 +21,10 @@ test("escapes HTML in plain text", () => {
 });
 
 test("renders code spans, emphasis and escapes", () => {
-  assert.equal(inlineHTML("use `x < y` *now* **here** \\*not\\*"), "use <code>x &lt; y</code> <em>now</em> <strong>here</strong> *not*");
+  assert.equal(
+    inlineHTML("use `x < y` *now* **here** \\*not\\*"),
+    "use <code>x &lt; y</code> <em>now</em> <strong>here</strong> *not*",
+  );
 });
 
 test("links to known symbols and drops links to unknown ones", () => {
@@ -26,12 +33,18 @@ test("links to known symbols and drops links to unknown ones", () => {
 });
 
 test("links web addresses and refuses other schemes", () => {
-  assert.match(inlineHTML("[docs](https://example.com/a)"), /^<a href="https:\/\/example.com\/a" target="_blank" rel="noopener">docs<\/a>$/);
+  assert.match(
+    inlineHTML("[docs](https://example.com/a)"),
+    /^<a href="https:\/\/example.com\/a" target="_blank" rel="noopener">docs<\/a>$/,
+  );
   assert.doesNotMatch(inlineHTML("[x](javascript:alert(1))"), /href|<a/);
 });
 
 test("applies autolinks to plain text only", () => {
-  assert.equal(inlineHTML("see #12 and `#13`"), 'see <a href="https://example.com/o/r/issues/12" target="_blank" rel="noopener">#12</a> and <code>#13</code>');
+  assert.equal(
+    inlineHTML("see #12 and `#13`"),
+    'see <a href="https://example.com/o/r/issues/12" target="_blank" rel="noopener">#12</a> and <code>#13</code>',
+  );
 });
 
 test("strips markup for the canvas", () => {

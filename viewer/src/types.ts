@@ -1,7 +1,14 @@
 // Schema v1, as the viewer reads it. docs/schema.md explains every field.
 
-export interface Location { path: string; line: number; endLine?: number }
-export interface Provenance { by: string; at: string }
+export interface Location {
+  path: string;
+  line: number;
+  endLine?: number;
+}
+export interface Provenance {
+  by: string;
+  at: string;
+}
 
 export type Block =
   | { type: "paragraph"; text: string }
@@ -26,9 +33,24 @@ export interface Doc {
   tags?: { name: string; text: string }[];
 }
 
-export interface Param { name?: string; type: string; refs?: string[]; optional?: boolean; rest?: boolean; default?: string }
-export interface Signature { typeParams?: string; params: Param[]; results: Param[]; text?: string }
-export interface TypeText { text: string; refs?: string[] }
+export interface Param {
+  name?: string;
+  type: string;
+  refs?: string[];
+  optional?: boolean;
+  rest?: boolean;
+  default?: string;
+}
+export interface Signature {
+  typeParams?: string;
+  params: Param[];
+  results: Param[];
+  text?: string;
+}
+export interface TypeText {
+  text: string;
+  refs?: string[];
+}
 
 export interface Container {
   id: string;
@@ -63,8 +85,16 @@ export interface Symbol {
   satisfies?: string[];
 }
 
-export type EdgeKind = "calls" | "implements" | "extends" | "field_type" | "param_type" | "return_type" | "imports" | "overrides";
-export interface Edge { from: string; to: string; kind: EdgeKind; confidence: "exact" | "heuristic"; line?: number; count?: number }
+export type EdgeKind =
+  "calls" | "implements" | "extends" | "field_type" | "param_type" | "return_type" | "imports" | "overrides";
+export interface Edge {
+  from: string;
+  to: string;
+  kind: EdgeKind;
+  confidence: "exact" | "heuristic";
+  line?: number;
+  count?: number;
+}
 
 export interface EntryPoint {
   id: string;
@@ -80,7 +110,10 @@ export interface EntryPoint {
   plugin: string;
 }
 
-export interface TestUse { name: string; location: Location }
+export interface TestUse {
+  name: string;
+  location: Location;
+}
 
 export interface Region {
   id: string;
@@ -100,7 +133,12 @@ export type View =
   | { view: "trace"; entryPoint: string }
   | { view: "trace"; symbol: string };
 
-export interface TourStep { title: string; text: string; open: View; drafted?: Provenance }
+export interface TourStep {
+  title: string;
+  text: string;
+  open: View;
+  drafted?: Provenance;
+}
 
 export interface Project {
   name: string;

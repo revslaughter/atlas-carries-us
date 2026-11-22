@@ -4,14 +4,16 @@
 // second cue: a dash pattern, a shape, or a text label.
 
 export const T: Record<string, string> & { light?: boolean } = {};
-let sans = "system-ui, sans-serif", mono = "ui-monospace, monospace";
+let sans = "system-ui, sans-serif",
+  mono = "ui-monospace, monospace";
 
 function cssVar(n: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 }
 
 export function readTheme() {
-  for (const k of ["bg", "surface", "surface-2", "line", "edge", "fg", "muted", "faint", "focus", "link"]) T[k.replace("-2", "2")] = cssVar("--" + k);
+  for (const k of ["bg", "surface", "surface-2", "line", "edge", "fg", "muted", "faint", "focus", "link"])
+    T[k.replace("-2", "2")] = cssVar("--" + k);
   T.light = lum(T.bg) > 0.5;
   sans = cssVar("--sans") || sans;
   mono = cssVar("--mono") || mono;
@@ -49,7 +51,12 @@ export function regionColor(i: number | undefined): string {
   return T.light ? c[1] : c[0];
 }
 
-export interface EdgeStyle { dark: string; light: string; dash: number[]; name: string }
+export interface EdgeStyle {
+  dark: string;
+  light: string;
+  dash: number[];
+  name: string;
+}
 
 /** Line styles. The name reads as a verb: "A calls B". */
 export const EDGE: Record<string, EdgeStyle> = {
