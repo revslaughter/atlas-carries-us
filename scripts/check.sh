@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs every check that CI runs: formatting, lints, unit tests, the golden
-# files, and the end-to-end smoke test on each example.
+# Runs every check that CI runs: pinned versions, formatting, lints, unit
+# tests, the golden files, and the end-to-end smoke test on each example.
 #
 #   scripts/check.sh           everything
 #   scripts/check.sh --quick   everything except the end-to-end run
@@ -24,7 +24,8 @@ export GIT_CONFIG_COUNT=3 \
 
 step() { printf '\n== %s\n' "$*"; }
 
-step "Versions"
+step "Versions: pinned tools agree"
+scripts/check-pins.sh
 go version
 node --version
 cargo --version
@@ -38,8 +39,9 @@ step "Go adapter: format, vet, tests"
   go test ./...
 )
 
-step "Viewer: install, type check, tests, build"
+step "Viewer: install, format, type check, tests, build"
 npm ci --no-audit --no-fund
+npm run format:check
 npm run check -w viewer
 npm test -w viewer
 npm run build -w viewer
