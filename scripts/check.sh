@@ -12,6 +12,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$PWD
 quick=false
+
+# In CI the checkout belongs to another user than the container's. Trust the
+# workspace and the corpus checkouts for this script's git calls only, so
+# acu can read the commit for its source links.
+export GIT_CONFIG_COUNT=3 \
+  GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$root" \
+  GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$root/corpus/go/chi" \
+  GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$root/corpus/go/cobra"
 [[ "${1:-}" == "--quick" ]] && quick=true
 
 step() { printf '\n== %s\n' "$*"; }
@@ -48,8 +56,7 @@ if $quick; then
 fi
 
 step "End to end: each example"
-# The workspace may belong to another user than the container's; tell git so.
-git -c safe.directory="$root" submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra
+git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra
 (cd adapters/go && go install ./cmd/acu-adapter-go)
 mkdir -p out
 for ex in lending chi cobra; do

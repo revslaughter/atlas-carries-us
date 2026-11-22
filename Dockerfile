@@ -100,6 +100,10 @@ LABEL org.opencontainers.image.title="Atlas Carries Us" \
       org.opencontainers.image.licenses="MIT"
 
 COPY --from=build /out/acu /out/acu-adapter-go /usr/local/bin/
+# The image exists to read a repository that you mount into it, which
+# belongs to your user, not the container's. Let git read it, so acu can name
+# the commit in source links.
+RUN git config --system --add safe.directory '*'
 WORKDIR /work
 EXPOSE 4321
 ENTRYPOINT ["acu"]

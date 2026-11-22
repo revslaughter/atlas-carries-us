@@ -108,8 +108,12 @@ func Run(req Request) (*schema.Document, error) {
 		Dir:   root,
 		Tests: true,
 	}
+	// The adapter reads code; it never needs version-control stamps. Without
+	// this flag, go list asks git for the repository's state and fails when
+	// another user owns the checkout (git's "dubious ownership" check).
+	cfg.BuildFlags = []string{"-buildvcs=false"}
 	if len(req.Options.BuildTags) > 0 {
-		cfg.BuildFlags = []string{"-tags", strings.Join(req.Options.BuildTags, ",")}
+		cfg.BuildFlags = append(cfg.BuildFlags, "-tags", strings.Join(req.Options.BuildTags, ","))
 	}
 	patterns := req.Options.Patterns
 	if len(patterns) == 0 {
