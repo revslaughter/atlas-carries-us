@@ -1,0 +1,104 @@
+# Atlas Carries Us config for go-chi/chi v5.5.0 (MIT licence, by Peter Kieltyka
+# and the chi authors). The code sits in the submodule corpus/go/chi:
+#
+#   git submodule update --init --checkout --depth 1 corpus/go/chi
+#   acu extract -c examples/chi/atlas.yaml -o examples/chi/atlas.json
+#   acu serve -d examples/chi/atlas.json
+version: 1
+project:
+  name: chi, an HTTP router for Go
+  repo: go-chi/chi
+  links: github
+  description: |
+    chi routes HTTP requests to handlers. A router (Mux) keeps its routes in a
+    radix tree, runs a stack of middleware before each handler, and stores the
+    URL parameters of each request in a routing Context.
+
+    This map covers chi v5.5.0, by the chi authors under the MIT licence. The
+    examples folder (_examples) and the tests do not appear, except under
+    "Tests that use it".
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: go
+    root: ../../corpus/go/chi
+entryPoints:
+  - plugin: go-chi
+  - plugin: go-nethttp
+regions:
+  - id: router
+    name: Router
+    paths: ["."]
+    description: >-
+      The router itself. Mux stores each route in a radix tree of nodes, matches
+      every request against the tree, and calls the handler with the URL
+      parameters in a routing Context.
+    readingTip: >-
+      Start with the Router interface for the public API. Then read
+      Mux.routeHTTP for the path of one request.
+  - id: middleware
+    name: Middleware
+    paths: ["middleware"]
+    description: >-
+      Ready-made middleware. Each one takes the next http.Handler and returns a
+      new one, so a router can stack them with Use or With.
+    readingTip: >-
+      Most files hold one middleware. Logger, Recoverer and RequestID show the
+      common shape.
+layout:
+  rows:
+    - [router, middleware]
+tour:
+  - title: Two parts
+    open: { view: overview }
+    text: >-
+      chi has two packages. The router package matches requests to handlers.
+      The middleware package holds optional handlers that wrap others. Zoom in,
+      or click a region, to see each package.
+  - title: The public API
+    open: { view: symbol, name: chi.Router }
+    text: >-
+      Router lists every method an application calls. Use and With add
+      middleware. Get, Post and the other verbs add routes. Route, Group and
+      Mount build sub-routers. The left side shows Mux, the one type that
+      implements it.
+  - title: Registering a route
+    open: { view: trace, symbol: Mux.Get }
+    text: >-
+      Get calls handle. handle checks that the pattern starts with "/" and
+      calls InsertRoute on the root node of the tree. An inline router, made by
+      With or Group, first wraps the handler in its own middleware. Each node
+      holds one segment of a pattern: plain text, a {param}, a {param:regexp},
+      or a * wildcard.
+  - title: Serving a request
+    open: { view: symbol, name: Mux.ServeHTTP }
+    text: >-
+      ServeHTTP takes a routing Context from a pool, puts it on the request, and
+      calls mx.handler. updateRouteHandler builds mx.handler from the middleware
+      stack and routeHTTP. The map cannot follow a call through a function
+      value, so the next step opens routeHTTP directly.
+  - title: Finding the handler
+    open: { view: trace, symbol: Mux.routeHTTP }
+    text: >-
+      routeHTTP reads the request method, asks the tree for a match with
+      FindRoute, copies the URL parameters onto the request, and calls the
+      handler. Without a match it answers 405 Method Not Allowed or 404 Not
+      Found.
+  - title: URL parameters
+    open: { view: symbol, name: chi.Context }
+    text: >-
+      Context travels with each request. It holds the matched route patterns
+      and the URL parameters. URLParam reads one parameter back from a request.
+  - title: Sub-routers
+    open: { view: symbol, name: Mux.Mount }
+    text: >-
+      Mount puts any http.Handler under a path. When that handler is another
+      Mux, it inherits the parent's not-found and method-not-allowed handlers.
+      Mount panics when another handler already sits under that path.
+  - title: Middleware
+    open: { view: unit, path: middleware }
+    text: >-
+      Each middleware takes the next handler and returns a new one. The right
+      side shows what the package uses from the router: RouteContext, to read
+      the matched route, and Mux, for small sub-routers such as Profiler.

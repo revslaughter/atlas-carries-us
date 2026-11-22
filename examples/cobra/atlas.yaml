@@ -1,0 +1,108 @@
+# Atlas Carries Us config for spf13/cobra v1.10.2 (Apache 2.0 licence, by the
+# Cobra authors). The code sits in the submodule corpus/go/cobra:
+#
+#   git submodule update --init --checkout --depth 1 corpus/go/cobra
+#   acu extract -c examples/cobra/atlas.yaml -o examples/cobra/atlas.json
+#   acu serve -d examples/cobra/atlas.json
+version: 1
+project:
+  name: Cobra, a command-line library for Go
+  repo: spf13/cobra
+  links: github
+  description: |
+    Cobra builds command-line programs from a tree of commands, as git and
+    kubectl do. Each Command names its usage, its flags and the function that
+    runs it. Cobra parses the arguments, finds the command, runs its hooks, and
+    writes help, usage text and shell completions.
+
+    This map covers Cobra v1.10.2, by the Cobra authors under the Apache 2.0
+    licence. Tests appear only under "Tests that use it".
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: go
+    root: ../../corpus/go/cobra
+entryPoints:
+  - plugin: cobra
+regions:
+  - id: commands
+    name: Commands
+    paths: ["."]
+    description: >-
+      The library. A Command holds its usage, flags, sub-commands and run
+      hooks. Execute parses the arguments, finds the command to run, checks the
+      arguments and flags, and runs the hooks in order. The same package writes
+      help text and shell completion scripts.
+    readingTip: >-
+      Start with the Command type and its ExecuteC method. Files group the
+      features: args.go checks arguments, flag_groups.go checks flags that
+      belong together, and the *_completions.go files write shell scripts.
+  - id: docs
+    name: Documentation generators
+    paths: ["doc"]
+    description: >-
+      Writes documentation for a command tree: man pages, Markdown,
+      reStructuredText and YAML.
+    readingTip: Each format has one file and walks the tree the same way.
+layout:
+  rows:
+    - [commands, docs]
+tour:
+  - title: Two parts
+    open: { view: overview }
+    text: >-
+      Cobra has two packages. The cobra package runs programs. The doc package
+      writes documentation for a program's command tree.
+  - title: A command
+    open: { view: symbol, name: cobra.Command }
+    text: >-
+      A Command is one verb of a program, such as "serve" in "app serve". Use
+      gives its usage line. Run or RunE holds the function that does the work.
+      AddCommand hangs sub-commands under it. Hooks such as PersistentPreRun
+      run before Run.
+  - title: Running a program
+    open: { view: trace, symbol: Command.ExecuteC }
+    text: >-
+      main calls Execute on the root command, and Execute calls ExecuteC.
+      ExecuteC adds the default help and completion commands, finds the target
+      command from the arguments with Find (or Traverse), and calls execute on
+      it.
+  - title: Finding the command
+    open: { view: symbol, name: Command.Find }
+    text: >-
+      Find walks the command tree one word at a time and skips flags. It stops
+      at the first word that names no sub-command, and returns that command
+      with the remaining arguments.
+  - title: Running one command
+    open: { view: trace, symbol: Command.execute }
+    text: >-
+      execute parses the flags, answers --help and --version, validates the
+      arguments, and runs the hooks in order: PersistentPreRun, PreRun, the
+      required-flag and flag-group checks, Run, PostRun and PersistentPostRun.
+      The hooks are function values in the Command, so the trace stops at them.
+  - title: Checking the arguments
+    open: { view: symbol, name: PositionalArgs }
+    text: >-
+      PositionalArgs checks the words after the command. Some ready-made
+      checks, such as ExactArgs, RangeArgs and MinimumNArgs, build one from
+      numbers; the left side lists them. Others, such as NoArgs and
+      ArbitraryArgs, have the same shape and serve as one directly.
+  - title: Flags that belong together
+    open: { view: symbol, name: Command.ValidateFlagGroups }
+    text: >-
+      MarkFlagsMutuallyExclusive, MarkFlagsOneRequired and
+      MarkFlagsRequiredTogether record flag groups as annotations.
+      ValidateFlagGroups checks them after the flags parse.
+  - title: Shell completion
+    open: { view: symbol, name: Command.initCompleteCmd }
+    text: >-
+      Shells ask the program itself for completions. initCompleteCmd adds a
+      hidden __complete command that answers them. The answer ends with a
+      ShellCompDirective, which tells the shell what to do next.
+  - title: Documentation from the tree
+    open: { view: symbol, name: GenMarkdownTree }
+    text: >-
+      GenMarkdownTree hands over to GenMarkdownTreeCustom, which calls itself
+      for each sub-command and then writes one Markdown page for the command.
+      The man, reStructuredText and YAML generators work the same way.

@@ -464,26 +464,48 @@ func (ex *extractor) declarations() {
 		}
 		sort.Strings(ext)
 		pc.ExternalImports = ext
-		pkgDoc := ""
+		// The package doc: a file comment that starts "Package <name>" (or
+		// "Command" for a program). Without one, the comment attached to the
+		// package clause counts, as go doc treats it, with doc.go first.
+		attached := map[*ast.File]string{}
+		pkgDoc, pkgDocFile := "", (*ast.File)(nil)
+		for _, f := range p.Syntax {
+			if f.Doc == nil {
+				continue
+			}
+			t := strings.TrimSpace(f.Doc.Text())
+			if isLicence(t) {
+				continue
+			}
+			attached[f] = t
+			if pkgDoc == "" && isPackageDoc(t, p.Name) {
+				pkgDoc, pkgDocFile = t, f
+			}
+		}
+		if pkgDoc == "" {
+			for _, f := range p.Syntax {
+				t, ok := attached[f]
+				if !ok {
+					continue
+				}
+				if pkgDocFile == nil || filepath.Base(p.Fset.Position(f.Pos()).Filename) == "doc.go" {
+					pkgDoc, pkgDocFile = t, f
+				}
+			}
+		}
 		for _, f := range p.Syntax {
 			rel, _ := ex.rel(p.Fset, f.Pos())
 			fd := ""
-			if f.Doc != nil {
-				fd = strings.TrimSpace(f.Doc.Text())
-				if pkgDoc == "" && isPackageDoc(fd, p.Name) {
-					pkgDoc = fd
-				}
+			if f != pkgDocFile {
+				fd = attached[f]
 			}
-			// A comment above the package clause that is not the package doc
-			// still describes the file.
-			if fd == "" && len(f.Comments) > 0 && f.Comments[0].End() < f.Package {
+			// A comment above the package clause, apart from it, still
+			// describes the file, unless it holds a licence or a build line.
+			if fd == "" && f != pkgDocFile && len(f.Comments) > 0 && f.Comments[0].End() < f.Package && f.Comments[0] != f.Doc {
 				fd = strings.TrimSpace(f.Comments[0].Text())
-				if strings.HasPrefix(fd, "go:build") || strings.HasPrefix(fd, "+build") || strings.HasPrefix(fd, "Code generated") {
+				if strings.HasPrefix(fd, "go:build") || strings.HasPrefix(fd, "+build") || strings.HasPrefix(fd, "Code generated") || isLicence(fd) {
 					fd = ""
 				}
-			}
-			if isPackageDoc(fd, p.Name) {
-				fd = ""
 			}
 			fc := ex.addCont(&schema.Container{ID: fileID(rel), Kind: "file", LanguageKind: "file",
 				Name: filepath.Base(rel), Path: rel, Parent: pc.ID, Language: "go"})
@@ -492,6 +514,13 @@ func (ex *extractor) declarations() {
 		}
 		ex.queueDoc(pkgDoc, p.PkgPath, func(d *schema.Doc) { pc.Doc = d })
 	}
+}
+
+// isLicence reports whether a comment holds a licence header, which
+// documents no code.
+func isLicence(text string) bool {
+	return strings.HasPrefix(text, "Copyright") || strings.HasPrefix(text, "SPDX-License-Identifier") ||
+		strings.Contains(text, "Licensed under") || strings.Contains(text, "license that can be found in the LICENSE file")
 }
 
 // isPackageDoc reports whether a file comment documents the package. Go

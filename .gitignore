@@ -2,6 +2,7 @@
 /target/
 node_modules/
 dist/
+dist-test/
 /out/
 /site/
 *.tsbuildinfo
