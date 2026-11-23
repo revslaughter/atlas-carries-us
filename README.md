@@ -41,6 +41,21 @@ docker build -t acu .
 docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.0.0:4321
 ```
 
+To get the programs themselves on your machine, build the `export` stage. It
+writes them to `out/docker`:
+
+```sh
+docker build --target export --output type=local,dest=out/docker .
+```
+
+The folder then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
+`acu-adapter-typescript/`. These programs target Linux on the build machine's
+architecture, and they need the same tools at run time as the image holds: Go
+for the Go adapter, Node for the TypeScript adapter, and the pinned nightly
+for the Rust adapter. On macOS or Windows they do not run outside a
+container. There, build from source as the next steps show
+(`npm run build -w viewer && cargo build --release --workspace`).
+
 To build from source instead, you need Go 1.24 or later, Node 20 or later,
 and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
 `.node-version` and `rust-toolchain.toml`. The Rust adapter also needs its

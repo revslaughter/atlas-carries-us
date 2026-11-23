@@ -43,6 +43,21 @@ Choose one:
 Behind Docker Hub's pull limit, add `--build-arg REGISTRY=mirror.gcr.io`.
 Behind a TLS-inspecting proxy, see the comment at the top of the `Dockerfile`.
 
+To write `acu` and its adapters to a folder on your machine without
+installing the tools, build the `export` stage:
+
+```sh
+docker build --target export --output type=local,dest=out/docker .
+```
+
+`out/docker` then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
+`acu-adapter-typescript/`. These programs target Linux on the build machine's
+architecture. The adapters still need Go, Node and the pinned nightly at run
+time. On macOS or Windows, run `acu` from a native build instead:
+`npm run build -w viewer && cargo build --release --workspace`. A plain
+`docker build -t acu .` still builds the runtime image; `export` never
+becomes the default target.
+
 ## 2. From idea to merge
 
 1. **Find or open an issue.** The roadmap in issue #2 lists the phases and

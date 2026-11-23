@@ -7,7 +7,9 @@
 #              devcontainer and CI use it; scripts/check.sh runs every check
 #              inside it.
 #   build      Builds the viewer, acu and the Go, TypeScript and Rust
-#              adapters.
+#              adapters into /out.
+#   export     The contents of /out alone, for `--output`: it writes the
+#              Linux binaries to a folder on the host.
 #   rust-nightly  The pinned nightly alone, for the runtime image.
 #   runtime    acu and the three adapters, plus the Go toolchain that the Go
 #              adapter needs to load packages, the Node runtime that runs the
@@ -20,6 +22,8 @@
 #
 #   docker build -t acu .
 #   docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve --addr 0.0.0.0:4321
+#
+#   docker build --target export --output type=local,dest=out/docker .
 #
 # Each base image names its version in the tag and its exact content in the
 # digest. To move to a new version, change both; the image's page on Docker
@@ -116,6 +120,14 @@ RUN npm run build -w adapters/typescript \
  && cp -r adapters/typescript/dist/src /out/acu-adapter-typescript/dist/src \
  && cp -r /deps/node_modules /out/acu-adapter-typescript/node_modules \
  && chmod +x /out/acu-adapter-typescript/dist/src/main.js
+
+# ---------------------------------------------------------------------------
+# The build output alone, with no base image. Use it with --output to write
+# acu, acu-adapter-go, acu-adapter-rust and acu-adapter-typescript/ to a
+# folder on the host. They target Linux. Keep runtime the last stage, so that
+# a build without --target still makes the runtime image.
+FROM scratch AS export
+COPY --from=build /out /
 
 # ---------------------------------------------------------------------------
 # The pinned nightly alone: the runtime image copies this stage's rustup and
