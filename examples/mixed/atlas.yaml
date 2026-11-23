@@ -1,0 +1,116 @@
+# Config for the two invented fixtures together: the Go lending service and
+# its TypeScript web side. One atlas.json holds both languages, and the viewer
+# draws it as it draws one.
+version: 1
+project:
+  name: Lending library in Go and TypeScript (fixtures)
+  repo: revslaughter/atlas-carries-us
+  links: github
+  description: |
+    Two invented fixtures in one map. The Go service keeps the books, the
+    members and the loans. The TypeScript web side serves readers through a
+    Hono app and staff through an Express server, and both talk to the Go
+    service through one typed client.
+
+    The two halves talk over HTTP, so no line joins them on the map.
+languages:
+  - adapter: go
+    root: ../../adapters/go/testdata/fixture
+    exclude: ["**/features/**"]
+  - adapter: typescript
+    root: ../../adapters/typescript/testdata/fixture
+    exclude: ["**/generated/**"]
+entryPoints:
+  - plugin: go-chi
+    options:
+      prefixes:
+        - { inFunc: Routes, prefix: /api }
+    notes:
+      - pathPrefix: /api
+        title: Before the handler runs
+        text: In the Go service, NewMux strips the /api prefix and hands the request to the chi router.
+  - plugin: go-nethttp
+  - plugin: cobra
+  - plugin: express
+    options:
+      prefixes:
+        - { inFunc: routes, prefix: /reports }
+  - plugin: hono
+regions:
+  - id: readers
+    name: Readers' web app
+    paths: ["src/web", "src/ui"]
+    description: The Hono app and the pages that readers use. Each route asks the shared client.
+    readingTip: Start with app.ts; it mounts the book routes and the loan routes.
+  - id: staff
+    name: Staff server
+    paths: ["src/admin"]
+    description: The Express server for staff. It mounts the admin router under /admin.
+  - id: client
+    name: Client for the Go API
+    paths: ["src/client"]
+    description: One interface, LendingApi, and the classes that speak HTTP to the Go service.
+  - id: words
+    name: Shared words (TypeScript)
+    paths: ["src", "src/domain"]
+    description: The types that mirror the Go service's JSON, and the loan rule.
+  - id: entry
+    name: Start-up (Go)
+    paths: ["cmd/**"]
+    description: The lendd command. It reads its flags, opens a store and serves the API.
+  - id: http
+    name: HTTP API (Go)
+    paths: ["internal/httpapi"]
+    description: Handlers turn requests into service calls and results into JSON.
+  - id: rules
+    name: Lending rules (Go)
+    paths: ["internal/service"]
+    description: The service checks each request and calls storage in order.
+  - id: domain
+    name: Shared vocabulary (Go)
+    paths: ["internal/domain"]
+    description: Books, members, loans and the errors that every layer returns.
+  - id: storage
+    name: Storage (Go)
+    paths: ["internal/store", "internal/store/**"]
+    description: One storage contract and two stores that implement it.
+layout:
+  rows:
+    - [readers, staff]
+    - [client, words]
+    - [entry, http]
+    - [rules, domain]
+    - [storage]
+tour:
+  - title: Two languages, one map
+    open: { view: overview }
+    text: >-
+      The TypeScript web side sits at the top and the Go service below it.
+      No line joins the two halves, because they talk over HTTP.
+  - title: A reader asks for a book
+    open: { view: trace, entryPoint: "GET /books/:id" }
+    text: >-
+      The Hono route asks the shared CachingClient for the book.
+      CachingClient.getBook answers from its cache, or calls
+      HttpClient.getBook, which sends the request to the Go service.
+  - title: The contract with the service
+    open: { view: symbol, name: client.LendingApi }
+    text: >-
+      LendingApi lists what the web side asks of the service. HttpClient
+      implements it, and CachingClient extends HttpClient.
+  - title: The same book, on the Go side
+    open: { view: trace, entryPoint: "GET /api/books/{id}" }
+    text: >-
+      The chi handler getBook asks the service through the Lender interface,
+      and the service reads through the Store interface.
+  - title: The loan limit, twice
+    open: { view: symbol, name: mayBorrow }
+    text: >-
+      The web side checks the loan limit before it asks the service.
+      MAX_LOANS matches MaxLoans in the Go service, but no code ties the two
+      values together, so a change to one needs a change to the other.
+  - title: The staff server
+    open: { view: unit, path: src/admin }
+    text: >-
+      The Express server mounts the admin router under /admin. The report
+      routes sit under /reports, which this config sets with a prefix rule.

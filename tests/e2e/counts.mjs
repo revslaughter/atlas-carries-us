@@ -7,8 +7,12 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const [data, snap] = process.argv.slice(2);
 const d = JSON.parse(readFileSync(data, "utf8"));
+// The tally starts from an object without a prototype, so a kind named
+// "constructor" counts like any other.
 const kinds = (list, key) =>
-  Object.fromEntries(Object.entries(list.reduce((m, x) => ((m[x[key]] = (m[x[key]] ?? 0) + 1), m), {})).sort());
+  Object.fromEntries(
+    Object.entries(list.reduce((m, x) => ((m[x[key]] = (m[x[key]] ?? 0) + 1), m), Object.create(null))).sort(),
+  );
 const got = {
   containers: kinds(d.containers, "kind"),
   symbols: kinds(d.symbols, "kind"),
