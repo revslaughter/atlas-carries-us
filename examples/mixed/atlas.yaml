@@ -4,6 +4,7 @@
 version: 1
 project:
   name: Lending library in Go and TypeScript (fixtures)
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
   repo: revslaughter/atlas-carries-us
   links: github
   description: |
@@ -39,39 +40,48 @@ entryPoints:
 regions:
   - id: readers
     name: Readers' web app
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src/web", "src/ui"]
     description: The Hono app and the pages that readers use. Each route asks the shared client.
     readingTip: Start with app.ts; it mounts the book routes and the loan routes.
   - id: staff
     name: Staff server
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src/admin"]
     description: The Express server for staff. It mounts the admin router under /admin.
   - id: client
     name: Client for the Go API
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src/client"]
     description: One interface, LendingApi, and the classes that speak HTTP to the Go service.
   - id: words
     name: Shared words (TypeScript)
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src", "src/domain"]
     description: The types that mirror the Go service's JSON, and the loan rule.
   - id: entry
     name: Start-up (Go)
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["cmd/**"]
     description: The lendd command. It reads its flags, opens a store and serves the API.
   - id: http
     name: HTTP API (Go)
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["internal/httpapi"]
     description: Handlers turn requests into service calls and results into JSON.
   - id: rules
     name: Lending rules (Go)
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["internal/service"]
     description: The service checks each request and calls storage in order.
   - id: domain
     name: Shared vocabulary (Go)
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["internal/domain"]
     description: Books, members, loans and the errors that every layer returns.
   - id: storage
     name: Storage (Go)
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["internal/store", "internal/store/**"]
     description: One storage contract and two stores that implement it.
 layout:
@@ -83,33 +93,39 @@ layout:
     - [storage]
 tour:
   - title: Two languages, one map
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: overview }
     text: >-
       The TypeScript web side sits at the top and the Go service below it.
       No line joins the two halves, because they talk over HTTP.
   - title: A reader asks for a book
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: trace, entryPoint: "GET /books/:id" }
     text: >-
       The Hono route asks the shared CachingClient for the book.
       CachingClient.getBook answers from its cache, or calls
       HttpClient.getBook, which sends the request to the Go service.
   - title: The contract with the service
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: symbol, name: client.LendingApi }
     text: >-
       LendingApi lists what the web side asks of the service. HttpClient
       implements it, and CachingClient extends HttpClient.
   - title: The same book, on the Go side
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: trace, entryPoint: "GET /api/books/{id}" }
     text: >-
       The chi handler getBook asks the service through the Lender interface,
       and the service reads through the Store interface.
   - title: The loan limit, twice
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: symbol, name: mayBorrow }
     text: >-
       The web side checks the loan limit before it asks the service.
       MAX_LOANS matches MaxLoans in the Go service, but no code ties the two
       values together, so a change to one needs a change to the other.
   - title: The staff server
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: unit, path: src/admin }
     text: >-
       The Express server mounts the admin router under /admin. The report

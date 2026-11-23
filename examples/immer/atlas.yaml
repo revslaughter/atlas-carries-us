@@ -8,6 +8,7 @@
 version: 1
 project:
   name: Immer, immutable state by mutation
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
   repo: immerjs/immer
   links: github
   description: |
@@ -28,6 +29,7 @@ languages:
 regions:
   - id: api
     name: Public API
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src"]
     description: >-
       The functions that applications import. immer.ts makes one Immer
@@ -36,6 +38,7 @@ regions:
     readingTip: Start with produce; most other exports follow from it.
   - id: core
     name: Drafting core
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src/core"]
     description: >-
       The Immer class, the proxies that record changes to a draft, the scope
@@ -44,18 +47,21 @@ regions:
     readingTip: Read Immer.produce first, then createProxyProxy, then processResult.
   - id: plugins
     name: Plugins
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src/plugins"]
     description: >-
       Optional features: patches, Map and Set drafts, and array methods. An
       application switches each one on with its enable function.
   - id: utils
     name: Utilities
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src/utils"]
     description: >-
       Small helpers that every part uses: type checks, shallow copies,
       freezing, error messages, and the plugin registry.
   - id: types
     name: Types
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     paths: ["src/types"]
     description: The public types, such as Draft and Patch, and the internal draft states.
 layout:
@@ -65,17 +71,20 @@ layout:
     - [utils, types]
 tour:
   - title: Five parts
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: overview }
     text: >-
       Immer has a public API, a drafting core, three optional plugins, shared
       utilities and types. Every module imports through src/internal.ts, so
       most import lines on the overview point at the public API's folder.
   - title: The function that applications call
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: symbol, name: src.produce }
     text: >-
       produce holds the produce method of one shared Immer instance, which
       immer.ts makes when it loads. The real work happens in Immer.produce.
   - title: One produce call
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: trace, symbol: Immer.produce }
     text: >-
       produce checks its arguments, opens a scope with enterScope, and wraps
@@ -83,6 +92,7 @@ tour:
       draft, then hands the result to processResult. The map cannot follow the
       call to the recipe, because the recipe arrives as a function value.
   - title: The draft
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: symbol, name: createProxyProxy }
     text: >-
       createProxyProxy builds the draft: a revocable Proxy whose target holds
@@ -90,6 +100,7 @@ tour:
       the first write, the set trap copies the base with prepareCopy and marks
       the draft and its parents as changed with markChanged.
   - title: From draft to next state
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: trace, symbol: processResult }
     text: >-
       When the recipe returns nothing or the draft itself, processResult calls
@@ -97,6 +108,7 @@ tour:
       each unchanged one. Then it freezes the result, revokes the scope, and
       passes any patches to the listener.
   - title: Plugins
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
     open: { view: unit, path: src/plugins }
     text: >-
       Patches, Map and Set drafts, and array methods stay out of the core
