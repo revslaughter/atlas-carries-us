@@ -45,3 +45,21 @@ test("interfaces list their implementations", () => {
 test("tests roll up from members to items", () => {
   assert.ok((M.tests.get(p + "internal/service#Lending") ?? []).some(t => t.name === "TestBorrow"));
 });
+
+test("a map of two languages names its units by both words", () => {
+  const ts = JSON.parse(
+    readFileSync(new URL("../../adapters/typescript/testdata/golden/fixture.json", import.meta.url), "utf8"),
+  );
+  const both = new Model({
+    ...doc,
+    containers: [...doc.containers, ...ts.containers],
+    symbols: [...doc.symbols, ...ts.symbols],
+    edges: [...doc.edges, ...ts.edges],
+  });
+  assert.equal(M.anyUnit(), "package");
+  assert.equal(M.allUnits(), "packages");
+  assert.equal(both.anyUnit(), "package or folder");
+  assert.equal(both.allUnits(), "packages and folders");
+  assert.equal(both.wordOf("ts:dir:lending-web/src/client"), "folder");
+  assert.equal(both.allUnits(["ts:dir:lending-web/src/client"]), "folders");
+});
