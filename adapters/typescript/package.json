@@ -1,0 +1,30 @@
+{
+  "name": "@atlas-carries-us/adapter-typescript",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Atlas Carries Us adapter for TypeScript: reads a project with the TypeScript compiler API and writes the data format.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "acu-adapter-typescript": "dist/src/main.js"
+  },
+  "files": [
+    "dist/src"
+  ],
+  "scripts": {
+    "build": "tsc -p .",
+    "check": "tsc --noEmit -p .",
+    "test": "tsc -p . && node --test \"dist/test/*.test.js\"",
+    "golden": "tsc -p . && ACU_UPDATE_GOLDEN=1 node --test dist/test/extract.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "typescript": "6.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.1",
+    "ajv": "8.20.0"
+  }
+}

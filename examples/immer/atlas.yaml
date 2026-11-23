@@ -1,0 +1,117 @@
+# Atlas Carries Us config for immerjs/immer v11.2.9 (MIT licence, by Michel
+# Weststrate and the Immer contributors). The code sits in the submodule
+# corpus/typescript/immer:
+#
+#   git submodule update --init --checkout --depth 1 corpus/typescript/immer
+#   acu extract -c examples/immer/atlas.yaml -o examples/immer/atlas.json
+#   acu serve -d examples/immer/atlas.json
+version: 1
+project:
+  name: Immer, immutable state by mutation
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+  repo: immerjs/immer
+  links: github
+  description: |
+    Immer makes the next immutable state from the current one. A recipe
+    function changes a draft as if the draft were a plain object, and Immer
+    turns those changes into a new state that shares every unchanged part with
+    the old one.
+
+    This map covers Immer v11.2.9, by the Immer contributors under the MIT
+    licence. The tests in __tests__ do not appear, except under "Tests that
+    use it".
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: typescript
+    root: ../../corpus/typescript/immer
+regions:
+  - id: api
+    name: Public API
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src"]
+    description: >-
+      The functions that applications import. immer.ts makes one Immer
+      instance and exports its methods. internal.ts gathers every module, and
+      the other files import through it.
+    readingTip: Start with produce; most other exports follow from it.
+  - id: core
+    name: Drafting core
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/core"]
+    description: >-
+      The Immer class, the proxies that record changes to a draft, the scope
+      of one produce call, and the code that turns a finished draft into the
+      next state.
+    readingTip: Read Immer.produce first, then createProxyProxy, then processResult.
+  - id: plugins
+    name: Plugins
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/plugins"]
+    description: >-
+      Optional features: patches, Map and Set drafts, and array methods. An
+      application switches each one on with its enable function.
+  - id: utils
+    name: Utilities
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/utils"]
+    description: >-
+      Small helpers that every part uses: type checks, shallow copies,
+      freezing, error messages, and the plugin registry.
+  - id: types
+    name: Types
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/types"]
+    description: The public types, such as Draft and Patch, and the internal draft states.
+layout:
+  rows:
+    - [api]
+    - [core, plugins]
+    - [utils, types]
+tour:
+  - title: Five parts
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: overview }
+    text: >-
+      Immer has a public API, a drafting core, three optional plugins, shared
+      utilities and types. Every module imports through src/internal.ts, so
+      most import lines on the overview point at the public API's folder.
+  - title: The function that applications call
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: symbol, name: src.produce }
+    text: >-
+      produce holds the produce method of one shared Immer instance, which
+      immer.ts makes when it loads. The real work happens in Immer.produce.
+  - title: One produce call
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: trace, symbol: Immer.produce }
+    text: >-
+      produce checks its arguments, opens a scope with enterScope, and wraps
+      the base state in a draft with createProxy. It runs the recipe on the
+      draft, then hands the result to processResult. The map cannot follow the
+      call to the recipe, because the recipe arrives as a function value.
+  - title: The draft
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: symbol, name: createProxyProxy }
+    text: >-
+      createProxyProxy builds the draft: a revocable Proxy whose target holds
+      the draft's state. Objects use objectTraps and arrays use arrayTraps. On
+      the first write, the set trap copies the base with prepareCopy and marks
+      the draft and its parents as changed with markChanged.
+  - title: From draft to next state
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: trace, symbol: processResult }
+    text: >-
+      When the recipe returns nothing or the draft itself, processResult calls
+      finalize, which returns the copy of each changed draft and the base of
+      each unchanged one. Then it freezes the result, revokes the scope, and
+      passes any patches to the listener.
+  - title: Plugins
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: unit, path: src/plugins }
+    text: >-
+      Patches, Map and Set drafts, and array methods stay out of the core
+      until an application asks for them. enablePatches, enableMapSet and
+      enableArrayMethods each call loadPlugin, and the core finds the plugin
+      again with getPlugin.

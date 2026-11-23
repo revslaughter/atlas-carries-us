@@ -8,3 +8,13 @@
 	url = https://github.com/spf13/cobra
 	shallow = true
 	update = none
+[submodule "corpus/typescript/immer"]
+	path = corpus/typescript/immer
+	url = https://github.com/immerjs/immer
+	shallow = true
+	update = none
+[submodule "corpus/typescript/hono"]
+	path = corpus/typescript/hono
+	url = https://github.com/honojs/hono
+	shallow = true
+	update = none

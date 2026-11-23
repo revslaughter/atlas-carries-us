@@ -54,8 +54,10 @@ jobs:
             type=gha,scope=toolchain
             type=gha,scope=runtime
           cache-to: type=gha,scope=runtime,mode=max
-      - name: Map the fixture with the image
+      - name: Map the fixtures with the image
         run: |
           docker run --rm acu:ci --version
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending/atlas.yaml -o out/lending.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending.json
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/mixed/atlas.yaml -o out/mixed.json
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/mixed.json

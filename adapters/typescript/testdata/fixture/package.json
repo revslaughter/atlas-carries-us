@@ -1,0 +1,5 @@
+{
+  "name": "lending-web",
+  "private": true,
+  "description": "An invented project: the web side of the lending library in the Go adapter's fixture."
+}

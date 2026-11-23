@@ -1,0 +1,138 @@
+# Atlas Carries Us config for honojs/hono v4.13.17 (MIT licence, by Yusuke
+# Wada and the Hono contributors). The code sits in the submodule
+# corpus/typescript/hono:
+#
+#   git submodule update --init --checkout --depth 1 corpus/typescript/hono
+#   acu extract -c examples/hono/atlas.yaml -o examples/hono/atlas.json
+#   acu serve -d examples/hono/atlas.json
+version: 1
+project:
+  name: Hono, a web framework on web standards
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+  repo: honojs/hono
+  links: github
+  description: |
+    Hono routes HTTP requests to handlers on any runtime that speaks the web
+    standard Request and Response: Cloudflare Workers, Deno, Bun, Node.js and
+    more. An app keeps its routes in a router, runs middleware around each
+    handler, and gives each request a Context.
+
+    This map covers Hono v4.13.17, by Yusuke Wada and the Hono contributors
+    under the MIT licence. Tests appear only under "Tests that use it". Hono's
+    own source registers no routes, so the map holds no entry points.
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: typescript
+    root: ../../corpus/typescript/hono
+    options:
+      tsconfig: tsconfig.build.json
+entryPoints:
+  - plugin: hono
+regions:
+  - id: core
+    name: Application core
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src", "src/request", "src/preset"]
+    description: >-
+      The Hono class, the Context of each request, compose for middleware,
+      the Router contract, and the public types.
+    readingTip: Start with Hono, then follow fetch to see one request.
+  - id: routers
+    name: Routers
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/router", "src/router/**"]
+    description: >-
+      Six routers implement one contract. SmartRouter picks the fastest one
+      that accepts every route of the app.
+  - id: middleware
+    name: Middleware
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/middleware/**"]
+    description: >-
+      Ready-made middleware, one per folder. Each exports a function that
+      returns a handler.
+  - id: helpers
+    name: Helpers
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/helper/**"]
+    description: Functions for cookies, streaming, static sites, WebSockets and other common jobs.
+  - id: jsx
+    name: JSX
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/jsx", "src/jsx/**"]
+    description: Hono's own JSX, for HTML on the server and a small DOM renderer for the browser.
+  - id: client
+    name: Typed client and validation
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/client", "src/validator"]
+    description: The client that reads an app's types to call its routes, and the validator that checks input.
+  - id: adapters
+    name: Runtime adapters
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/adapter/**"]
+    description: Glue for each runtime, such as AWS Lambda, Bun and Cloudflare Pages.
+  - id: utils
+    name: Utilities
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    paths: ["src/utils", "src/utils/**"]
+    description: Shared helpers for URLs, bodies, cookies, encodings and JSON Web Tokens.
+layout:
+  rows:
+    - [core, routers]
+    - [middleware, helpers]
+    - [jsx, client]
+    - [adapters, utils]
+tour:
+  - title: Eight parts
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: overview }
+    text: >-
+      The application core sits at the top, beside the routers. Middleware,
+      helpers, JSX and the typed client build on the core. Runtime adapters
+      and shared utilities sit at the bottom.
+  - title: The class that applications create
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: symbol, id: "ts:hono/src/hono#Hono" }
+    text: >-
+      Hono extends the base class in hono-base.ts, which the code exports as
+      HonoBase. Its constructor picks the router: a SmartRouter that holds a
+      RegExpRouter and a TrieRouter.
+  - title: One request
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: trace, symbol: "ts:hono/src/hono-base#Hono.fetch" }
+    text: >-
+      fetch calls dispatch. dispatch asks the router to match the method and
+      the path, and makes a Context. With one matched handler, it calls that
+      handler itself; with more, it runs them through compose. The map cannot
+      follow the call into a handler, because handlers arrive as function
+      values.
+  - title: The router contract
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: symbol, id: "ts:hono/src/router#Router" }
+    text: >-
+      add stores a route, and match finds the handlers for a method and a
+      path. Six classes implement Router. On the first request, SmartRouter
+      gives every route to each of its routers in turn and keeps the first
+      router that accepts them all.
+  - title: Middleware in order
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: symbol, id: "ts:hono/src/compose#compose" }
+    text: >-
+      compose runs the middleware and the handler in order. Each one receives
+      a next function, and a call to next runs the one after it. An error goes
+      to the app's error handler when the app has one.
+  - title: The context of a request
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: symbol, id: "ts:hono/src/context#Context" }
+    text: >-
+      Context travels with one request. Handlers read the request through
+      c.req and answer with c.json, c.text or c.html.
+  - title: One middleware
+    drafted: { by: Claude Code, at: "2026-11-23T00:40:00Z" }
+    open: { view: unit, path: src/middleware/cors }
+    text: >-
+      cors returns a handler that sets the CORS headers. For a preflight
+      request (OPTIONS), the handler answers at once with status 204;
+      otherwise it calls next.

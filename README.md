@@ -17,22 +17,23 @@ computer.
 
 ## Status
 
-Phase 1 of 4 works today:
+Phases 1 and 2 of 4 work today:
 
 | Part | State |
 | --- | --- |
 | Data format, version 1 | Done: [`schema/atlas.schema.json`](schema/atlas.schema.json), spec in [`docs/schema.md`](docs/schema.md). |
 | Go adapter | Done: [`adapters/go`](adapters/go). |
+| TypeScript adapter | Done: [`adapters/typescript`](adapters/typescript), with Express and Hono routes. One map may hold Go and TypeScript together. |
 | `acu` command (Rust) | `extract`, `build`, `serve` and `check` work. |
 | Viewer | Done: [`viewer`](viewer). |
-| TypeScript adapter | Next (phase 2). |
-| Rust adapter | After TypeScript. |
+| Svelte and SvelteKit | Next (phase 3), on the TypeScript adapter. |
+| Rust adapter | Phase 4. |
 | MCP server in `acu serve` | Planned: lets a language model of your choice read the map, draft regions and tours, and answer questions. |
 
 ## Try it
 
-The quickest way builds the container image. It holds `acu`,
-the Go adapter and the Go toolchain:
+The quickest way builds the container image. It holds `acu`, both adapters,
+the Go toolchain and Node:
 
 ```sh
 docker build -t acu .
@@ -50,14 +51,16 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
    npm run build -w viewer
    ```
 
-2. Build the command and install the Go adapter:
+2. Build the command and the adapters. `acu` runs the TypeScript adapter
+   from its build in this checkout:
 
    ```sh
    cargo build --release
    (cd adapters/go && go install ./cmd/acu-adapter-go)
+   npm run build -w adapters/typescript
    ```
 
-3. Fetch a public example (chi or cobra) and look at it:
+3. Fetch a public example (chi, cobra, immer or hono) and look at it:
 
    ```sh
    git submodule update --init --checkout --depth 1 corpus/go/chi
@@ -74,14 +77,14 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
    version: 1
    project: { name: My service, repo: me/my-service }
    languages:
-     - adapter: go
+     - adapter: go # or typescript
    ```
 
 2. Run `acu extract` to write `atlas.json`, then `acu build` to write a static
    site to `site/`, or `acu serve` to look at it locally.
 3. Add regions (groups of packages, named by their job), entry-point plugins
    (HTTP routes, CLI commands) and a tour. [`docs/config.md`](docs/config.md)
-   lists every field, and [`examples/`](examples) holds three full configs.
+   lists every field, and [`examples/`](examples) holds six full configs.
 
 `acu check` reports problems, such as a tour step that points at code that no
 longer exists, without writing anything.
@@ -93,8 +96,8 @@ pins Go, Node, Rust and the Chromium that the smoke test uses, each base image
 by digest. Three places use it:
 
 1. **VS Code.** Open the folder and choose "Reopen in Container". The
-   devcontainer installs the dependencies, fetches the test corpus and
-   installs the Go adapter.
+   devcontainer installs the dependencies, fetches the test corpus, installs
+   the Go adapter and builds the TypeScript adapter.
 2. **The command line.**
 
    ```sh
@@ -120,9 +123,10 @@ the conventions that keep the languages consistent. Coding agents read
 | --- | --- |
 | `schema/` | The data format and the config format, as JSON Schema. |
 | `adapters/go/` | The Go adapter: reads a module with the Go type checker. |
+| `adapters/typescript/` | The TypeScript adapter: reads a project with the TypeScript compiler API. |
 | `cli/` | `acu`, the command (Rust). It embeds the built viewer. |
 | `viewer/` | The viewer: TypeScript, one canvas plus a docs panel, no framework. |
-| `examples/` | Configs for the test fixture and for the public corpus. |
+| `examples/` | Configs for the test fixtures and for the public corpus. |
 | `corpus/` | Public projects pinned as shallow submodules, for testing. A plain clone leaves them out. |
 | `tests/e2e/` | The smoke test: opens every view in Chromium and fails on console errors. |
 | `Dockerfile`, `.devcontainer/` | The pinned toolchain, the release image and the VS Code devcontainer. |
@@ -151,4 +155,4 @@ The design follows research on how developers read code
 Atlas Carries Us carries the MIT licence. The viewer ships the Inter, Fraunces
 and JetBrains Mono fonts under the SIL Open Font License 1.1. The Ahro mark
 belongs to Ahro. The projects under `corpus/` keep their own licences: chi
-(MIT) and Cobra (Apache 2.0).
+(MIT), Cobra (Apache 2.0), Immer (MIT) and Hono (MIT).

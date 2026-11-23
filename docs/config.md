@@ -58,12 +58,32 @@ languages:
     exclude: ["**/features/**"] # package folders to leave out
     options:
       buildTags: [grafeo]       # Go: build tags
+  - adapter: typescript
+    root: ../web
+    exclude: ["**/generated/**"] # folders to leave out
+    tests: ["**/*.test.ts"]      # files that hold tests (default below)
+    options:
+      tsconfig: tsconfig.build.json # TypeScript: the tsconfig to read
 ```
+
+1. `include` and `exclude` match folders: a Go package's folder, or a
+   TypeScript folder that holds source files.
+2. `tests` matters to the TypeScript adapter only. Its default,
+   `["**/*.test.*", "**/*.spec.*", "**/__tests__/**"]`, covers Vitest and
+   Jest. Test files never appear on the map; they fill "Tests that use it".
+3. `options.tsconfig` names the TypeScript project file, relative to `root`.
+   It defaults to `tsconfig.json`. A tsconfig that only lists `references`
+   reads every project it references.
+4. One config may hold several languages. `acu` merges their output into one
+   map; [`examples/mixed`](../examples/mixed) holds Go and TypeScript
+   together.
 
 `acu` finds the program for each adapter in this order: `command` (a list:
 program, then arguments), the variable `ACU_ADAPTER_<NAME>`, a program called
 `acu-adapter-<name>` on the `PATH`, and, inside this repository, the adapter's
-source. [`adapters.md`](adapters.md) describes the protocol.
+source. For TypeScript, the source needs a build first:
+`npm run build -w adapters/typescript`. [`adapters.md`](adapters.md) describes
+the protocol.
 
 ## entryPoints
 
@@ -81,7 +101,7 @@ entryPoints:
   - plugin: cobra
 ```
 
-The Go adapter offers three plugins:
+The Go adapter offers three plugins, and the TypeScript adapter two:
 
 1. `go-chi` finds `r.Get("/x", h)`, the other verbs, `Method`, `Handle` and
    `HandleFunc`, and follows `r.Route("/prefix", func(r chi.Router) { … })`.
@@ -90,6 +110,14 @@ The Go adapter offers three plugins:
    run time.
 2. `go-nethttp` finds `mux.HandleFunc("GET /x", h)` and `http.Handle("/x", h)`.
 3. `cobra` finds `&cobra.Command{Use: "serve", RunE: run}`.
+4. `express` finds `app.get("/x", h)` and the other verbs,
+   `app.route("/x").get(h)`, and follows `app.use("/prefix", router)` across
+   files.
+5. `hono` finds `app.get("/x", h)` and the other verbs, `app.on(method, path,
+   h)`, and follows `app.route("/prefix", sub)` and `basePath("/api")`.
+
+Every route plugin takes `prefixes` for a mount that happens at run time: the
+routes that the function `inFunc` registers gain `prefix`.
 
 `notes` show beside every entry point whose path starts with `pathPrefix`.
 
@@ -109,9 +137,11 @@ regions:
 ```
 
 1. Name regions by job, not by folder. Readers navigate by these names.
-2. `paths` match unit paths (a Go package's folder), relative to the
-   repository root or to the language's `root`. A unit joins the first region
-   that matches.
+2. `paths` match unit paths (a Go package's folder, a TypeScript folder),
+   relative to the repository root or to the language's `root`. A unit joins
+   the first region that matches. `src/router/**` matches the folders below
+   `src/router`, not `src/router` itself; list both when the region needs
+   both.
 3. Without any regions, `acu` makes one per top-level folder.
 
 ## layout

@@ -5,9 +5,11 @@
 #   toolchain  Go, Node, Rust and Playwright's Chromium. The VS Code
 #              devcontainer and CI use it; scripts/check.sh runs every check
 #              inside it.
-#   build      Builds the viewer, acu and the Go adapter.
-#   runtime    acu and the Go adapter, plus the Go toolchain that the adapter
-#              needs to load packages. The default target.
+#   build      Builds the viewer, acu, the Go adapter and the TypeScript
+#              adapter.
+#   runtime    acu and both adapters, plus the Go toolchain that the Go adapter
+#              needs to load packages and the Node runtime that runs the
+#              TypeScript adapter. The default target.
 #
 #   docker build --target toolchain -t acu-toolchain .
 #   docker run --rm -v "$PWD:/workspace" acu-toolchain scripts/check.sh
@@ -80,6 +82,7 @@ FROM toolchain AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
 COPY viewer/package.json viewer/
+COPY adapters/typescript/package.json adapters/typescript/
 COPY tests/e2e/package.json tests/e2e/
 RUN npm ci --no-audit --no-fund
 COPY adapters/go/go.mod adapters/go/go.sum adapters/go/
@@ -89,17 +92,28 @@ RUN npm run build -w viewer \
  && cargo build --release --locked \
  && mkdir -p /out \
  && cp target/release/acu /out/acu \
- && cd adapters/go && CGO_ENABLED=0 go build -trimpath -o /out/acu-adapter-go ./cmd/acu-adapter-go
+ && (cd adapters/go && CGO_ENABLED=0 go build -trimpath -o /out/acu-adapter-go ./cmd/acu-adapter-go)
+# The TypeScript adapter: its compiled source, and the TypeScript compiler
+# from the lockfile's install. It needs nothing else at run time.
+RUN npm run build -w adapters/typescript \
+ && mkdir -p /out/acu-adapter-typescript/dist /out/acu-adapter-typescript/node_modules \
+ && cp adapters/typescript/package.json /out/acu-adapter-typescript/ \
+ && cp -r adapters/typescript/dist/src /out/acu-adapter-typescript/dist/src \
+ && cp -r node_modules/typescript /out/acu-adapter-typescript/node_modules/typescript \
+ && chmod +x /out/acu-adapter-typescript/dist/src/main.js
 
 # ---------------------------------------------------------------------------
 FROM ${GO_IMAGE} AS runtime
 
 LABEL org.opencontainers.image.title="Atlas Carries Us" \
-      org.opencontainers.image.description="acu and its Go adapter: turn a code base and its doc comments into an interactive map." \
+      org.opencontainers.image.description="acu and its Go and TypeScript adapters: turn a code base and its doc comments into an interactive map." \
       org.opencontainers.image.source="https://github.com/revslaughter/atlas-carries-us" \
       org.opencontainers.image.licenses="MIT"
 
 COPY --from=build /out/acu /out/acu-adapter-go /usr/local/bin/
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=build /out/acu-adapter-typescript /usr/local/lib/acu-adapter-typescript
+RUN ln -s /usr/local/lib/acu-adapter-typescript/dist/src/main.js /usr/local/bin/acu-adapter-typescript
 # The image exists to read a repository that you mount into it, which
 # belongs to your user, not the container's. Let git read it, so acu can name
 # the commit in source links.

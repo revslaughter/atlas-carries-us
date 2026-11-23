@@ -7,6 +7,7 @@
 #   Node        Dockerfile NODE_IMAGE tag    = .node-version
 #   Rust        Dockerfile RUST_IMAGE tag    = channel in rust-toolchain.toml
 #   Playwright  Dockerfile PLAYWRIGHT_VERSION = tests/e2e/package.json = package-lock.json
+#   TypeScript  viewer/package.json = adapters/typescript/package.json = package-lock.json
 #
 # It also checks that each base image carries a digest.
 set -euo pipefail
@@ -52,6 +53,13 @@ agree Playwright \
   "Dockerfile PLAYWRIGHT_VERSION" "$(sed -nE 's/^ARG PLAYWRIGHT_VERSION=(.+)$/\1/p' Dockerfile)" \
   "tests/e2e/package.json" "$(sed -nE 's/^ *"playwright": *"([^"]+)".*$/\1/p' tests/e2e/package.json)" \
   "package-lock.json" "$(node -e 'const l=require("./package-lock.json");process.stdout.write(l.packages["node_modules/playwright"]?.version??"")' 2>/dev/null || true)"
+
+npm_pin() { sed -nE "s/^ *\"$1\": *\"([^\"]+)\".*$/\1/p" "$2" | head -1; }
+
+agree TypeScript \
+  "viewer/package.json" "$(npm_pin typescript viewer/package.json)" \
+  "adapters/typescript/package.json" "$(npm_pin typescript adapters/typescript/package.json)" \
+  "package-lock.json" "$(node -e 'const l=require("./package-lock.json");process.stdout.write(l.packages["node_modules/typescript"]?.version??"")' 2>/dev/null || true)"
 
 if ((fail)); then
   echo "pins: change every file in a group together (see CONTRIBUTING.md, \"Versions\")."
