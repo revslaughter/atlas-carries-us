@@ -1,0 +1,2434 @@
+{
+ "version": 1,
+ "meta": {
+  "schemaVersion": 1,
+  "tool": {
+   "name": "acu-adapter-typescript",
+   "version": "0.1.0"
+  },
+  "generated": "2000-01-01T00:00:00Z",
+  "languages": [
+   "ts"
+  ],
+  "adapters": [
+   {
+    "name": "typescript",
+    "version": "0.1.0",
+    "language": "ts",
+    "notes": [
+     "Calls through function values, callbacks and computed property names do not appear.",
+     "A call through an interface points at the interface member.",
+     "Declaration files (.d.ts) do not appear; they describe code that lives elsewhere.",
+     "1 imports of outside packages did not resolve, so the types they bring count as unknown.",
+     "Components come from svelte2tsx 0.7.63 with svelte 5.57.3, not from the project's own Svelte version.",
+     "A render of a component that a variable holds, or of a snippet that a prop passes in, does not appear.",
+     "3 imports of the route types that svelte-kit sync writes (./$types) did not resolve, so the types they bring count as unknown.",
+     "tsconfig.json extends $app/tsconfig, which does not resolve without an install and svelte-kit sync; the adapter reads the tsconfig without it, with the compiler options that svelte-check forces."
+    ]
+   }
+  ]
+ },
+ "containers": [
+  {
+   "id": "ts:dir:reading-room/src",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src",
+   "path": "src",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room",
+   "externalImports": [
+    "@sveltejs/kit"
+   ]
+  },
+  {
+   "id": "ts:dir:reading-room/src/lib",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/lib",
+   "path": "src/lib",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room",
+   "externalImports": [
+    "svelte"
+   ]
+  },
+  {
+   "id": "ts:dir:reading-room/src/routes",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes",
+   "path": "src/routes",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room",
+   "externalImports": [
+    "svelte"
+   ]
+  },
+  {
+   "id": "ts:dir:reading-room/src/routes/(marketing)",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes/(marketing)",
+   "path": "src/routes/(marketing)",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room",
+   "externalImports": [
+    "svelte"
+   ]
+  },
+  {
+   "id": "ts:dir:reading-room/src/routes/(marketing)/about",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes/(marketing)/about",
+   "path": "src/routes/(marketing)/about",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room"
+  },
+  {
+   "id": "ts:dir:reading-room/src/routes/(marketing)/pricing",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes/(marketing)/pricing",
+   "path": "src/routes/(marketing)/pricing",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room"
+  },
+  {
+   "id": "ts:dir:reading-room/src/routes/api/items",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes/api/items",
+   "path": "src/routes/api/items",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room"
+  },
+  {
+   "id": "ts:dir:reading-room/src/routes/blog",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes/blog",
+   "path": "src/routes/blog",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room"
+  },
+  {
+   "id": "ts:dir:reading-room/src/routes/blog/[slug]",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes/blog/[slug]",
+   "path": "src/routes/blog/[slug]",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room"
+  },
+  {
+   "id": "ts:file:reading-room/src/hooks.server.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "hooks.server.ts",
+   "path": "src/hooks.server.ts",
+   "parent": "ts:dir:reading-room/src",
+   "language": "ts",
+   "doc": {
+    "raw": "The server hook: it names the reader of each request.",
+    "format": "jsdoc",
+    "summary": "The server hook: it names the reader of each request.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The server hook: it names the reader of each request."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/lib/Button.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "Button.svelte",
+   "path": "src/lib/Button.svelte",
+   "parent": "ts:dir:reading-room/src/lib",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/lib/Counter.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "Counter.svelte",
+   "path": "src/lib/Counter.svelte",
+   "parent": "ts:dir:reading-room/src/lib",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/lib/Legacy.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "Legacy.svelte",
+   "path": "src/lib/Legacy.svelte",
+   "parent": "ts:dir:reading-room/src/lib",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/lib/counter.svelte.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "counter.svelte.ts",
+   "path": "src/lib/counter.svelte.ts",
+   "parent": "ts:dir:reading-room/src/lib",
+   "language": "ts",
+   "doc": {
+    "raw": "A counter whose count lives in a rune, so that any component can share it.",
+    "format": "jsdoc",
+    "summary": "A counter whose count lives in a rune, so that any component can share it.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A counter whose count lives in a rune, so that any component can share it."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/lib/format.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "format.ts",
+   "path": "src/lib/format.ts",
+   "parent": "ts:dir:reading-room/src/lib",
+   "language": "ts",
+   "doc": {
+    "raw": "Text helpers for the reading room's pages.",
+    "format": "jsdoc",
+    "summary": "Text helpers for the reading room's pages.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Text helpers for the reading room's pages."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/(marketing)/+layout.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+layout.svelte",
+   "path": "src/routes/(marketing)/+layout.svelte",
+   "parent": "ts:dir:reading-room/src/routes/(marketing)",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/(marketing)/about/+page.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page.svelte",
+   "path": "src/routes/(marketing)/about/+page.svelte",
+   "parent": "ts:dir:reading-room/src/routes/(marketing)/about",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/(marketing)/about/+page.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page.ts",
+   "path": "src/routes/(marketing)/about/+page.ts",
+   "parent": "ts:dir:reading-room/src/routes/(marketing)/about",
+   "language": "ts",
+   "doc": {
+    "raw": "The data of the about page.",
+    "format": "jsdoc",
+    "summary": "The data of the about page.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The data of the about page."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/(marketing)/pricing/+page.server.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page.server.ts",
+   "path": "src/routes/(marketing)/pricing/+page.server.ts",
+   "parent": "ts:dir:reading-room/src/routes/(marketing)/pricing",
+   "language": "ts",
+   "doc": {
+    "raw": "The form of the pricing page.",
+    "format": "jsdoc",
+    "summary": "The form of the pricing page.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The form of the pricing page."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/(marketing)/pricing/+page@.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page@.svelte",
+   "path": "src/routes/(marketing)/pricing/+page@.svelte",
+   "parent": "ts:dir:reading-room/src/routes/(marketing)/pricing",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/+error.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+error.svelte",
+   "path": "src/routes/+error.svelte",
+   "parent": "ts:dir:reading-room/src/routes",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/+layout.server.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+layout.server.ts",
+   "path": "src/routes/+layout.server.ts",
+   "parent": "ts:dir:reading-room/src/routes",
+   "language": "ts",
+   "doc": {
+    "raw": "The data of every page: who reads.",
+    "format": "jsdoc",
+    "summary": "The data of every page: who reads.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The data of every page: who reads."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/+layout.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+layout.svelte",
+   "path": "src/routes/+layout.svelte",
+   "parent": "ts:dir:reading-room/src/routes",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/+page.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page.svelte",
+   "path": "src/routes/+page.svelte",
+   "parent": "ts:dir:reading-room/src/routes",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/api/items/+server.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+server.ts",
+   "path": "src/routes/api/items/+server.ts",
+   "parent": "ts:dir:reading-room/src/routes/api/items",
+   "language": "ts",
+   "doc": {
+    "raw": "The items API: list the items, add one, and refuse every other method.",
+    "format": "jsdoc",
+    "summary": "The items API: list the items, add one, and refuse every other method.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The items API: list the items, add one, and refuse every other method."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/blog/+layout.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+layout.ts",
+   "path": "src/routes/blog/+layout.ts",
+   "parent": "ts:dir:reading-room/src/routes/blog",
+   "language": "ts",
+   "doc": {
+    "raw": "The data of every blog page.",
+    "format": "jsdoc",
+    "summary": "The data of every blog page.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The data of every blog page."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/blog/[slug]/+page.server.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page.server.ts",
+   "path": "src/routes/blog/[slug]/+page.server.ts",
+   "parent": "ts:dir:reading-room/src/routes/blog/[slug]",
+   "language": "ts",
+   "doc": {
+    "raw": "The data and the form actions of a post page on the server.",
+    "format": "jsdoc",
+    "summary": "The data and the form actions of a post page on the server.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The data and the form actions of a post page on the server."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/blog/[slug]/+page.svelte",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page.svelte",
+   "path": "src/routes/blog/[slug]/+page.svelte",
+   "parent": "ts:dir:reading-room/src/routes/blog/[slug]",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/blog/[slug]/+page.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+page.ts",
+   "path": "src/routes/blog/[slug]/+page.ts",
+   "parent": "ts:dir:reading-room/src/routes/blog/[slug]",
+   "language": "ts",
+   "doc": {
+    "raw": "The data of a post page in the browser.",
+    "format": "jsdoc",
+    "summary": "The data of a post page in the browser.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The data of a post page in the browser."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:pkg:reading-room",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "reading-room",
+   "path": ".",
+   "language": "ts"
+  }
+ ],
+ "symbols": [
+  {
+   "id": "ts:reading-room/src/hooks.server#handle",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "handle",
+   "parent": "ts:file:reading-room/src/hooks.server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/hooks.server.ts",
+    "line": 6,
+    "endLine": 9
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{event, resolve}",
+      "type": "{ event: any; resolve: any; }"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<any>"
+     }
+    ],
+    "text": "const handle = async ({event, resolve}) => …"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Reads the reader's name from a cookie, for every request.",
+    "format": "jsdoc",
+    "summary": "Reads the reader's name from a cookie, for every request.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reads the reader's name from a cookie, for every request."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Button",
+   "parent": "ts:file:reading-room/src/lib/Button.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 1,
+    "endLine": 47
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "label",
+      "type": "string"
+     },
+     {
+      "name": "primary",
+      "type": "boolean",
+      "optional": true,
+      "default": "false"
+     },
+     {
+      "name": "onclick",
+      "type": "(event: MouseEvent) => void",
+      "optional": true
+     },
+     {
+      "name": "children",
+      "type": "Snippet",
+      "optional": true
+     }
+    ],
+    "results": [],
+    "text": "<Button {label} {primary} {onclick} {children} />"
+   },
+   "doc": {
+    "raw": "A button that names its action. Every form in the reading room uses it.\n\n```svelte\n<Button label=\"Save\" primary onclick={save} />\n```",
+    "format": "jsdoc",
+    "summary": "A button that names its action.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A button that names its action. Every form in the reading room uses it."
+     },
+     {
+      "type": "code",
+      "code": "<Button label=\"Save\" primary onclick={save} />",
+      "language": "svelte"
+     }
+    ],
+    "params": {
+     "label": "The text on the button.",
+     "primary": "Marks the main action of a page.",
+     "onclick": "Runs when a reader presses the button.",
+     "children": "Content after the label."
+    }
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.Props",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Props",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 14,
+    "endLine": 23
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.Props.children",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "children",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button.Props",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 22,
+    "endLine": 22
+   },
+   "type": {
+    "text": "Snippet"
+   },
+   "modifiers": [
+    "optional"
+   ],
+   "doc": {
+    "raw": "Content after the label.",
+    "format": "jsdoc",
+    "summary": "Content after the label.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Content after the label."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.Props.label",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "label",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button.Props",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 16,
+    "endLine": 16
+   },
+   "type": {
+    "text": "string"
+   },
+   "doc": {
+    "raw": "The text on the button.",
+    "format": "jsdoc",
+    "summary": "The text on the button.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The text on the button."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.Props.onclick",
+   "kind": "method",
+   "languageKind": "property",
+   "name": "onclick",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button.Props",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 20,
+    "endLine": 20
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "event",
+      "type": "MouseEvent"
+     }
+    ],
+    "results": [],
+    "text": "onclick: (event: MouseEvent) => void"
+   },
+   "modifiers": [
+    "optional"
+   ],
+   "doc": {
+    "raw": "Runs when a reader presses the button.",
+    "format": "jsdoc",
+    "summary": "Runs when a reader presses the button.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Runs when a reader presses the button."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.Props.primary",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "primary",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button.Props",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 18,
+    "endLine": 18
+   },
+   "type": {
+    "text": "boolean"
+   },
+   "modifiers": [
+    "optional"
+   ],
+   "doc": {
+    "raw": "Marks the main action of a page.",
+    "format": "jsdoc",
+    "summary": "Marks the main action of a page.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Marks the main action of a page."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.badge",
+   "kind": "function",
+   "languageKind": "snippet",
+   "name": "badge",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 37,
+    "endLine": 39
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "count",
+      "type": "number"
+     }
+    ],
+    "results": [],
+    "text": "{#snippet badge(count: number)}"
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.press",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "press",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 31,
+    "endLine": 34
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "event",
+      "type": "MouseEvent"
+     }
+    ],
+    "results": [],
+    "text": "function press(event: MouseEvent)"
+   },
+   "doc": {
+    "raw": "Records a press, then runs the reader's handler.",
+    "format": "jsdoc",
+    "summary": "Records a press, then runs the reader's handler.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Records a press, then runs the reader's handler."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Button.svelte#Button.presses",
+   "kind": "variable",
+   "languageKind": "variable",
+   "name": "presses",
+   "parent": "ts:reading-room/src/lib/Button.svelte#Button",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Button.svelte",
+    "line": 28,
+    "endLine": 28
+   },
+   "group": "Button.svelte:28",
+   "type": {
+    "text": "number"
+   },
+   "value": "$state(0)",
+   "doc": {
+    "raw": "Counts the presses, for the badge.",
+    "format": "jsdoc",
+    "summary": "Counts the presses, for the badge.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Counts the presses, for the badge."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Counter",
+   "parent": "ts:file:reading-room/src/lib/Counter.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Counter.svelte",
+    "line": 1,
+    "endLine": 33
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "start",
+      "type": "number",
+      "optional": true,
+      "default": "0"
+     },
+     {
+      "name": "limit",
+      "type": "number",
+      "optional": true,
+      "default": "10"
+     }
+    ],
+    "results": [],
+    "text": "<Counter {start} {limit} />"
+   },
+   "doc": {
+    "raw": "Counts up from a start value, and says when the count passes a limit.",
+    "format": "jsdoc",
+    "summary": "Counts up from a start value, and says when the count passes a limit.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Counts up from a start value, and says when the count passes a limit."
+     }
+    ],
+    "params": {
+     "start": "Where the count starts.",
+     "limit": "The count above which the counter says \"enough\"."
+    }
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Counter.svelte#Counter.counter",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "counter",
+   "parent": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Counter.svelte",
+    "line": 20,
+    "endLine": 20
+   },
+   "group": "Counter.svelte:20",
+   "type": {
+    "text": "Counter",
+    "refs": [
+     "ts:reading-room/src/lib/counter.svelte#Counter"
+    ]
+   },
+   "value": "createCounter(start)"
+  },
+  {
+   "id": "ts:reading-room/src/lib/Counter.svelte#Counter.doubled",
+   "kind": "variable",
+   "languageKind": "variable",
+   "name": "doubled",
+   "parent": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Counter.svelte",
+    "line": 22,
+    "endLine": 22
+   },
+   "group": "Counter.svelte:22",
+   "type": {
+    "text": "number"
+   },
+   "value": "$derived(counter.count * 2)",
+   "doc": {
+    "raw": "The count, doubled.",
+    "format": "jsdoc",
+    "summary": "The count, doubled.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The count, doubled."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Counter.svelte#Counter.over",
+   "kind": "variable",
+   "languageKind": "variable",
+   "name": "over",
+   "parent": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Counter.svelte",
+    "line": 24,
+    "endLine": 24
+   },
+   "group": "Counter.svelte:24",
+   "type": {
+    "text": "boolean"
+   },
+   "value": "$derived(counter.count> limit)",
+   "doc": {
+    "raw": "Whether the count has passed the limit.",
+    "format": "jsdoc",
+    "summary": "Whether the count has passed the limit.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Whether the count has passed the limit."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Legacy",
+   "parent": "ts:file:reading-room/src/lib/Legacy.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Legacy.svelte",
+    "line": 1,
+    "endLine": 39
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "name",
+      "type": "string",
+      "optional": true,
+      "default": "DEFAULT_NAME"
+     },
+     {
+      "name": "loud",
+      "type": "boolean",
+      "optional": true,
+      "default": "false"
+     }
+    ],
+    "results": [],
+    "text": "<Legacy {name} {loud} />"
+   },
+   "doc": {
+    "raw": "Greets a reader, in the older component syntax: `export let` props, an\nevent dispatcher and a slot.",
+    "format": "jsdoc",
+    "summary": "Greets a reader, in the older component syntax: `export let` props, an event dispatcher and a slot.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Greets a reader, in the older component syntax: `export let` props, an event dispatcher and a slot."
+     }
+    ],
+    "params": {
+     "name": "The reader's name.",
+     "loud": "Says the greeting louder."
+    }
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Legacy.svelte#Legacy.DEFAULT_NAME",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "DEFAULT_NAME",
+   "parent": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Legacy.svelte",
+    "line": 8,
+    "endLine": 8
+   },
+   "group": "Legacy.svelte:8",
+   "type": {
+    "text": "\"reader\""
+   },
+   "value": "\"reader\"",
+   "doc": {
+    "raw": "The greeting when the page names no reader.",
+    "format": "jsdoc",
+    "summary": "The greeting when the page names no reader.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The greeting when the page names no reader."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Legacy.svelte#Legacy.dispatch",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "dispatch",
+   "parent": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Legacy.svelte",
+    "line": 26,
+    "endLine": 29
+   },
+   "group": "Legacy.svelte:26",
+   "type": {
+    "text": "EventDispatcher<{ wave: { name: string; }; }>"
+   },
+   "value": "createEventDispatcher<{/** Fires when the reader waves back. */ wave: {name: ..."
+  },
+  {
+   "id": "ts:reading-room/src/lib/Legacy.svelte#Legacy.isBlank",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "isBlank",
+   "parent": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Legacy.svelte",
+    "line": 11,
+    "endLine": 13
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "name",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "function isBlank(name: string): boolean"
+   },
+   "doc": {
+    "raw": "Says whether a name needs the default greeting.",
+    "format": "jsdoc",
+    "summary": "Says whether a name needs the default greeting.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Says whether a name needs the default greeting."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Legacy.svelte#Legacy.wave",
+   "kind": "event",
+   "languageKind": "event",
+   "name": "wave",
+   "parent": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "exported": true,
+   "location": {
+    "path": "src/lib/Legacy.svelte",
+    "line": 33
+   },
+   "type": {
+    "text": "CustomEvent<{ name: string }>"
+   },
+   "doc": {
+    "raw": "Fires when the reader waves back.",
+    "format": "jsdoc",
+    "summary": "Fires when the reader waves back.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Fires when the reader waves back."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/Legacy.svelte#Legacy.waveBack",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "waveBack",
+   "parent": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "exported": false,
+   "location": {
+    "path": "src/lib/Legacy.svelte",
+    "line": 32,
+    "endLine": 34
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "function waveBack()"
+   },
+   "doc": {
+    "raw": "Sends the wave event with the reader's name.",
+    "format": "jsdoc",
+    "summary": "Sends the wave event with the reader's name.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Sends the wave event with the reader's name."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/counter.svelte#Counter",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Counter",
+   "parent": "ts:file:reading-room/src/lib/counter.svelte.ts",
+   "exported": true,
+   "location": {
+    "path": "src/lib/counter.svelte.ts",
+    "line": 4,
+    "endLine": 9
+   },
+   "doc": {
+    "raw": "A count that a component reads and raises.",
+    "format": "jsdoc",
+    "summary": "A count that a component reads and raises.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A count that a component reads and raises."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/counter.svelte#Counter.count",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "count",
+   "parent": "ts:reading-room/src/lib/counter.svelte#Counter",
+   "exported": true,
+   "location": {
+    "path": "src/lib/counter.svelte.ts",
+    "line": 6,
+    "endLine": 6
+   },
+   "type": {
+    "text": "number"
+   },
+   "modifiers": [
+    "readonly"
+   ],
+   "doc": {
+    "raw": "The count now.",
+    "format": "jsdoc",
+    "summary": "The count now.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The count now."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/counter.svelte#Counter.increment",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "increment",
+   "parent": "ts:reading-room/src/lib/counter.svelte#Counter",
+   "exported": true,
+   "location": {
+    "path": "src/lib/counter.svelte.ts",
+    "line": 8,
+    "endLine": 8
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "increment(): void"
+   },
+   "doc": {
+    "raw": "Raises the count by one.",
+    "format": "jsdoc",
+    "summary": "Raises the count by one.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Raises the count by one."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/counter.svelte#createCounter",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "createCounter",
+   "parent": "ts:file:reading-room/src/lib/counter.svelte.ts",
+   "exported": true,
+   "location": {
+    "path": "src/lib/counter.svelte.ts",
+    "line": 12,
+    "endLine": 22
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "start",
+      "type": "number",
+      "optional": true,
+      "default": "0"
+     }
+    ],
+    "results": [
+     {
+      "type": "Counter",
+      "refs": [
+       "ts:reading-room/src/lib/counter.svelte#Counter"
+      ]
+     }
+    ],
+    "text": "function createCounter(start = 0): Counter"
+   },
+   "doc": {
+    "raw": "Makes a counter that starts at `start`.",
+    "format": "jsdoc",
+    "summary": "Makes a counter that starts at `start`.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Makes a counter that starts at `start`."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/format#plural",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "plural",
+   "parent": "ts:file:reading-room/src/lib/format.ts",
+   "exported": true,
+   "location": {
+    "path": "src/lib/format.ts",
+    "line": 4,
+    "endLine": 6
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "count",
+      "type": "number"
+     },
+     {
+      "name": "noun",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "function plural(count: number, noun: string): string"
+   },
+   "doc": {
+    "raw": "Writes a count with its noun, in the plural when the count is not one.",
+    "format": "jsdoc",
+    "summary": "Writes a count with its noun, in the plural when the count is not one.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Writes a count with its noun, in the plural when the count is not one."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/format#shout",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "shout",
+   "parent": "ts:file:reading-room/src/lib/format.ts",
+   "exported": true,
+   "location": {
+    "path": "src/lib/format.ts",
+    "line": 9,
+    "endLine": 11
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "text",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "function shout(text: string): string"
+   },
+   "doc": {
+    "raw": "Writes a text in capitals, with an exclamation mark.",
+    "format": "jsdoc",
+    "summary": "Writes a text in capitals, with an exclamation mark.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Writes a text in capitals, with an exclamation mark."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/lib/format#slugTitle",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "slugTitle",
+   "parent": "ts:file:reading-room/src/lib/format.ts",
+   "exported": true,
+   "location": {
+    "path": "src/lib/format.ts",
+    "line": 14,
+    "endLine": 17
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "slug",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "function slugTitle(slug: string): string"
+   },
+   "doc": {
+    "raw": "Turns a post's slug, such as \"first-light\", into its title, \"First light\".",
+    "format": "jsdoc",
+    "summary": "Turns a post's slug, such as \"first-light\", into its title, \"First light\".",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Turns a post's slug, such as \"first-light\", into its title, \"First light\"."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/(marketing)/+layout.svelte#Layout",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Layout",
+   "parent": "ts:file:reading-room/src/routes/(marketing)/+layout.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/routes/(marketing)/+layout.svelte",
+    "line": 1,
+    "endLine": 12
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "children",
+      "type": "Snippet"
+     }
+    ],
+    "results": [],
+    "text": "<Layout {children} />"
+   },
+   "doc": {
+    "raw": "The frame of the marketing pages: a banner above the page.",
+    "format": "jsdoc",
+    "summary": "The frame of the marketing pages: a banner above the page.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The frame of the marketing pages: a banner above the page."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/(marketing)/about/+page#load",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "load",
+   "parent": "ts:file:reading-room/src/routes/(marketing)/about/+page.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/(marketing)/about/+page.ts",
+    "line": 4,
+    "endLine": 6
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "{ rooms: number; }"
+     }
+    ],
+    "text": "function load()"
+   },
+   "doc": {
+    "raw": "Counts the rooms.",
+    "format": "jsdoc",
+    "summary": "Counts the rooms.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Counts the rooms."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/(marketing)/about/+page.svelte#Page",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Page",
+   "parent": "ts:file:reading-room/src/routes/(marketing)/about/+page.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/routes/(marketing)/about/+page.svelte",
+    "line": 1,
+    "endLine": 9
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "data",
+      "type": "{rooms: number}"
+     }
+    ],
+    "results": [],
+    "text": "<Page {data} />"
+   },
+   "doc": {
+    "raw": "Tells a visitor what the reading room offers.",
+    "format": "jsdoc",
+    "summary": "Tells a visitor what the reading room offers.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Tells a visitor what the reading room offers."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/(marketing)/pricing/+page.server#POST /pricing",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "POST /pricing",
+   "parent": "ts:file:reading-room/src/routes/(marketing)/pricing/+page.server.ts",
+   "exported": false,
+   "location": {
+    "path": "src/routes/(marketing)/pricing/+page.server.ts",
+    "line": 5,
+    "endLine": 5
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "Promise<{ joined: boolean; }>"
+     }
+    ],
+    "text": "async () => …"
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/(marketing)/pricing/+page.server#actions",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "actions",
+   "parent": "ts:file:reading-room/src/routes/(marketing)/pricing/+page.server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/(marketing)/pricing/+page.server.ts",
+    "line": 4,
+    "endLine": 6
+   },
+   "group": "+page.server.ts:4",
+   "type": {
+    "text": "{ default: () => Promise<{ joined: boolean; }>; }"
+   },
+   "value": "{default: async () => ({joined: true})}",
+   "doc": {
+    "raw": "The pricing page's one form: join the reading room.",
+    "format": "jsdoc",
+    "summary": "The pricing page's one form: join the reading room.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The pricing page's one form: join the reading room."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/(marketing)/pricing/+page@.svelte#Page",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Page",
+   "parent": "ts:file:reading-room/src/routes/(marketing)/pricing/+page@.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/routes/(marketing)/pricing/+page@.svelte",
+    "line": 1,
+    "endLine": 12
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "<Page />"
+   },
+   "doc": {
+    "raw": "The prices, without the marketing banner: the page resets to the root\nlayout.",
+    "format": "jsdoc",
+    "summary": "The prices, without the marketing banner: the page resets to the root layout.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The prices, without the marketing banner: the page resets to the root layout."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/+error.svelte#Error",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Error",
+   "parent": "ts:file:reading-room/src/routes/+error.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/routes/+error.svelte",
+    "line": 1,
+    "endLine": 5
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "<Error />"
+   },
+   "doc": {
+    "raw": "Says that a page went wrong.",
+    "format": "jsdoc",
+    "summary": "Says that a page went wrong.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Says that a page went wrong."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/+layout.server#load",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "load",
+   "parent": "ts:file:reading-room/src/routes/+layout.server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/+layout.server.ts",
+    "line": 4,
+    "endLine": 6
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{locals}",
+      "type": "{locals: {reader?: string}}"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<{ reader: string; }>"
+     }
+    ],
+    "text": "async function load({locals}: {locals: {reader?: string}})"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Names the reader of the request, for the title bar.",
+    "format": "jsdoc",
+    "summary": "Names the reader of the request, for the title bar.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Names the reader of the request, for the title bar."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/+layout.svelte#Layout",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Layout",
+   "parent": "ts:file:reading-room/src/routes/+layout.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/routes/+layout.svelte",
+    "line": 1,
+    "endLine": 14
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "data",
+      "type": "{reader: string}"
+     },
+     {
+      "name": "children",
+      "type": "Snippet"
+     }
+    ],
+    "results": [],
+    "text": "<Layout {data} {children} />"
+   },
+   "doc": {
+    "raw": "The frame of every page: the title bar, then the page.",
+    "format": "jsdoc",
+    "summary": "The frame of every page: the title bar, then the page.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The frame of every page: the title bar, then the page."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/+page.svelte#Page",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Page",
+   "parent": "ts:file:reading-room/src/routes/+page.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/routes/+page.svelte",
+    "line": 1,
+    "endLine": 19
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "<Page />"
+   },
+   "doc": {
+    "raw": "The home page: a counter and a greeting.",
+    "format": "jsdoc",
+    "summary": "The home page: a counter and a greeting.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The home page: a counter and a greeting."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/+page.svelte#Page.onWave",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "onWave",
+   "parent": "ts:reading-room/src/routes/+page.svelte#Page",
+   "exported": false,
+   "location": {
+    "path": "src/routes/+page.svelte",
+    "line": 11,
+    "endLine": 13
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "name",
+      "type": "string"
+     }
+    ],
+    "results": [],
+    "text": "function onWave(name: string)"
+   },
+   "doc": {
+    "raw": "Records a wave in the console.",
+    "format": "jsdoc",
+    "summary": "Records a wave in the console.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Records a wave in the console."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/api/items/+server#GET",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "GET",
+   "parent": "ts:file:reading-room/src/routes/api/items/+server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/api/items/+server.ts",
+    "line": 9,
+    "endLine": 11
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "Promise<Response>"
+     }
+    ],
+    "text": "async function GET()"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Lists the items, with a count.",
+    "format": "jsdoc",
+    "summary": "Lists the items, with a count.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lists the items, with a count."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/api/items/+server#POST",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "POST",
+   "parent": "ts:file:reading-room/src/routes/api/items/+server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/api/items/+server.ts",
+    "line": 14,
+    "endLine": 17
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{request}",
+      "type": "{request: Request}"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Response>"
+     }
+    ],
+    "text": "const POST = async ({request}: {request: Request}) => …"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Adds the item in the request body.",
+    "format": "jsdoc",
+    "summary": "Adds the item in the request body.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Adds the item in the request body."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/api/items/+server#fallback",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "fallback",
+   "parent": "ts:file:reading-room/src/routes/api/items/+server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/api/items/+server.ts",
+    "line": 20,
+    "endLine": 22
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "Response"
+     }
+    ],
+    "text": "function fallback()"
+   },
+   "doc": {
+    "raw": "Refuses every other method.",
+    "format": "jsdoc",
+    "summary": "Refuses every other method.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Refuses every other method."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/api/items/+server#items",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "items",
+   "parent": "ts:file:reading-room/src/routes/api/items/+server.ts",
+   "exported": false,
+   "location": {
+    "path": "src/routes/api/items/+server.ts",
+    "line": 6,
+    "endLine": 6
+   },
+   "group": "+server.ts:6",
+   "type": {
+    "text": "string[]"
+   },
+   "value": "[]",
+   "doc": {
+    "raw": "The items, in memory.",
+    "format": "jsdoc",
+    "summary": "The items, in memory.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The items, in memory."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/blog/+layout#load",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "load",
+   "parent": "ts:file:reading-room/src/routes/blog/+layout.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/blog/+layout.ts",
+    "line": 4,
+    "endLine": 6
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "{ section: string; }"
+     }
+    ],
+    "text": "function load()"
+   },
+   "doc": {
+    "raw": "Names the section, for the pages below it.",
+    "format": "jsdoc",
+    "summary": "Names the section, for the pages below it.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Names the section, for the pages below it."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/blog/[slug]/+page#load",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "load",
+   "parent": "ts:file:reading-room/src/routes/blog/[slug]/+page.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/blog/[slug]/+page.ts",
+    "line": 6,
+    "endLine": 9
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{params, parent}",
+      "type": "{ params: any; parent: any; }"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<{ section: any; slug: any; }>"
+     }
+    ],
+    "text": "const load = async ({params, parent}) => …"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Joins the section of the blog layout to the post's slug.",
+    "format": "jsdoc",
+    "summary": "Joins the section of the blog layout to the post's slug.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Joins the section of the blog layout to the post's slug."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/blog/[slug]/+page.server#POST /blog/[slug]?/comment",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "POST /blog/[slug]?/comment",
+   "parent": "ts:file:reading-room/src/routes/blog/[slug]/+page.server.ts",
+   "exported": false,
+   "location": {
+    "path": "src/routes/blog/[slug]/+page.server.ts",
+    "line": 21,
+    "endLine": 24
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{request}",
+      "type": "{ request: any; }"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<{ comment: string; }>"
+     }
+    ],
+    "text": "async ({request}) => …"
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/blog/[slug]/+page.server#actions",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "actions",
+   "parent": "ts:file:reading-room/src/routes/blog/[slug]/+page.server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/blog/[slug]/+page.server.ts",
+    "line": 19,
+    "endLine": 25
+   },
+   "group": "+page.server.ts:19",
+   "type": {
+    "text": "Actions"
+   },
+   "value": "{like, comment: async ({request}) => {const form = await request.formData(); ...",
+   "doc": {
+    "raw": "The forms of a post page: like it, or comment on it.",
+    "format": "jsdoc",
+    "summary": "The forms of a post page: like it, or comment on it.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The forms of a post page: like it, or comment on it."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/blog/[slug]/+page.server#like",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "like",
+   "parent": "ts:file:reading-room/src/routes/blog/[slug]/+page.server.ts",
+   "exported": false,
+   "location": {
+    "path": "src/routes/blog/[slug]/+page.server.ts",
+    "line": 14,
+    "endLine": 16
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{params}",
+      "type": "{params: {slug: string}}"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<{ liked: string; }>"
+     }
+    ],
+    "text": "async function like({params}: {params: {slug: string}})"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Records that the reader likes the post.",
+    "format": "jsdoc",
+    "summary": "Records that the reader likes the post.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Records that the reader likes the post."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/blog/[slug]/+page.server#load",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "load",
+   "parent": "ts:file:reading-room/src/routes/blog/[slug]/+page.server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/blog/[slug]/+page.server.ts",
+    "line": 8,
+    "endLine": 11
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{params, parent}",
+      "type": "{ params: any; parent: any; }"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<{ title: string; reader: any; }>"
+     }
+    ],
+    "text": "const load = async ({params, parent}) => …"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Reads the post that the slug names, for the reader in the root layout.",
+    "format": "jsdoc",
+    "summary": "Reads the post that the slug names, for the reader in the root layout.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reads the post that the slug names, for the reader in the root layout."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:reading-room/src/routes/blog/[slug]/+page.svelte#Page",
+   "kind": "function",
+   "languageKind": "component",
+   "name": "Page",
+   "parent": "ts:file:reading-room/src/routes/blog/[slug]/+page.svelte",
+   "exported": true,
+   "location": {
+    "path": "src/routes/blog/[slug]/+page.svelte",
+    "line": 1,
+    "endLine": 21
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "<Page />"
+   },
+   "doc": {
+    "raw": "One blog post, with its like and comment forms.",
+    "format": "jsdoc",
+    "summary": "One blog post, with its like and comment forms.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "One blog post, with its like and comment forms."
+     }
+    ]
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": "ts:dir:reading-room/src/routes",
+   "to": "ts:dir:reading-room/src/lib",
+   "kind": "imports",
+   "confidence": "exact",
+   "count": 3
+  },
+  {
+   "from": "ts:dir:reading-room/src/routes/(marketing)/pricing",
+   "to": "ts:dir:reading-room/src/lib",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:dir:reading-room/src/routes/api/items",
+   "to": "ts:dir:reading-room/src/lib",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:dir:reading-room/src/routes/blog/[slug]",
+   "to": "ts:dir:reading-room/src/lib",
+   "kind": "imports",
+   "confidence": "exact",
+   "count": 3
+  },
+  {
+   "from": "ts:reading-room/src/lib/Button.svelte#Button",
+   "to": "ts:reading-room/src/lib/Button.svelte#Button.badge",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 44
+  },
+  {
+   "from": "ts:reading-room/src/lib/Button.svelte#Button.badge",
+   "to": "ts:reading-room/src/lib/format#shout",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 38
+  },
+  {
+   "from": "ts:reading-room/src/lib/Button.svelte#Button.press",
+   "to": "ts:reading-room/src/lib/Button.svelte#Button.Props.onclick",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 33
+  },
+  {
+   "from": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "to": "ts:reading-room/src/lib/Button.svelte#Button",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 32
+  },
+  {
+   "from": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "to": "ts:reading-room/src/lib/counter.svelte#Counter.increment",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 32
+  },
+  {
+   "from": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "to": "ts:reading-room/src/lib/format#plural",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 27,
+   "count": 2
+  },
+  {
+   "from": "ts:reading-room/src/lib/Counter.svelte#Counter.counter",
+   "to": "ts:reading-room/src/lib/counter.svelte#createCounter",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 20
+  },
+  {
+   "from": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "to": "ts:reading-room/src/lib/Legacy.svelte#Legacy.isBlank",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 37
+  },
+  {
+   "from": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "to": "ts:reading-room/src/lib/format#shout",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 37
+  },
+  {
+   "from": "ts:reading-room/src/lib/counter.svelte#createCounter",
+   "to": "ts:reading-room/src/lib/counter.svelte#Counter",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 12
+  },
+  {
+   "from": "ts:reading-room/src/routes/(marketing)/+layout.svelte#Layout",
+   "to": "ts:reading-room/src/routes/(marketing)/about/+page.svelte#Page",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 12
+  },
+  {
+   "from": "ts:reading-room/src/routes/(marketing)/pricing/+page@.svelte#Page",
+   "to": "ts:reading-room/src/lib/Button.svelte#Button",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 11
+  },
+  {
+   "from": "ts:reading-room/src/routes/+layout.svelte#Layout",
+   "to": "ts:reading-room/src/routes/(marketing)/+layout.svelte#Layout",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 13
+  },
+  {
+   "from": "ts:reading-room/src/routes/+layout.svelte#Layout",
+   "to": "ts:reading-room/src/routes/(marketing)/pricing/+page@.svelte#Page",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 13
+  },
+  {
+   "from": "ts:reading-room/src/routes/+layout.svelte#Layout",
+   "to": "ts:reading-room/src/routes/+page.svelte#Page",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 13
+  },
+  {
+   "from": "ts:reading-room/src/routes/+layout.svelte#Layout",
+   "to": "ts:reading-room/src/routes/blog/[slug]/+page.svelte#Page",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 13
+  },
+  {
+   "from": "ts:reading-room/src/routes/+page.svelte#Page",
+   "to": "ts:reading-room/src/lib/Counter.svelte#Counter",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 16
+  },
+  {
+   "from": "ts:reading-room/src/routes/+page.svelte#Page",
+   "to": "ts:reading-room/src/lib/Legacy.svelte#Legacy",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "ts:reading-room/src/routes/+page.svelte#Page",
+   "to": "ts:reading-room/src/routes/+page.svelte#Page.onWave",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "ts:reading-room/src/routes/+page.svelte#Page.onWave",
+   "to": "ts:reading-room/src/lib/format#plural",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 12
+  },
+  {
+   "from": "ts:reading-room/src/routes/api/items/+server#GET",
+   "to": "ts:reading-room/src/lib/format#plural",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 10
+  },
+  {
+   "from": "ts:reading-room/src/routes/blog/[slug]/+page#load",
+   "to": "ts:reading-room/src/routes/+layout.server#load",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 7
+  },
+  {
+   "from": "ts:reading-room/src/routes/blog/[slug]/+page#load",
+   "to": "ts:reading-room/src/routes/blog/+layout#load",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 7
+  },
+  {
+   "from": "ts:reading-room/src/routes/blog/[slug]/+page.server#POST /blog/[slug]?/comment",
+   "to": "ts:reading-room/src/lib/format#slugTitle",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 23
+  },
+  {
+   "from": "ts:reading-room/src/routes/blog/[slug]/+page.server#load",
+   "to": "ts:reading-room/src/lib/format#slugTitle",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 10
+  },
+  {
+   "from": "ts:reading-room/src/routes/blog/[slug]/+page.server#load",
+   "to": "ts:reading-room/src/routes/+layout.server#load",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 9
+  },
+  {
+   "from": "ts:reading-room/src/routes/blog/[slug]/+page.svelte#Page",
+   "to": "ts:reading-room/src/lib/Button.svelte#Button",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 16,
+   "count": 2
+  },
+  {
+   "from": "ts:reading-room/src/routes/blog/[slug]/+page.svelte#Page",
+   "to": "ts:reading-room/src/lib/format#slugTitle",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 14
+  }
+ ],
+ "entryPoints": [
+  {
+   "id": "http:GET /about",
+   "kind": "http",
+   "name": "GET /about",
+   "method": "GET",
+   "path": "/about",
+   "handler": "ts:reading-room/src/routes/(marketing)/about/+page#load",
+   "registeredAt": {
+    "path": "src/routes/(marketing)/about/+page.svelte",
+    "line": 1
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:POST /pricing",
+   "kind": "http",
+   "name": "POST /pricing",
+   "method": "POST",
+   "path": "/pricing",
+   "handler": "ts:reading-room/src/routes/(marketing)/pricing/+page.server#POST /pricing",
+   "registeredAt": {
+    "path": "src/routes/(marketing)/pricing/+page.server.ts",
+    "line": 5
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:GET /pricing",
+   "kind": "http",
+   "name": "GET /pricing",
+   "method": "GET",
+   "path": "/pricing",
+   "handler": "ts:reading-room/src/routes/(marketing)/pricing/+page@.svelte#Page",
+   "registeredAt": {
+    "path": "src/routes/(marketing)/pricing/+page@.svelte",
+    "line": 1
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:GET /",
+   "kind": "http",
+   "name": "GET /",
+   "method": "GET",
+   "path": "/",
+   "handler": "ts:reading-room/src/routes/+page.svelte#Page",
+   "registeredAt": {
+    "path": "src/routes/+page.svelte",
+    "line": 1
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:GET /api/items",
+   "kind": "http",
+   "name": "GET /api/items",
+   "method": "GET",
+   "path": "/api/items",
+   "handler": "ts:reading-room/src/routes/api/items/+server#GET",
+   "registeredAt": {
+    "path": "src/routes/api/items/+server.ts",
+    "line": 9
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:POST /api/items",
+   "kind": "http",
+   "name": "POST /api/items",
+   "method": "POST",
+   "path": "/api/items",
+   "handler": "ts:reading-room/src/routes/api/items/+server#POST",
+   "registeredAt": {
+    "path": "src/routes/api/items/+server.ts",
+    "line": 14
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:ANY /api/items",
+   "kind": "http",
+   "name": "ANY /api/items",
+   "method": "ANY",
+   "path": "/api/items",
+   "handler": "ts:reading-room/src/routes/api/items/+server#fallback",
+   "registeredAt": {
+    "path": "src/routes/api/items/+server.ts",
+    "line": 20
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:POST /blog/[slug]?/like",
+   "kind": "http",
+   "name": "POST /blog/[slug]?/like",
+   "method": "POST",
+   "path": "/blog/[slug]?/like",
+   "handler": "ts:reading-room/src/routes/blog/[slug]/+page.server#like",
+   "registeredAt": {
+    "path": "src/routes/blog/[slug]/+page.server.ts",
+    "line": 20
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:POST /blog/[slug]?/comment",
+   "kind": "http",
+   "name": "POST /blog/[slug]?/comment",
+   "method": "POST",
+   "path": "/blog/[slug]?/comment",
+   "handler": "ts:reading-room/src/routes/blog/[slug]/+page.server#POST /blog/[slug]?/comment",
+   "registeredAt": {
+    "path": "src/routes/blog/[slug]/+page.server.ts",
+    "line": 21
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:GET /blog/[slug]",
+   "kind": "http",
+   "name": "GET /blog/[slug]",
+   "method": "GET",
+   "path": "/blog/[slug]",
+   "handler": "ts:reading-room/src/routes/blog/[slug]/+page.server#load",
+   "registeredAt": {
+    "path": "src/routes/blog/[slug]/+page.svelte",
+    "line": 1
+   },
+   "plugin": "sveltekit"
+  }
+ ],
+ "tests": {
+  "ts:reading-room/src/lib/Button.svelte#Button": [
+   {
+    "name": "Button > shows its label",
+    "location": {
+     "path": "src/lib/format.test.ts",
+     "line": 19
+    }
+   }
+  ],
+  "ts:reading-room/src/lib/format#plural": [
+   {
+    "name": "format > writes the plural",
+    "location": {
+     "path": "src/lib/format.test.ts",
+     "line": 10
+    }
+   }
+  ],
+  "ts:reading-room/src/lib/format#slugTitle": [
+   {
+    "name": "format > titles a slug",
+    "location": {
+     "path": "src/lib/format.test.ts",
+     "line": 13
+    }
+   }
+  ]
+ }
+}
