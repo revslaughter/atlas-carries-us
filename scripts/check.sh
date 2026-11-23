@@ -17,12 +17,14 @@ quick=false
 # In CI the checkout belongs to another user than the container's. Trust the
 # workspace and the corpus checkouts for this script's git calls only, so
 # acu can read the commit for its source links.
-export GIT_CONFIG_COUNT=5 \
+export GIT_CONFIG_COUNT=7 \
   GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$root" \
   GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$root/corpus/go/chi" \
   GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$root/corpus/go/cobra" \
   GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$root/corpus/typescript/immer" \
-  GIT_CONFIG_KEY_4=safe.directory GIT_CONFIG_VALUE_4="$root/corpus/typescript/hono"
+  GIT_CONFIG_KEY_4=safe.directory GIT_CONFIG_VALUE_4="$root/corpus/typescript/hono" \
+  GIT_CONFIG_KEY_5=safe.directory GIT_CONFIG_VALUE_5="$root/corpus/svelte/realworld" \
+  GIT_CONFIG_KEY_6=safe.directory GIT_CONFIG_VALUE_6="$root/corpus/svelte/svelte-changelog"
 [[ "${1:-}" == "--quick" ]] && quick=true
 
 step() { printf '\n== %s\n' "$*"; }
@@ -68,11 +70,12 @@ if $quick; then
 fi
 
 step "End to end: each example"
-git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra corpus/typescript/immer corpus/typescript/hono
+git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra corpus/typescript/immer corpus/typescript/hono \
+  corpus/svelte/realworld corpus/svelte/svelte-changelog
 (cd adapters/go && go install ./cmd/acu-adapter-go)
 # acu runs the TypeScript adapter from its build in this checkout.
 mkdir -p out
-for ex in lending chi cobra immer hono mixed; do
+for ex in lending chi cobra immer hono realworld svelte-changelog mixed; do
   echo "-- $ex"
   ./target/release/acu extract -c "examples/$ex/atlas.yaml" -o "out/$ex.json"
   node tests/e2e/counts.mjs "out/$ex.json" "examples/$ex/counts.json"

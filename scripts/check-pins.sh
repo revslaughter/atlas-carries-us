@@ -8,8 +8,10 @@
 #   Rust        Dockerfile RUST_IMAGE tag    = channel in rust-toolchain.toml
 #   Playwright  Dockerfile PLAYWRIGHT_VERSION = tests/e2e/package.json = package-lock.json
 #   TypeScript  viewer/package.json = adapters/typescript/package.json = package-lock.json
+#   Svelte      adapters/typescript/package.json = package-lock.json (svelte, svelte2tsx)
 #
-# It also checks that each base image carries a digest.
+# It also checks that each base image carries a digest, and that TypeScript
+# stays on major version 6, whose API the adapters and the Svelte tools use.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -60,6 +62,20 @@ agree TypeScript \
   "viewer/package.json" "$(npm_pin typescript viewer/package.json)" \
   "adapters/typescript/package.json" "$(npm_pin typescript adapters/typescript/package.json)" \
   "package-lock.json" "$(node -e 'const l=require("./package-lock.json");process.stdout.write(l.packages["node_modules/typescript"]?.version??"")' 2>/dev/null || true)"
+
+ts_version=$(npm_pin typescript adapters/typescript/package.json)
+if [[ "$ts_version" != 6.* ]]; then
+  echo "pins: TypeScript $ts_version leaves major version 6; the adapters need the TypeScript 6 API (see docs/adapters.md)."
+  fail=1
+fi
+
+lock_pin() { node -e 'const l=require("./package-lock.json");process.stdout.write(l.packages["node_modules/"+process.argv[1]]?.version??"")' "$1" 2>/dev/null || true; }
+
+for pkg in svelte svelte2tsx; do
+  agree "$pkg" \
+    "adapters/typescript/package.json" "$(npm_pin "$pkg" adapters/typescript/package.json)" \
+    "package-lock.json" "$(lock_pin "$pkg")"
+done
 
 if ((fail)); then
   echo "pins: change every file in a group together (see CONTRIBUTING.md, \"Versions\")."

@@ -15,7 +15,7 @@ use crate::config::{EntryPointPlugin, Language};
 pub fn plugin_adapter(plugin: &str) -> Option<&'static str> {
     match plugin {
         "go-chi" | "go-nethttp" | "cobra" => Some("go"),
-        "express" | "hono" => Some("typescript"),
+        "express" | "hono" | "sveltekit" => Some("typescript"),
         _ => None,
     }
 }
@@ -180,6 +180,7 @@ mod tests {
         assert_eq!(plugin_adapter("go-chi"), Some("go"));
         assert_eq!(plugin_adapter("express"), Some("typescript"));
         assert_eq!(plugin_adapter("hono"), Some("typescript"));
+        assert_eq!(plugin_adapter("sveltekit"), Some("typescript"));
         assert_eq!(plugin_adapter("rails"), None);
     }
 }

@@ -37,7 +37,8 @@ The rules for the reply:
 4. Mark each container that the overview should draw as `"unit": true`.
 5. Write the language's own words in `languageKind`.
 6. Give each edge a `confidence`: `exact` when a type checker resolved it,
-   `heuristic` when the adapter matched names.
+   `heuristic` when the adapter matched names, or when a framework's file
+   convention implies the edge, such as a layout around a page.
 7. Normalise doc comments into blocks and the inline subset. Keep the comment
    as written in `raw`.
 8. Fail on an unknown entry-point plugin, with a message that names the known
@@ -85,7 +86,8 @@ The TypeScript adapter, `adapters/typescript`, runs in Node and reads the
 project with the TypeScript compiler API, pinned to TypeScript 6.0.3.
 TypeScript 7, the native port, offers its programmatic API only as "unstable"
 so far; the adapter will move once that API settles. The checker resolves
-every edge, so every edge counts as `exact`. On immer v11.2.9 and Hono
+every edge, so every edge counts as `exact`; only the layout edges of the
+`sveltekit` plugin, below, count as `heuristic`. On immer v11.2.9 and Hono
 v4.13.17 the counts sit in `examples/immer/counts.json` and
 `examples/hono/counts.json`.
 
@@ -202,8 +204,10 @@ that the test's callback uses records the test against its symbol.
 2. `hono` finds `app.get("/x", h)` and the other verbs, `app.on(method,
    path, h)`, apps that `app.route("/prefix", sub)` mounts, and
    `new Hono().basePath("/api")`.
+3. `sveltekit` reads a SvelteKit app's file-based routes; see "Svelte and
+   SvelteKit" below.
 
-A plugin knows a receiver by its type (the package's own types, when the
+The `express` and `hono` plugins know a receiver by its type (the package's own types, when the
 project has them installed) or else by the import that it comes from. The last argument
 handles the request; the arguments before it run as middleware. Both plugins
 take the `prefixes` option of the Go plugins, for mounts that happen at run
@@ -223,6 +227,180 @@ The output's notes list these limits, and the help text repeats them:
    not appear.
 2. A call through an interface points at the interface member.
 3. Declaration files do not appear.
+
+### Svelte and SvelteKit (done)
+
+Svelte rides on the TypeScript adapter. The TypeScript compiler cannot read
+a `.svelte` file, so the adapter turns each component into TypeScript with
+`svelte2tsx`, the tool behind `svelte-check`, and the compiler does the
+rest. Both `svelte2tsx` (0.7.63) and `svelte` (5.57.3), whose compiler
+parses the components, sit pinned in `adapters/typescript/package.json`. Two
+public apps hold the count snapshots. sveltejs/realworld at commit df79670
+(`examples/realworld/counts.json`) covers pages, form actions, loads that
+call `parent()`, and layouts, in JavaScript. WarningImHack3r/svelte-changelog
+at commit c100d72 (`examples/svelte-changelog/counts.json`) covers SvelteKit
+3, `+server` methods, param matchers, and code with doc comments.
+
+#### What it reads
+
+1. The adapter turns Svelte handling on only when the root holds a
+   `.svelte` file. A project without one reads exactly as before.
+2. It finds `.svelte` files with the walk that finds test files, so it skips
+   `node_modules`, folders whose names start with a dot, and the folders that
+   `exclude` names. A component that matches a `tests` glob joins the
+   program but not the map.
+3. `svelte2tsx` writes TypeScript for each component (`mode: "ts"`, with
+   `emitOnTemplateError`). The compiler reads that code under a virtual name
+   that ends in `.acu.tsx`, or in `.acu.jsx` for a component in JavaScript,
+   so that its JSDoc types count. A compiler host wrapper serves these files.
+4. An import of a `.svelte` file resolves through TypeScript's own
+   resolution, so relative paths, `paths`, package `imports` (`#lib`) and
+   every resolution mode behave as usual. The resolver probes for
+   `Button.d.svelte.ts` beside `Button.svelte`; the wrapper answers for each
+   known component and hands back its virtual name.
+5. The shims that `svelte2tsx` ships, `svelte-shims-v4.d.ts` and
+   `svelte-jsx-v4.d.ts`, join the program from the adapter's own install.
+   They load `svelte`'s own types from there too, so runes such as `$state`
+   get their declared types even in a project with nothing installed.
+6. A source map from `svelte2tsx` maps every location back to the `.svelte`
+   file. A position without a mapping takes the nearest earlier mapping on
+   its line, else the component's first line. Files, containers and IDs
+   always name the `.svelte` path, never the virtual one.
+7. A SvelteKit project's tsconfig extends a file that SvelteKit writes:
+   `./.svelte-kit/tsconfig.json` (Kit 2) or `$app/tsconfig` (Kit 3). Neither
+   exists before an install and `svelte-kit sync`. When an `extends` target
+   does not resolve, the adapter reads the config without it, with
+   `allowJs`, and adds a note. Without a `tsconfig.json`, it reads
+   `jsconfig.json`, as `svelte-check` does; without either, it reads every
+   `.ts`, `.tsx`, `.js` and `.jsx` file under the root.
+8. In a project with components, the adapter applies the compiler options
+   that `svelte-check` forces: an ES module kind where the config names none
+   or an old one, a module resolution where it names none, and a target of
+   at least ES2015. Where the config names no module resolution, the adapter
+   picks Bundler, as SvelteKit's generated config does, not `svelte-check`'s
+   Node10: only the newer resolutions read the `imports` of `package.json`,
+   where SvelteKit 3 declares `#lib`.
+9. When the config gives no `paths` for `$lib`, the adapter maps `$lib` and
+   `$lib/*` to `src/lib`, as SvelteKit 2 does. `$app/*`, `$env/*` and
+   `./$types` resolve to nothing; the notes count the unresolved `./$types`
+   imports. Imports through `$lib` and `#` never count as outside packages,
+   because they name the project's own files.
+
+#### IDs
+
+A component's module keeps its `.svelte` name, so that `Button.svelte` and
+`Button.ts` in one folder never collide:
+`ts:app/src/lib/Button.svelte#Button`. A `.svelte.ts` module follows the
+usual rule and drops only `.ts`. When the two forms collide (`Button.svelte`
+beside `Button.svelte.ts`), the component keeps the name, the IDs of the
+`.svelte.ts` file keep its extension, and a note says so.
+
+#### Symbols
+
+Kinds come from the schema's neutral list; the words go to `languageKind`.
+
+| Svelte | `kind` | `languageKind` |
+| --- | --- | --- |
+| A component | `function` | "component" |
+| A prop | a parameter in `signature.params` | — |
+| A snippet in the markup | `function`, member | "snippet" |
+| A dispatched or forwarded event (legacy) | `event`, member | "event" |
+| A declaration of `<script module>` | its usual kind, member, exported when the script exports it | its usual word |
+| A top-level declaration of the instance script | its usual kind, member, not exported | its usual word |
+
+1. A component takes its name from its file, as `svelte2tsx` writes it:
+   `Button.svelte` gives `Button`, `+page.svelte` gives `Page`. Its location
+   spans the whole file.
+2. Props come from the type of what the component takes: the type of
+   `$props()` in Svelte 5, or the `export let` declarations of a legacy
+   component. Each prop's type stays as written where its declaration
+   annotates it. A default value in the `$props()` destructuring or in
+   `export let` fills `default`.
+3. A prop's doc comment fills its text in the component's `doc.params`.
+4. The `<!-- @component -->` comment gives the component's doc. `svelte2tsx`
+   carries it as JSDoc, so it keeps its Markdown, code blocks included.
+5. `signature.text` shows the component as a tag: `<Button {label}
+   {primary} />`.
+6. A variable that a rune declares shows its own type: `let n = $state(0)`
+   has the type `number`. Names that start with `$` stay out, because
+   Svelte keeps them for itself: store reads and the code that `svelte2tsx`
+   adds.
+7. A legacy event takes the line of its `dispatch("name")` call, or of the
+   `on:name` that forwards it. Its type comes from `svelte2tsx`, and a doc
+   comment in the dispatcher's type gives its doc.
+
+The viewer needs no Svelte words: it shows `languageKind` from the data.
+
+#### Edges
+
+1. A component tag renders that component. `svelte2tsx` writes
+   `<Button />` as a call of `__sveltets_2_ensureComponent(Button)`, which
+   the adapter reads as an exact `calls` edge from the component around the
+   tag to `Button`, from the line of the tag. The maintainer chose `calls`
+   over a new edge kind for every render.
+2. Calls in the markup and in event handlers count for the component, as a
+   call in a nested function counts for its declaration. A call inside a
+   snippet counts for the snippet, and `{@render badge()}` calls the
+   snippet.
+3. Every other edge follows the TypeScript rules above.
+
+#### The `sveltekit` plugin
+
+The plugin reads routes from file names under `src/routes`; its option
+`routes` names another folder. It never runs `svelte.config.js` or
+`vite.config.js`.
+
+1. A route's path joins its folders under `routes`. `(group)` folders drop
+   out. `[param]`, `[[optional]]`, `[...rest]` and `[id=matcher]` stay as
+   written: `src/routes/(app)/blog/[slug]` gives `/blog/[slug]`.
+2. A `+server.ts` or `+server.js` module makes an `http` entry for each
+   `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` and `HEAD` that it
+   exports, with that method. `fallback` makes `ANY`. An export that a
+   factory builds, such as `export const GET = rssHandler(…)`, takes as its
+   handler the first project function that its initializer names, as in the
+   Express and Hono plugins. The same rule holds for a `load` and a form
+   action.
+3. A page (`+page.svelte`, with an optional `+page.ts` and
+   `+page.server.ts`) makes one entry, `GET <path>`. Its handler: the `load`
+   of `+page.server.ts`, else the `load` of `+page.ts`, else the component.
+4. The form actions of `+page.server.ts`: `default` makes `POST <path>`;
+   a named action makes `POST <path>?/<name>`. An inline action at the top
+   level becomes a function symbol named after its route, such as
+   `POST /blog/[slug]?/comment`, as in the Express and Hono plugins.
+5. Layouts make no entry of their own: a layout answers no request alone.
+   SvelteKit renders each page inside every `+layout.svelte` from `routes`
+   down to the page's folder, and the page never names its layout. No
+   checker resolves that use, so the plugin records it as edges with
+   `confidence: "heuristic"`, each from the user to the thing used:
+   - a `calls` edge from each layout component to the nearest layout or
+     page below it, from the line of its `{@render children()}` or
+     `<slot>`;
+   - a `calls` edge from a `load` that calls `parent()` to the `load` of
+     each layout around it. A `+page.server.ts` or `+layout.server.ts` load
+     points at the `+layout.server.ts` loads. A `+page.ts` or `+layout.ts`
+     load points at the `+layout.ts` loads, and at a layout's
+     `+layout.server.ts` load where that layout has no `+layout.ts` load.
+6. The layouts around a node follow SvelteKit's own rule, including its
+   reset syntax: `+page@<segment>.svelte` and `+layout@<segment>.svelte`
+   skip the layouts up to the folder of that name, and `+page@.svelte`
+   resets to the root layout. A `(group)` folder counts as a segment for a
+   reset, but not for the path.
+7. `hooks.server.ts`, `+error.svelte` and param matchers make no entries.
+
+#### Limits
+
+The output's notes list these limits, and the help text repeats them:
+
+1. The components come from the adapter's `svelte2tsx` and `svelte`, not
+   from the project's own Svelte version. A component that a newer syntax
+   breaks adds a note and stays out of the map; the others carry on.
+2. A render of a component that a variable holds, such as
+   `<svelte:component this={x}>`, and a render of a snippet that a prop
+   passes in, such as `{@render children()}`, do not appear.
+3. The layout and `parent()` edges count as heuristic: they follow
+   SvelteKit's file conventions, not a checker.
+4. Without an install and `svelte-kit sync`, `./$types`, `$app/*` and
+   `$env/*` resolve to nothing, so the types they bring count as unknown.
 
 ### Rust (after TypeScript)
 

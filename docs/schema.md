@@ -197,7 +197,7 @@ The viewer escapes all HTML and renders nothing else.
 | `from` | yes | The user. |
 | `to` | yes | The thing used. |
 | `kind` | yes | One kind from the table below. |
-| `confidence` | yes | `exact` when a type checker resolved the edge. `heuristic` when the adapter matched names. The viewer draws heuristic edges in a different style and says so in the legend. |
+| `confidence` | yes | `exact` when a type checker resolved the edge. `heuristic` when the adapter matched names, or when a framework's file convention implies the edge, such as a layout around a page. The viewer draws heuristic edges in a different style and says so in the legend. |
 | `line` | no | The first line of the use, in the file of `from`. For calls, the first call site; calls inside one function sort in source order by it. |
 | `count` | no | How many places make the same use. |
 

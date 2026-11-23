@@ -169,7 +169,7 @@ export interface Edge {
   to: string;
   /** The relation. */
   kind: EdgeKind;
-  /** "exact" when a type checker resolved the edge; the viewer draws "heuristic" edges fainter and says so. */
+  /** "exact" when a type checker resolved the edge; "heuristic" when the adapter matched names, or when a framework's file convention implies the edge. The viewer draws heuristic edges fainter and says so. */
   confidence: "exact" | "heuristic";
   /** The first line of the use, in the file of `from`; a trace numbers calls in this order. */
   line?: number;

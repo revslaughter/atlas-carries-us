@@ -21,6 +21,8 @@
     "node": ">=20"
   },
   "dependencies": {
+    "svelte": "5.57.3",
+    "svelte2tsx": "0.7.63",
     "typescript": "6.0.3"
   },
   "devDependencies": {

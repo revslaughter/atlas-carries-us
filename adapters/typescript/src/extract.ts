@@ -15,11 +15,12 @@ import { builtinModules } from "node:module";
 import path from "node:path";
 import ts from "typescript";
 
-import { commentText, FILE_TAGS, normalise } from "./docs.js";
+import { commentText, FILE_TAGS, inline, normalise } from "./docs.js";
 import { compileGlobs, type Globs } from "./glob.js";
 import { Plugins, type PluginConfig } from "./plugins.js";
 import type * as S from "./schema.js";
 import { VERSION } from "./schema.js";
+import { Svelte } from "./svelte.js";
 import { indexTests } from "./tests.js";
 
 /** This adapter's release. */
@@ -71,9 +72,13 @@ export function collapse(s: string): string {
     .trim();
 }
 
-/** Cuts a text to at most n characters. */
+/** Cuts a text to at most n characters. The cut never splits a character that takes two UTF-16 units, such as an emoji, so the JSON stays valid. */
 export function shorten(s: string, n = 80): string {
-  return s.length > n ? s.slice(0, n - 3) + "..." : s;
+  if (s.length <= n) return s;
+  let cut = n - 3;
+  const last = s.charCodeAt(cut - 1);
+  if (last >= 0xd800 && last <= 0xdbff) cut--;
+  return s.slice(0, cut) + "...";
 }
 
 /** Removes parentheses, type assertions and non-null marks around an expression. */
@@ -115,6 +120,8 @@ interface PendingDoc {
   at: ts.Node;
   /** Stores the finished doc on its owner. */
   set: (d: S.Doc) => void;
+  /** Stores the doc as one line of inline text instead, for the text of a parameter. */
+  inline?: (text: string) => void;
 }
 
 /** Holds the state of one run. The plugins and the test index read it too. */
@@ -183,6 +190,10 @@ export class Extractor {
   private tests: Globs;
   /** The imports of outside packages that resolved to nothing, for a note. */
   private unresolved = 0;
+  /** The Svelte components of the run; undefined when the root holds no .svelte file. */
+  svelte: Svelte | undefined;
+  /** The files whose IDs keep their extension, because a component already takes the module name without it. */
+  private readonly keepExtension = new Set<ts.SourceFile>();
 
   /** Prepares a run: resolves the paths, compiles the globs and switches on the plugins. Nothing reads code yet. */
   constructor(req: Request) {
@@ -217,11 +228,21 @@ export class Extractor {
 
   private load() {
     const opt = this.req.options ?? {};
-    const configPath = path.resolve(this.root, opt.tsconfig ?? "tsconfig.json");
+    let configPath = path.resolve(this.root, opt.tsconfig ?? "tsconfig.json");
+    const all = walk(this.root, r => this.exclude.match(r));
+    const components = all.filter(f => f.endsWith(".svelte"));
+    if (components.length) this.svelte = new Svelte(components, f => this.rel(f));
+    // A project with components may hold its config in jsconfig.json, as
+    // svelte-check allows.
+    const jsconfig = path.join(this.root, "jsconfig.json");
+    if (this.svelte && !opt.tsconfig && !fs.existsSync(configPath) && fs.existsSync(jsconfig)) configPath = jsconfig;
     let options: ts.CompilerOptions;
     let rootNames: string[];
     if (fs.existsSync(configPath)) {
-      const parsed = parseConfig(configPath);
+      let parsed = parseConfig(configPath);
+      // SvelteKit's generated config, which the project extends, lets
+      // JavaScript in; without it, read the config again with allowJs.
+      if (this.svelte && this.missingExtends(configPath, parsed)) parsed = parseConfig(configPath, { allowJs: true });
       options = parsed.options;
       rootNames = [...parsed.fileNames];
       if (!rootNames.length && parsed.projectReferences?.length) {
@@ -247,9 +268,9 @@ export class Extractor {
         jsx: ts.JsxEmit.Preserve,
         strict: true,
       };
-      rootNames = walk(this.root, r => this.exclude.match(r)).filter(
-        f => /\.[cm]?tsx?$/.test(f) && !/\.d\.[cm]?ts$/.test(f),
-      );
+      // A project with components reads its JavaScript too, as svelte-check does.
+      const source = this.svelte ? /\.[cm]?[jt]sx?$/ : /\.[cm]?tsx?$/;
+      rootNames = all.filter(f => source.test(f) && !/\.d\.[cm]?ts$/.test(f));
     }
     options = {
       ...options,
@@ -264,12 +285,15 @@ export class Extractor {
       emitDeclarationOnly: false,
       sourceMap: false,
     };
-    const host = ts.createCompilerHost(options, true);
+    let host = ts.createCompilerHost(options, true);
     host.jsDocParsingMode = ts.JSDocParsingMode.ParseAll;
+    if (this.svelte) {
+      this.svelte.configure(options, this.root);
+      rootNames.push(...this.svelte.virtualNames(), ...this.svelte.shims());
+      host = this.svelte.wrap(host, options);
+    }
     const first = ts.createProgram({ rootNames, options, host });
-    const tests = walk(this.root, r => this.exclude.match(r)).filter(
-      f => SCRIPT.test(f) && !/\.d\.[cm]?ts$/.test(f) && this.tests.match(this.relRoot(f)),
-    );
+    const tests = all.filter(f => SCRIPT.test(f) && !/\.d\.[cm]?ts$/.test(f) && this.tests.match(this.relRoot(f)));
     this.program = tests.length
       ? ts.createProgram({ rootNames: [...rootNames, ...tests], options, host, oldProgram: first })
       : first;
@@ -301,32 +325,76 @@ export class Extractor {
       const sf = this.program.getSourceFile(f);
       if (sf) this.testFiles.push(sf);
     }
+    if (this.svelte) this.moduleNameClashes();
+  }
+
+  /** Adds a note, and returns true, when the tsconfig extends a file that does not exist yet, such as the config that `svelte-kit sync` writes. TypeScript then reads the tsconfig without it. */
+  private missingExtends(file: string, parsed: ts.ParsedCommandLine): boolean {
+    const msgs = parsed.errors
+      .filter(d => d.code === 6053 || d.code === 5083)
+      .map(d => ts.flattenDiagnosticMessageText(d.messageText, " "));
+    if (!msgs.length) return false;
+    const raw = (parsed.raw as { extends?: unknown } | undefined)?.extends;
+    const list = (Array.isArray(raw) ? raw : [raw]).filter((x): x is string => typeof x === "string");
+    const missing = list.filter(x => msgs.some(m => m.includes(x) || m.includes(path.resolve(path.dirname(file), x))));
+    this.notes.push(
+      `${this.rel(file)} extends ${(missing.length ? missing : list).join(", ")}, which does not resolve without an install and svelte-kit sync; the adapter reads the config without it, with allowJs and the compiler options that svelte-check forces.`,
+    );
+    return true;
+  }
+
+  /** Finds the files whose module name a component already takes (Button.svelte.ts beside Button.svelte), keeps their extension in their IDs, and adds a note for each. */
+  private moduleNameClashes() {
+    const svelte = this.svelte!;
+    const taken = new Set(this.files.filter(sf => svelte.has(sf.fileName)).map(sf => this.relRoot(sf.fileName)));
+    for (const sf of this.files) {
+      if (svelte.has(sf.fileName)) continue;
+      const r = this.relRoot(sf.fileName);
+      const m = r.replace(/\.[cm]?[jt]sx?$/, "");
+      if (m === r || !taken.has(m)) continue;
+      this.keepExtension.add(sf);
+      this.notes.push(
+        `${this.rel(sf.fileName)} and the component ${path.posix.basename(m)} share a module name; the component keeps it, and the IDs of ${path.posix.basename(r)} keep its extension.`,
+      );
+    }
   }
 
   /* Paths and IDs. See docs/schema.md, section 3. */
 
   /** The path of a file relative to the repository root, with forward slashes. */
   rel(file: string): string {
-    const r = path.relative(this.repoRoot, file).split(path.sep).join("/");
+    const r = path
+      .relative(this.repoRoot, this.svelte ? this.svelte.real(file) : file)
+      .split(path.sep)
+      .join("/");
     return r || ".";
   }
 
-  /** The path of a file relative to the language root. */
+  /** The path of a file relative to the language root. A component's virtual name gives the path of its .svelte file. */
   relRoot(file: string): string {
-    return path.relative(this.root, file).split(path.sep).join("/");
+    return path
+      .relative(this.root, this.svelte ? this.svelte.real(file) : file)
+      .split(path.sep)
+      .join("/");
   }
 
-  /** The first line of a node, counting from 1. */
+  /** The first line of a node, counting from 1. In a component, the line comes from the .svelte file. */
   line(node: ts.Node, sf = node.getSourceFile()): number {
-    return sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+    const pos = node.getStart(sf);
+    return this.svelte?.lineOf(sf, pos) ?? sf.getLineAndCharacterOfPosition(pos).line + 1;
   }
 
+  /** The last line of a node, counting from 1. In a component, the line comes from the .svelte file, and never falls before the first. */
   private endLine(node: ts.Node, sf: ts.SourceFile): number {
+    const mapped = this.svelte?.lineOf(sf, Math.max(node.getStart(sf), node.getEnd() - 1));
+    if (mapped !== undefined) return Math.max(mapped, this.line(node, sf));
     return sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
   }
 
+  /** The module part of a file's IDs: the package name and the file's path without its extension. A .svelte file keeps its whole name. */
   private moduleKey(sf: ts.SourceFile): string {
-    const m = this.relRoot(sf.fileName).replace(/\.[cm]?[jt]sx?$/, "");
+    const r = this.relRoot(sf.fileName);
+    const m = this.keepExtension.has(sf) ? r : r.replace(/\.[cm]?[jt]sx?$/, "");
     return this.pkgName ? `${this.pkgName}/${m}` : m;
   }
 
@@ -381,7 +449,7 @@ export class Extractor {
   }
 
   /** Records one use. A repeated use raises the edge's count and keeps its first line. */
-  addEdge(from: string, to: string, kind: S.EdgeKind, line: number) {
+  addEdge(from: string, to: string, kind: S.EdgeKind, line: number, confidence: S.Edge["confidence"] = "exact") {
     // A call from a function to itself (recursion) counts; other self-edges do not.
     if (!from || !to || (from === to && kind !== "calls")) return;
     const k = `${from}\0${to}\0${kind}`;
@@ -389,9 +457,10 @@ export class Extractor {
     if (e) {
       e.count = (e.count ?? 1) + 1;
       if (line > 0 && (!e.line || line < e.line)) e.line = line;
+      if (confidence === "exact") e.confidence = "exact";
       return;
     }
-    const edge: S.Edge = { from, to, kind, confidence: "exact" };
+    const edge: S.Edge = { from, to, kind, confidence };
     if (line > 0) edge.line = line;
     this.edges.set(k, edge);
   }
@@ -436,9 +505,10 @@ export class Extractor {
       language: "ts",
     };
     this.conts.set(fc.id, fc);
-    const fd = this.fileDoc(sf);
+    const fd = this.svelte?.has(sf.fileName) ? undefined : this.fileDoc(sf);
     if (fd) this.fileDocs.set(fc.id, fd);
-    this.statements(sf, sf.statements, fc.id, "", undefined);
+    if (this.svelte?.has(sf.fileName)) this.svelte.declare(this, sf, fc.id);
+    else this.statements(sf, sf.statements, fc.id, "", undefined);
   }
 
   /** Finds the comment that describes a whole file: the first comment that no declaration owns. */
@@ -562,7 +632,13 @@ export class Extractor {
     return l;
   }
 
-  private statements(
+  /**
+   * Declares the symbols of a list of statements under a parent: a file, a
+   * namespace or a component. Every member path starts with `prefix`. `ns`
+   * holds whether the enclosing namespace counts as exported; undefined
+   * means the top level of a module, where the module's exports decide.
+   */
+  statements(
     sf: ts.SourceFile,
     list: readonly ts.Statement[],
     parent: string,
@@ -975,6 +1051,11 @@ export class Extractor {
     return out;
   }
 
+  /** Returns a list that fills with the IDs that an inferred type names, once every symbol exists. */
+  typeRefsLater(type: ts.Type): string[] {
+    return this.refsLater(() => this.typeRefs(type));
+  }
+
   private typeText(t: ts.Type, at: ts.Node): string {
     return this.checker.typeToString(t, at, ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope);
   }
@@ -1044,7 +1125,8 @@ export class Extractor {
     return id;
   }
 
-  private signature(sf: ts.SourceFile, fn: ts.SignatureDeclaration, how: string, name: string): S.Signature {
+  /** Builds the signature of a callable: its parameters and results with their types, and the text as the code writes it. `how` names the form ("function", "arrow", "constructor", "property" or "method"). */
+  signature(sf: ts.SourceFile, fn: ts.SignatureDeclaration, how: string, name: string): S.Signature {
     const params: S.Param[] = [];
     for (const prm of fn.parameters) {
       const pn = ts.isIdentifier(prm.name) ? prm.name.text : shorten(collapse(prm.name.getText(sf)), 40);
@@ -1107,7 +1189,7 @@ export class Extractor {
   }
 
   /** Declares an inline route handler at the top level of a module as a function named after its route. */
-  inlineHandler(fn: ts.ArrowFunction | ts.FunctionExpression, name: string): string {
+  inlineHandler(fn: ts.ArrowFunction | ts.FunctionExpression | ts.MethodDeclaration, name: string): string {
     const known = this.idOfNode.get(fn);
     if (known) return known;
     const sf = fn.getSourceFile();
@@ -1217,11 +1299,17 @@ export class Extractor {
         continue;
       }
       const text = spec.text;
+      if (this.svelte && !target && /(^|\/)\$types(\.[jt]s)?$/.test(text)) this.svelte.unresolvedTypes++;
       if (text.startsWith(".") || text.startsWith("/")) continue;
+      // $lib and #-imports name the project's own files, such as an asset
+      // that only the bundler reads; they never name an outside package.
+      if (this.svelte && /^(\$lib(\/|$)|#)/.test(text)) continue;
       const parts = text.split("/");
       const name = text.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
       if (name.startsWith("node:") || BUILTIN.has(name) || name === this.pkgName) continue;
-      if (!target) this.unresolved++;
+      // In a project with components, an import that an ambient module
+      // declaration answers (svelte's own types declare "svelte") resolves.
+      if (!target && !(this.svelte && sym)) this.unresolved++;
       ext.add(name);
     }
     if (ext.size) c.externalImports = [...ext].sort(cmp);
@@ -1256,8 +1344,17 @@ export class Extractor {
 
   private walkCalls(sf: ts.SourceFile) {
     const aliases = this.aliases(sf);
+    const component = this.svelte?.has(sf.fileName);
     this.walkWithCaller(sf, (n, caller) => {
       if (!caller) return;
+      if (component) {
+        // A component tag renders that component: <Button /> calls Button.
+        const r = this.svelte!.renderTarget(this, n);
+        if (r) {
+          this.addEdge(caller, r.id, "calls", this.line(r.at, sf));
+          return;
+        }
+      }
       if (!(
         ts.isCallExpression(n) ||
         ts.isNewExpression(n) ||
@@ -1277,7 +1374,8 @@ export class Extractor {
 
   /* Pass 4: docs. */
 
-  private queueDecl(node: ts.Node, sf: ts.SourceFile, s: S.Symbol) {
+  /** Queues the doc comment above a declaration as the doc of its symbol. A symbol takes the first doc that it meets, so an overload's second comment never wins. */
+  queueDecl(node: ts.Node, sf: ts.SourceFile, s: S.Symbol) {
     if (this.docQueued.has(s.id)) return;
     const jsdocs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
     const last = jsdocs[jsdocs.length - 1];
@@ -1288,14 +1386,37 @@ export class Extractor {
     this.queue(raw, sf, node, d => (s.doc = d));
   }
 
-  private queue(raw: string, sf: ts.SourceFile, at: ts.Node, set: (d: S.Doc) => void) {
+  /** Queues a doc comment, which pass 4 turns into the normal form once every symbol exists, so that its links resolve. */
+  queue(raw: string, sf: ts.SourceFile, at: ts.Node, set: (d: S.Doc) => void) {
     this.docs.push({ raw, sf, at, set });
+  }
+
+  /** Queues the doc of one parameter, such as a component's prop: its text joins the owner's doc under the parameter's name. */
+  queueParamDoc(raw: string, sf: ts.SourceFile, at: ts.Node, owner: S.Symbol, name: string) {
+    this.docs.push({
+      raw,
+      sf,
+      at,
+      set: () => {},
+      inline: text => {
+        owner.doc ??= { raw: "", format: "jsdoc", summary: "", description: [] };
+        (owner.doc.params ??= {})[name] = text;
+      },
+    });
   }
 
   private resolveDocs() {
     for (const pd of this.docs) {
       const lang = /\.[cm]?jsx?$/.test(pd.sf.fileName) ? "js" : "ts";
-      const d = normalise(pd.raw, t => this.resolveLink(t, pd.sf, pd.at), lang);
+      const resolve = (t: string) => this.resolveLink(t, pd.sf, pd.at);
+      if (pd.inline) {
+        const d = normalise(pd.raw, resolve, lang);
+        const paras = d?.description.flatMap(b => (b.type === "paragraph" ? [b.text] : [])) ?? [];
+        const text = paras.length ? paras.join(" ") : (d?.summary ?? inline(pd.raw, resolve));
+        if (text) pd.inline(text);
+        continue;
+      }
+      const d = normalise(pd.raw, resolve, lang);
       if (d) pd.set(d);
     }
   }
@@ -1365,6 +1486,7 @@ export class Extractor {
       notes.push(
         `${this.unresolved} imports of outside packages did not resolve, so the types they bring count as unknown.`,
       );
+    if (this.svelte) notes.push(...this.svelte.limits());
     notes.push(...this.notes);
     const info: S.AdapterInfo = { name: "typescript", version: ADAPTER_VERSION, language: "ts" };
     const r = this.rel(this.root);
@@ -1445,15 +1567,15 @@ function calleeName(n: ts.Node): string | undefined {
   return undefined;
 }
 
-/** Reads and parses a tsconfig file, with its extends chain, or throws with a message that names the file. */
-function parseConfig(file: string): ts.ParsedCommandLine {
+/** Reads and parses a tsconfig file, with its extends chain, or throws with a message that names the file. `extra` overrides the file's own options. */
+function parseConfig(file: string, extra?: ts.CompilerOptions): ts.ParsedCommandLine {
   const host: ts.ParseConfigFileHost = {
     ...ts.sys,
     onUnRecoverableConfigFileDiagnostic: d => {
       throw new Error(`read ${file}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
     },
   };
-  const parsed = ts.getParsedCommandLineOfConfigFile(file, undefined, host);
+  const parsed = ts.getParsedCommandLineOfConfigFile(file, extra, host);
   if (!parsed) throw new Error(`read ${file}: the file does not parse`);
   return parsed;
 }

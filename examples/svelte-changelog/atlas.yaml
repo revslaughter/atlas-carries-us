@@ -1,0 +1,156 @@
+# Atlas Carries Us config for WarningImHack3r/svelte-changelog at commit
+# c100d72 (MIT licence, by WarningImHack3r and contributors). The code sits in
+# the submodule corpus/svelte/svelte-changelog:
+#
+#   git submodule update --init --checkout --depth 1 corpus/svelte/svelte-changelog
+#   acu extract -c examples/svelte-changelog/atlas.yaml -o examples/svelte-changelog/atlas.json
+#   acu serve -d examples/svelte-changelog/atlas.json
+#
+# The app runs SvelteKit 3. Its tsconfig.json extends $app/tsconfig, which
+# exists only after an install and svelte-kit sync; the adapter installs
+# nothing, so it reads tsconfig.json without it and says so in its notes.
+version: 1
+project:
+  name: Svelte Changelog
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+  repo: WarningImHack3r/svelte-changelog
+  links: github
+  description: |
+    Svelte Changelog gathers the releases of the packages of the Svelte
+    ecosystem in one place, read from their GitHub repositories. It also shows
+    one issue, pull request or discussion at a time, and tracks the recent
+    work of each repository's members. It runs on SvelteKit 3 and Svelte 5.
+
+    This map covers commit c100d72 of WarningImHack3r/svelte-changelog, under
+    the MIT licence. Each page and each +server method appears under "Ways
+    in". The server keeps GitHub's answers in Redis and tags its pages for
+    the CDN, and a webhook clears both when a package changes.
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: typescript
+    root: ../../corpus/svelte/svelte-changelog
+entryPoints:
+  - plugin: sveltekit
+regions:
+  - id: releases
+    name: Release pages
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["src/routes", "src/routes/package", "src/routes/package/**", "src/routes/packages", "src/routes/packages/**"]
+    description: >-
+      The root layout, the pages that list each package's releases beside a
+      side panel of packages, and the RSS, Atom and JSON feeds of the same
+      releases. The home page redirects to the first package.
+    readingTip: Start with the load of the package page, then follow it into the server code.
+  - id: details
+    name: Issues, pull requests and discussions
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    # In a glob, [...] matches one character from a set; [[] matches a
+    # literal "[", as in the folder name [pid=pid].
+    paths: ["src/routes/[[]pid=pid]", "src/routes/[[]pid=pid]/**", "src/routes/[[]...host=gh]", "src/routes/[[]...host=gh]/**"]
+    description: >-
+      The page of one issue, pull request or discussion of a listed
+      repository, and the GitHub-style addresses that redirect to it.
+  - id: tracker
+    name: Tracker
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["src/routes/tracker", "src/routes/tracker/**"]
+    description: >-
+      The recent pull requests, issues and discussions of each listed
+      repository's members. The tracker leaves out pull requests that close
+      an issue.
+  - id: extras
+    name: Site extras
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["src/routes/og", "src/routes/devlog", "src/routes/devlog/**"]
+    description: The social preview image that /og draws as a PNG, and the devlog pages.
+  - id: server
+    name: GitHub data and caches
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["src/lib/server", "src/routes/api/**"]
+    description: >-
+      The GitHub client with its Redis cache, the package discoverer, the CDN
+      cache tags, and the webhook that clears both caches when a package
+      changes.
+    readingTip: Read GitHubAPI first; every page's data passes through it.
+  - id: shared
+    name: Shared code
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["src", "src/lib", "src/lib/components", "src/lib/components/renderers"]
+    default: true
+    description: >-
+      Helpers for releases, changelogs, badges and logging; the shared
+      components; the route parameter matchers; and the server hooks, which
+      pass analytics requests on and report errors.
+  - id: ui
+    name: Interface kit
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["src/lib/components/ui/**"]
+    description: >-
+      Generic interface components from shadcn-svelte, one folder each:
+      buttons, cards, dialogs, menus, tooltips and more.
+layout:
+  rows:
+    - [releases, details]
+    - [tracker, extras]
+    - [server, shared]
+    - [ui]
+tour:
+  - title: Seven parts
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: overview }
+    text: >-
+      The release pages and the details pages sit at the top. The tracker and
+      the site extras follow. All of them read their data through the GitHub
+      client and its caches. The interface kit at the bottom holds the
+      building blocks of every page.
+  - title: One package's releases
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: trace, entryPoint: "GET /package/[...package]" }
+    text: >-
+      The page's server load first asks the discoverer for every package. The
+      slug "all" and the slug of a category each give a merged list of
+      releases. For any other slug, the load checks that the package exists,
+      answers 404 when it does not, and reads the package's releases. It tags
+      the response, so that the CDN can drop its copy later.
+  - title: Where the packages come from
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: symbol, id: "ts:svelte-changelog/src/lib/server/package-discoverer#PackageDiscoverer" }
+    text: >-
+      discoverAll asks the GitHub client for the releases and the
+      descriptions of each listed repository, and takes the package names
+      from the release tags. getOrDiscover keeps that result, and runs
+      discoverAll only while it holds nothing.
+  - title: A GitHub client with a cache
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: symbol, id: "ts:svelte-changelog/src/lib/server/github-api#GitHubAPI" }
+    text: >-
+      Each getter reads the cache in Redis first, fetches from GitHub only on
+      a miss, and stores the answer with its own lifetime: 30 minutes for
+      releases, 2 hours for the details of an issue or a pull request.
+  - title: When a package changes
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: trace, entryPoint: "POST /api/webhooks/packages" }
+    text: >-
+      A replicator calls this webhook with a bearer token. The handler checks
+      the token, finds the repository of the package, and deletes its cached
+      releases. It then clears the CDN's copy of every page tagged
+      all-packages at once, and of the package's own pages after a delay, in
+      the background.
+  - title: Three feeds, one factory
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: trace, entryPoint: "GET /package/[...package]/rss.xml" }
+    text: >-
+      rss.xml, atom.xml and rss.json each export a GET that rssHandler
+      builds. The handler finds the releases as the package page does; each
+      file's callback writes them as RSS, Atom or JSON.
+  - title: The layout around the package pages
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: symbol, id: "ts:svelte-changelog/src/routes/package/+layout.svelte#Layout" }
+    text: >-
+      The package layout adds the side panel of packages around each package
+      page. SvelteKit joins a layout to its pages by file names, not by calls,
+      so the map draws that edge as heuristic. The layout's server load hands
+      the pages a promise of each package's releases, for the badges in the
+      side panel.

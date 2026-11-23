@@ -33,7 +33,8 @@ Choose one:
    npm ci
    npm run build -w adapters/typescript
    git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra \
-     corpus/typescript/immer corpus/typescript/hono
+     corpus/typescript/immer corpus/typescript/hono corpus/svelte/realworld \
+     corpus/svelte/svelte-changelog
    (cd adapters/go && go install ./cmd/acu-adapter-go)
    ```
 
@@ -204,11 +205,15 @@ Each tool version lives in two or more files. Change a group together;
 | Rust | `RUST_IMAGE` in `Dockerfile`; `rust-toolchain.toml` |
 | Playwright | `PLAYWRIGHT_VERSION` in `Dockerfile`; `tests/e2e/package.json`; `package-lock.json` |
 | TypeScript | `viewer/package.json`; `adapters/typescript/package.json`; `package-lock.json` |
+| `svelte`, `svelte2tsx` | `adapters/typescript/package.json`; `package-lock.json` |
 
 1. Pin base images by tag and digest.
 2. Pin npm packages to exact versions.
 3. Prefer releases at least two weeks old.
 4. Add a dependency only when it earns its place; say why in the pull request.
+5. Keep TypeScript on major version 6. The adapters and `svelte2tsx` use the
+   TypeScript 6 compiler API; TypeScript 7 offers only an unstable one.
+   `scripts/check-pins.sh` fails on another major version.
 
 ### 4.12 Colour and access
 

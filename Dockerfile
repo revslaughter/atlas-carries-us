@@ -85,6 +85,12 @@ COPY viewer/package.json viewer/
 COPY adapters/typescript/package.json adapters/typescript/
 COPY tests/e2e/package.json tests/e2e/
 RUN npm ci --no-audit --no-fund
+# The TypeScript adapter's run-time dependencies alone, from the same lock
+# file: the TypeScript compiler, svelte and svelte2tsx.
+RUN mkdir /deps \
+ && cp -r package.json package-lock.json viewer adapters tests /deps/ \
+ && (cd /deps && npm ci --omit=dev --no-audit --no-fund -w adapters/typescript) \
+ && rm -rf /deps/node_modules/@atlas-carries-us /deps/node_modules/.bin /root/.npm
 COPY adapters/go/go.mod adapters/go/go.sum adapters/go/
 RUN cd adapters/go && go mod download
 COPY . .
@@ -93,13 +99,13 @@ RUN npm run build -w viewer \
  && mkdir -p /out \
  && cp target/release/acu /out/acu \
  && (cd adapters/go && CGO_ENABLED=0 go build -trimpath -o /out/acu-adapter-go ./cmd/acu-adapter-go)
-# The TypeScript adapter: its compiled source, and the TypeScript compiler
-# from the lockfile's install. It needs nothing else at run time.
+# The TypeScript adapter: its compiled source, and its run-time dependencies
+# from /deps. It needs nothing else at run time.
 RUN npm run build -w adapters/typescript \
- && mkdir -p /out/acu-adapter-typescript/dist /out/acu-adapter-typescript/node_modules \
+ && mkdir -p /out/acu-adapter-typescript/dist \
  && cp adapters/typescript/package.json /out/acu-adapter-typescript/ \
  && cp -r adapters/typescript/dist/src /out/acu-adapter-typescript/dist/src \
- && cp -r node_modules/typescript /out/acu-adapter-typescript/node_modules/typescript \
+ && cp -r /deps/node_modules /out/acu-adapter-typescript/node_modules \
  && chmod +x /out/acu-adapter-typescript/dist/src/main.js
 
 # ---------------------------------------------------------------------------

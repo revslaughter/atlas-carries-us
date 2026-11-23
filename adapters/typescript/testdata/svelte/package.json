@@ -1,0 +1,9 @@
+{
+  "name": "reading-room",
+  "private": true,
+  "description": "An invented SvelteKit 3 app for the adapter's tests: a reading room with a blog, a counter and an items API.",
+  "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "containers": {
+    "directory": 14,
+    "file": 42,
+    "package": 1
+  },
+  "symbols": {
+    "constant": 17,
+    "function": 54,
+    "variable": 3
+  },
+  "edges": {
+    "calls": 53,
+    "imports": 13
+  },
+  "entryPoints": 21,
+  "symbolsWithTests": 0,
+  "regions": 5,
+  "tourSteps": 7
+}
