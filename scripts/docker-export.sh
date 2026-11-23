@@ -2,15 +2,16 @@
 # Builds the Dockerfile's export stage and writes acu, acu-adapter-go,
 # acu-adapter-rust and acu-adapter-typescript/ to a folder on the host.
 #
-#   scripts/docker-export.sh                          out/docker, this machine's architecture
-#   scripts/docker-export.sh --platform linux/arm64   another Linux architecture
-#   scripts/docker-export.sh out/acu                  another folder
+#   scripts/docker-export.sh                           out/docker, this machine's platform
+#   scripts/docker-export.sh --platform darwin/arm64   another platform
+#   scripts/docker-export.sh out/acu                   another folder
 #   scripts/docker-export.sh -- --build-arg REGISTRY=mirror.gcr.io
-#                                                     extra arguments for docker build
+#                                                      extra arguments for docker build
 #
-# The Dockerfile builds in Linux containers, so it makes Linux programs only.
-# A platform other than the machine's own runs the build under emulation
-# (QEMU, through binfmt), which takes far longer than a native build.
+# The Dockerfile builds in containers of the build machine's own platform and
+# cross-compiles for the platform that --platform names, so no step runs
+# under emulation. The platforms: linux, darwin (macOS) and windows, each on
+# amd64 or arm64.
 set -euo pipefail
 caller=$PWD
 cd "$(dirname "$0")/.."
@@ -23,18 +24,19 @@ Builds the Dockerfile's export stage and writes acu, acu-adapter-go,
 acu-adapter-rust and acu-adapter-typescript/ to <folder> (default: out/docker).
 
 Options:
-  --platform <os/arch>  The platform to build for, for example linux/amd64 or
-                        linux/arm64. The default follows this machine. Only
-                        linux works: the build runs in Linux containers. Another
-                        architecture runs under emulation and takes much longer;
-                        set it up once with
-                        docker run --privileged --rm tonistiigi/binfmt --install <arch>
+  --platform <os/arch>  The platform to build for: linux/amd64, linux/arm64,
+                        darwin/amd64, darwin/arm64, windows/amd64 or
+                        windows/arm64. The default follows this machine, which
+                        Docker counts as linux, also on macOS and Windows.
+                        The build cross-compiles, so every platform builds at
+                        about the same speed.
   -h, --help            Print this help.
   --                    Pass every later argument to docker build, for example
                         --build-arg REGISTRY=mirror.gcr.io, or
                         --secret id=extra_ca,src=<ca.pem> behind a TLS-inspecting proxy.
 
-The programs need Go, Node and the pinned Rust nightly at run time.
+On windows, acu, acu-adapter-go and acu-adapter-rust end in .exe. The programs
+need Go, Node and the pinned Rust nightly on the machine that runs them.
 EOF
 }
 
@@ -51,7 +53,7 @@ while (($#)); do
       ;;
     --platform)
       if (($# < 2)) || [[ -z "$2" ]]; then
-        echo "docker-export: --platform needs a value; give one such as linux/arm64." >&2
+        echo "docker-export: --platform needs a value; give one such as darwin/arm64." >&2
         exit 2
       fi
       platform=$2
@@ -86,11 +88,13 @@ done
 
 platform_args=()
 if [[ -n "$platform" ]]; then
-  os=${platform%%/*}
-  if [[ "$os" != linux || "$platform" != */* ]]; then
-    echo "docker-export: the Dockerfile builds in Linux containers, so it cannot make programs for $platform; choose a Linux platform such as linux/amd64 or linux/arm64." >&2
-    exit 2
-  fi
+  case "$platform" in
+    linux/amd64 | linux/arm64 | darwin/amd64 | darwin/arm64 | windows/amd64 | windows/arm64) ;;
+    *)
+      echo "docker-export: the Dockerfile cannot build for the platform $platform; choose linux, darwin or windows, each with amd64 or arm64, such as darwin/arm64." >&2
+      exit 2
+      ;;
+  esac
   platform_args=(--platform "$platform")
 fi
 
@@ -101,8 +105,10 @@ fi
 
 echo "docker-export: building the export stage${platform:+ for $platform} into $dest" >&2
 # The ${a[@]+"${a[@]}"} form keeps an empty array safe under set -u in bash 3.2,
-# the bash that macOS ships.
-docker build ${platform_args[@]+"${platform_args[@]}"} --target export --output "type=local,dest=$dest" ${extra[@]+"${extra[@]}"} .
+# the bash that macOS ships. --provenance=false keeps buildx from writing a
+# provenance.json beside the programs; an argument after -- can still turn it
+# back on.
+docker build ${platform_args[@]+"${platform_args[@]}"} --target export --provenance=false --output "type=local,dest=$dest" ${extra[@]+"${extra[@]}"} .
 
 echo "docker-export: $dest now holds:" >&2
 ls -l "$dest"

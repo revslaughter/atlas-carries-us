@@ -45,34 +45,37 @@ To get the programs themselves on your machine, build the `export` stage
 with the wrapper script. It writes them to `out/docker`:
 
 ```sh
-scripts/docker-export.sh                          # this machine's architecture
-scripts/docker-export.sh --platform linux/arm64   # another Linux architecture
+scripts/docker-export.sh                           # Linux, this machine's architecture
+scripts/docker-export.sh --platform darwin/arm64   # macOS on Apple silicon
+scripts/docker-export.sh --platform windows/amd64  # Windows on x86-64
 ```
 
-The script takes another folder as its argument, and passes everything after
-`--` to `docker build`, for example `-- --build-arg REGISTRY=mirror.gcr.io`.
-Without the script, run the build yourself:
+`--platform` accepts `linux/amd64`, `linux/arm64`, `darwin/amd64`,
+`darwin/arm64`, `windows/amd64` and `windows/arm64`. Without it, Docker picks
+its own Linux platform, also on macOS and Windows, so name your system there.
+The build cross-compiles, so no step runs under emulation. The script takes
+another folder as its argument, and passes everything after `--` to
+`docker build`, for example `-- --build-arg REGISTRY=mirror.gcr.io`. Without
+the script, run the build yourself:
 
 ```sh
-docker build --target export --output type=local,dest=out/docker .
+docker build --platform darwin/arm64 --target export --provenance=false \
+  --output type=local,dest=out/docker .
 ```
 
 The folder then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
-`acu-adapter-typescript/`. `acu` finds its adapters beside itself, the
-`acu-adapter-typescript/` folder included, which it runs with Node. You need
-no `PATH` setup for them. They need the same tools at run time as the image
-holds: Go for the Go adapter, Node for the TypeScript adapter, and the pinned
-nightly for the Rust adapter.
+`acu-adapter-typescript/`; on Windows the three programs end in `.exe`. `acu`
+finds its adapters beside itself, the `acu-adapter-typescript/` folder
+included, which it runs with Node. You need no `PATH` setup for them. They
+need the same tools at run time as the image holds, on every system: Go for
+the Go adapter, Node for the TypeScript adapter, and the pinned nightly for
+the Rust adapter.
 
-These programs target Linux with glibc 2.34 or later: they build on Debian
-bookworm, which has glibc 2.36. `acu-adapter-go` builds with `CGO_ENABLED=0`
-and runs on any Linux. The architecture follows the build machine unless
-`--platform` names another one. Another architecture builds under emulation
-(QEMU), which takes much longer than a native build; set it up once with
-`docker run --privileged --rm tonistiigi/binfmt --install arm64`. The build
-runs in Linux containers, so it cannot make programs for macOS or Windows.
-There, build from source as the next steps show
-(`npm run build -w viewer && cargo build --release --workspace`).
+The Linux programs need glibc 2.28 or later; `acu-adapter-go` runs on any
+Linux. The macOS programs need macOS 12 or later. Nothing signs them. A local
+`--output` sets no quarantine mark, so Gatekeeper lets them run; a copy that
+came through a browser download needs `xattr -d com.apple.quarantine <file>`
+first.
 
 To build from source instead, you need Go 1.24 or later, Node 20 or later,
 and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,

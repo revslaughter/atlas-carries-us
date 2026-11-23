@@ -47,35 +47,62 @@ To write `acu` and its adapters to a folder on your machine without
 installing the build tools, build the `export` stage with the wrapper script:
 
 ```sh
-scripts/docker-export.sh                          # writes out/docker
-scripts/docker-export.sh --platform linux/arm64   # another Linux architecture
+scripts/docker-export.sh                           # writes out/docker
+scripts/docker-export.sh --platform darwin/arm64   # programs for a Mac with Apple silicon
+scripts/docker-export.sh --platform windows/amd64  # programs for Windows on x86-64
 scripts/docker-export.sh -- --build-arg REGISTRY=mirror.gcr.io
 ```
 
 The script runs this command, which you may also run yourself:
 
 ```sh
-docker build --target export --output type=local,dest=out/docker .
+docker build --platform darwin/arm64 --target export --provenance=false \
+  --output type=local,dest=out/docker .
 ```
 
-`out/docker` then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
-`acu-adapter-typescript/`. `acu` finds its adapters beside itself, the
-`acu-adapter-typescript/` folder included, which it runs with Node; they need
-no `PATH` setup. The adapters still need Go, Node and the pinned nightly at
-run time.
+`--platform` accepts `linux/amd64`, `linux/arm64`, `darwin/amd64`,
+`darwin/arm64`, `windows/amd64` and `windows/arm64`. Without it, Docker picks
+its own Linux platform, also on macOS and Windows. The build stages run on
+the build machine's platform and cross-compile: Go with `GOOS` and `GOARCH`,
+Rust with `cargo zigbuild`, which links through zig. No step runs under
+emulation, so every platform builds at about the same speed.
+`--provenance=false` keeps buildx from writing a `provenance.json` into the
+folder.
 
-The programs target Linux with glibc 2.34 or later; they build on Debian
-bookworm (glibc 2.36). `acu-adapter-go` builds with `CGO_ENABLED=0` and runs
-on any Linux. The architecture follows the build machine unless `--platform`
-names another one, such as `linux/arm64`. A foreign architecture builds under
-QEMU emulation, which takes much longer than a native build (expect an hour
-or more for the Rust release build). Set up emulation once with
-`docker run --privileged --rm tonistiigi/binfmt --install arm64`. The build
-runs in Linux containers, so it cannot make macOS or Windows programs; there,
-run `acu` from a native build instead:
-`npm run build -w viewer && cargo build --release --workspace`. A plain
-`docker build -t acu .` still builds the runtime image; `export` never
-becomes the default target.
+`out/docker` then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
+`acu-adapter-typescript/`. On Windows the three programs end in `.exe`. `acu`
+finds its adapters beside itself, the `acu-adapter-typescript/` folder
+included, which it runs with Node; they need no `PATH` setup. The adapters
+still need Go, Node and the pinned nightly on the machine that runs them,
+whatever its system.
+
+- Linux: the programs need glibc 2.28 or later. `acu-adapter-go` builds with
+  `CGO_ENABLED=0` and runs on any Linux.
+- macOS: the programs need macOS 12 or later. Nothing signs them. A local
+  `--output` sets no quarantine mark, so Gatekeeper lets them run. A copy
+  that arrives through a browser download carries the mark; remove it with
+  `xattr -d com.apple.quarantine <file>`.
+- Windows: the Rust programs link against the MinGW runtime that zig
+  carries, and need no extra DLL.
+
+A plain `docker build -t acu .` still builds the runtime image for the build
+machine; `export` never becomes the default target. `--platform linux/arm64`
+builds an arm64 runtime image: its programs cross-compile, and its base image
+and nightly come for arm64. On an amd64 machine, the two steps that install
+the nightly and set up git in that image run under emulation; set it up once
+with `docker run --privileged --rm tonistiigi/binfmt --install arm64`. The
+runtime image exists for Linux only.
+
+To cross-compile outside Docker, install the zig and cargo-zigbuild versions
+that the `Dockerfile` pins, add the Rust target, and build:
+
+```sh
+pip install ziglang==0.16.0
+cargo install --locked cargo-zigbuild@0.24.1
+rustup target add aarch64-apple-darwin
+npm run build -w viewer
+cargo zigbuild --release --locked --target aarch64-apple-darwin -p atlas-carries-us -p acu-adapter-rust
+```
 
 ## 2. From idea to merge
 
@@ -245,6 +272,8 @@ Each tool version lives in two or more files. Change a group together;
 | `svelte`, `svelte2tsx` | `adapters/typescript/package.json`; `package-lock.json` |
 | Rust nightly | `RUST_NIGHTLY` in `Dockerfile`; `NIGHTLY` in `adapters/rust/src/toolchain.rs` |
 | `rustdoc-types` | `adapters/rust/Cargo.toml` (exact); `Cargo.lock`. It must read the nightly's JSON format; move both together. |
+| zig | `ZIG_VERSION` and the two `ZIG_SHA256_*` sums in `Dockerfile`; `ziglang==` in this file |
+| cargo-zigbuild | `CARGO_ZIGBUILD_VERSION` in `Dockerfile`; `cargo-zigbuild@` in this file |
 
 1. Pin base images by tag and digest.
 2. Pin npm packages to exact versions.
