@@ -9,7 +9,9 @@
 #   build      Builds the viewer, acu and the Go, TypeScript and Rust
 #              adapters into /out.
 #   export     The contents of /out alone, for `--output`: it writes the
-#              Linux binaries to a folder on the host.
+#              Linux programs to a folder on the host. scripts/docker-export.sh
+#              runs it; its --platform option picks another architecture,
+#              such as linux/arm64, under emulation.
 #   rust-nightly  The pinned nightly alone, for the runtime image.
 #   runtime    acu and the three adapters, plus the Go toolchain that the Go
 #              adapter needs to load packages, the Node runtime that runs the
@@ -23,6 +25,7 @@
 #   docker build -t acu .
 #   docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve --addr 0.0.0.0:4321
 #
+#   scripts/docker-export.sh [--platform linux/arm64] [<folder>]
 #   docker build --target export --output type=local,dest=out/docker .
 #
 # Each base image names its version in the tag and its exact content in the
@@ -124,7 +127,8 @@ RUN npm run build -w adapters/typescript \
 # ---------------------------------------------------------------------------
 # The build output alone, with no base image. Use it with --output to write
 # acu, acu-adapter-go, acu-adapter-rust and acu-adapter-typescript/ to a
-# folder on the host. They target Linux. Keep runtime the last stage, so that
+# folder on the host. They target Linux with glibc 2.34 or later, on the
+# architecture of --platform. Keep runtime the last stage, so that
 # a build without --target still makes the runtime image.
 FROM scratch AS export
 COPY --from=build /out /
