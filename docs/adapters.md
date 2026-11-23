@@ -166,7 +166,8 @@ without a `package.json` name drops the package part.
 5. The doc of a file comes from its first comment that no declaration owns: a
    comment with `@file`, `@module` or `@packageDocumentation`, or a comment
    that a blank line parts from the code. Licence headers and tool directives
-   never count. A folder takes the doc of its `index` file.
+   never count. A folder takes the doc of the file that carries
+   `@packageDocumentation`, or else the doc of its `index` file.
 6. A parameter property takes the text of its `@param` tag on the constructor.
 
 #### Edges

@@ -424,14 +424,26 @@ export class Extractor {
     return undefined;
   }
 
-  /** Gives each folder the doc of its index file. */
+  /**
+   * Gives each folder a doc: the doc of the file that carries
+   * `@packageDocumentation`, or else the doc of its index file. That file's
+   * own container keeps no doc, as a Go package's doc file keeps none.
+   */
   private unitDocs() {
+    const owner = new Map<string, ts.SourceFile>();
+    for (const sf of this.files) {
+      const d = this.fileDocs.get(this.fileId(sf));
+      if (!d) continue;
+      const dir = this.dirIdOf(sf);
+      if (/(^|\n)\s*@packageDocumentation\b/.test(d)) owner.set(dir, sf);
+      else if (!owner.has(dir) && /^(index|mod)\.[cm]?[jt]sx?$/.test(path.basename(sf.fileName))) owner.set(dir, sf);
+    }
     for (const sf of this.files) {
       const fid = this.fileId(sf);
       const d = this.fileDocs.get(fid);
       if (!d) continue;
-      const isIndex = /^(index|mod)\.[cm]?[jt]sx?$/.test(path.basename(sf.fileName));
-      const target = isIndex ? this.conts.get(this.dirIdOf(sf))! : this.conts.get(fid)!;
+      const dir = this.dirIdOf(sf);
+      const target = owner.get(dir) === sf ? this.conts.get(dir)! : this.conts.get(fid)!;
       this.queue(d, sf, sf, x => (target.doc = x));
     }
   }
