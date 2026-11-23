@@ -8,6 +8,7 @@ dist-test/
 *.tsbuildinfo
 
 # Generated data and screenshots
+/atlas.json
 /examples/*/atlas.json
 /tests/e2e/screenshots/
 /test-results/

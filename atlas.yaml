@@ -1,0 +1,146 @@
+# The map of Atlas Carries Us itself. Run `acu serve` in the repository root
+# to read it (build the viewer and the TypeScript adapter first; see the
+# README). scripts/check.sh builds it on every change, and
+# tests/e2e/docs.mjs fails when a unit, file, item or exported member lacks a
+# doc comment, so the map never shows "No doc comment" for this project.
+version: 1
+project:
+  name: Atlas Carries Us
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+  repo: revslaughter/atlas-carries-us
+  links: github
+  description: |
+    Atlas Carries Us turns a code base and its doc comments into an
+    interactive map. This map shows the project itself.
+
+    Two adapters read code: the Go adapter with the Go type checker, and the
+    TypeScript adapter with the TypeScript compiler. Each writes the same data
+    format, atlas.json. The viewer reads atlas.json and draws the map in the
+    browser.
+
+    The adapters and the viewer share no code: they meet only in atlas.json,
+    so no line joins their regions. The acu command, written in Rust, runs the
+    adapters, applies atlas.yaml and builds the site. It joins this map in
+    phase 4, with the Rust adapter.
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: go
+    root: adapters/go
+  - adapter: typescript
+    # tsconfig.atlas.json references the viewer and the TypeScript adapter,
+    # so that one run reads both from the repository root.
+    options: { tsconfig: tsconfig.atlas.json }
+    exclude: ["corpus/**", "target/**", "out/**", "examples/**", "**/testdata/**", "**/dist/**", "**/dist-test/**"]
+    tests: ["viewer/test/**", "adapters/typescript/test/**"]
+regions:
+  - id: go
+    name: Reading Go code
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    paths: ["adapters/go/**"]
+    description: >-
+      The Go adapter. It loads a module's packages with the Go type checker,
+      so every edge it writes counts as exact, and it writes the data format
+      from its own Go types in internal/schema.
+    readingTip: >-
+      Start with Run in internal/extract: it runs the passes in order.
+      plugins.go finds HTTP routes and commands; docs.go turns doc comments
+      into the normal form.
+  - id: ts
+    name: Reading TypeScript code
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    paths: ["adapters/typescript/**"]
+    description: >-
+      The TypeScript adapter. It reads a project with the TypeScript compiler
+      API, finds Express and Hono routes, and writes the same data format as
+      the Go adapter.
+    readingTip: >-
+      Start with Extractor.run in extract.ts: it runs the passes in order.
+      docs.ts holds the doc normaliser; plugins.ts the route plugins.
+  - id: viewer
+    name: Drawing the map
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    paths: ["viewer/**"]
+    description: >-
+      The viewer: one static page that reads atlas.json and draws four views
+      on one canvas (overview, unit focus, item focus and trace), with a docs
+      panel beside it.
+    readingTip: >-
+      Read the Model first: every view reads it. Then go in app.ts, which
+      every move passes through, then the scene builders in scene.ts.
+layout:
+  rows:
+    - [go, ts]
+    - [viewer]
+tour:
+  - title: Three parts and a file between them
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: overview }
+    text: >-
+      Two adapters read code, and the viewer draws the map. They share no
+      code: each adapter writes atlas.json, and the viewer reads it. So no
+      line joins the regions. The acu command, which runs the adapters and
+      builds the site, is not on this map yet.
+  - title: The Go adapter in one call
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: trace, symbol: Run }
+    text: >-
+      Run loads the module's packages with go/packages, so every fact comes
+      from the type checker. Then it runs the passes in order: declarations,
+      relations, tests, and docs last, so that doc links can resolve to IDs.
+      document sorts every list, so two runs write the same bytes.
+  - title: A call, as the type checker sees it
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: symbol, name: extractor.walkCalls }
+    text: >-
+      walkCalls asks the type checker which function each call reaches, and
+      records an edge from the caller. A call through an interface reaches
+      the interface method; the viewer later follows implements edges to the
+      code that can run.
+  - title: The same plan in TypeScript
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: trace, symbol: Extractor.run }
+    text: >-
+      The TypeScript adapter follows the same plan with the TypeScript
+      compiler. run loads the program, declares each file, lets the plugins
+      find routes, records relations, imports and calls, then resolves the
+      docs and indexes the tests.
+  - title: One form for every doc
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: symbol, name: normalise }
+    text: >-
+      normalise turns a JSDoc or TSDoc comment into the normal form: blocks,
+      inline text, and a field for each block tag. Its first sentence becomes
+      the summary that every box shows. The viewer never needs to know a
+      language's comment style.
+  - title: The viewer's model
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: symbol, name: Model }
+    text: >-
+      The viewer reads atlas.json once into the Model. It groups symbols into
+      items by unit, and turns edges into relations that keep the member at
+      each end, so that a line can end at the exact method or field.
+  - title: Every move
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: trace, symbol: go }
+    text: >-
+      Every click, key and tour step ends in go. It records the history,
+      builds the scene, places the camera and moves the boxes into place, then
+      updates the panel, the breadcrumbs, the address, the hint and the
+      legend.
+  - title: An item and its neighbours
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: symbol, name: buildSymScene }
+    text: >-
+      An item focus answers "what does this do, and what does it touch?".
+      symbolRelations sorts every relation into lanes. buildSymScene puts what
+      uses the item on the left and what it uses on the right, and shows a few
+      boxes per lane, so the view stays near twenty boxes.
+  - title: Your turn
+    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+    open: { view: overview }
+    text: >-
+      Pick any box to read its docs, or press / to search by name. Every box
+      shows the first sentence of its doc comment, and the "trace" link beside
+      a function follows its calls.

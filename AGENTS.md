@@ -40,6 +40,8 @@ Read `docs/schema.md` before a change that touches data. Read
 | acu checks | `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
 | Map an example | `cargo run -- extract -c examples/chi/atlas.yaml -o out/chi.json` |
 | Look at it | `cargo run -- serve -d out/chi.json`, or `cargo run -- build -d out/chi.json -o out/site` |
+| Map this project | `cargo run -- extract -c atlas.yaml -o out/self.json`, then `cargo run -- serve -d out/self.json` |
+| Find missing docs | `node tests/e2e/docs.mjs out/self.json` |
 | Screenshots of every view | `node tests/e2e/smoke.mjs out/site out/shot` (add `--light` for the light theme) |
 
 Build the viewer (`npm run build -w viewer`) before `cargo build`; `acu`
@@ -63,7 +65,9 @@ embeds `viewer/dist` at compile time. Build the TypeScript adapter before an
 7. Start every message with the program's name; say what happened and the
    next step; write messages to standard error (4.7).
 8. Open every new file with a comment that says what it holds. Give every
-   exported item a doc comment whose first sentence stands alone (4.8).
+   item, exported or not, and every exported member a doc comment whose
+   first sentence says what it does and stands alone. This project's own map
+   must stay complete; `tests/e2e/docs.mjs` checks it (4.8).
 9. Format with `gofmt`, `rustfmt` and Prettier; follow `.editorconfig` (4.9).
 10. Change a pinned version in every file of its group;
     `scripts/check-pins.sh` lists them. Pin images by digest and npm packages
