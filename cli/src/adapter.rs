@@ -16,6 +16,7 @@ pub fn plugin_adapter(plugin: &str) -> Option<&'static str> {
     match plugin {
         "go-chi" | "go-nethttp" | "cobra" => Some("go"),
         "express" | "hono" | "sveltekit" => Some("typescript"),
+        "axum" | "clap" => Some("rust"),
         _ => None,
     }
 }
@@ -58,7 +59,8 @@ pub fn source(config_dir: &Path, lang: &Language) -> Result<Source> {
 
 /// Picks the program that runs an adapter, in this order: the config's
 /// `command`, the ACU_ADAPTER_<NAME> variable, acu-adapter-<name> on PATH,
-/// and, inside this repository, the adapter's source.
+/// acu-adapter-<name> beside acu itself, and, inside this repository, the
+/// adapter's source.
 fn command_for(lang: &Language) -> Result<Command> {
     if let Some(cmd) = &lang.command {
         if cmd.is_empty() {
@@ -87,6 +89,14 @@ fn command_for(lang: &Language) -> Result<Command> {
     if on_path(&exe) {
         return Ok(Command::new(exe));
     }
+    // `cargo build --workspace` puts the Rust adapter beside acu.
+    if let Some(beside) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join(&exe)))
+        .filter(|p| p.is_file() || p.with_extension("exe").is_file())
+    {
+        return Ok(Command::new(beside));
+    }
     let dev = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("adapters")
@@ -108,6 +118,20 @@ fn command_for(lang: &Language) -> Result<Command> {
         c.arg(main);
         return Ok(c);
     }
+    if lang.adapter == "rust" && dev.join("Cargo.toml").exists() {
+        let mut c = Command::new("cargo");
+        c.args([
+            "run",
+            "--quiet",
+            "--release",
+            "-p",
+            "acu-adapter-rust",
+            "--manifest-path",
+        ])
+        .arg(dev.join("Cargo.toml"))
+        .arg("--");
+        return Ok(c);
+    }
     bail!(
         "no program runs the {name} adapter. Install {exe} on the PATH ({hint}), \
          set {var}, or give `command` in atlas.yaml",
@@ -121,6 +145,7 @@ fn install_hint(adapter: &str) -> &'static str {
     match adapter {
         "go" => "go install github.com/revslaughter/atlas-carries-us/adapters/go/cmd/acu-adapter-go@latest",
         "typescript" => "npm install --global ./adapters/typescript from a checkout, after npm run build -w adapters/typescript",
+        "rust" => "cargo install --path adapters/rust from a checkout",
         _ => "see the adapter's own docs",
     }
 }
@@ -181,6 +206,8 @@ mod tests {
         assert_eq!(plugin_adapter("express"), Some("typescript"));
         assert_eq!(plugin_adapter("hono"), Some("typescript"));
         assert_eq!(plugin_adapter("sveltekit"), Some("typescript"));
+        assert_eq!(plugin_adapter("axum"), Some("rust"));
+        assert_eq!(plugin_adapter("clap"), Some("rust"));
         assert_eq!(plugin_adapter("rails"), None);
     }
 }

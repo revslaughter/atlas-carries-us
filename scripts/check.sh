@@ -17,14 +17,16 @@ quick=false
 # In CI the checkout belongs to another user than the container's. Trust the
 # workspace and the corpus checkouts for this script's git calls only, so
 # acu can read the commit for its source links.
-export GIT_CONFIG_COUNT=7 \
+export GIT_CONFIG_COUNT=9 \
   GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$root" \
   GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$root/corpus/go/chi" \
   GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$root/corpus/go/cobra" \
   GIT_CONFIG_KEY_3=safe.directory GIT_CONFIG_VALUE_3="$root/corpus/typescript/immer" \
   GIT_CONFIG_KEY_4=safe.directory GIT_CONFIG_VALUE_4="$root/corpus/typescript/hono" \
   GIT_CONFIG_KEY_5=safe.directory GIT_CONFIG_VALUE_5="$root/corpus/svelte/realworld" \
-  GIT_CONFIG_KEY_6=safe.directory GIT_CONFIG_VALUE_6="$root/corpus/svelte/svelte-changelog"
+  GIT_CONFIG_KEY_6=safe.directory GIT_CONFIG_VALUE_6="$root/corpus/svelte/svelte-changelog" \
+  GIT_CONFIG_KEY_7=safe.directory GIT_CONFIG_VALUE_7="$root/corpus/rust/ripgrep" \
+  GIT_CONFIG_KEY_8=safe.directory GIT_CONFIG_VALUE_8="$root/corpus/rust/axum"
 [[ "${1:-}" == "--quick" ]] && quick=true
 
 step() { printf '\n== %s\n' "$*"; }
@@ -34,6 +36,9 @@ scripts/check-pins.sh
 go version
 node --version
 cargo --version
+nightly=$(sed -nE 's/^pub const NIGHTLY: &str = "([^"]+)";$/\1/p' adapters/rust/src/toolchain.rs)
+rustup run "$nightly" rustdoc --version
+rustup run "$nightly" rust-analyzer --version
 
 step "Go adapter: format, vet, tests"
 (
@@ -58,11 +63,11 @@ npm run check -w viewer
 npm test -w viewer
 npm run build -w viewer
 
-step "acu: format, lints, tests, release build"
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-cargo build --release
+step "acu and the Rust adapter: format, lints, tests (golden file, schema, facts), release build"
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+CI=${CI:-1} cargo test --workspace
+cargo build --release --workspace
 
 if $quick; then
   echo; echo "check.sh: quick checks passed"

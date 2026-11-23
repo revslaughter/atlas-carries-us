@@ -9,6 +9,8 @@
 #   Playwright  Dockerfile PLAYWRIGHT_VERSION = tests/e2e/package.json = package-lock.json
 #   TypeScript  viewer/package.json = adapters/typescript/package.json = package-lock.json
 #   Svelte      adapters/typescript/package.json = package-lock.json (svelte, svelte2tsx)
+#   Nightly     Dockerfile RUST_NIGHTLY      = NIGHTLY in adapters/rust/src/toolchain.rs
+#   rustdoc-types  adapters/rust/Cargo.toml (exact) = Cargo.lock
 #
 # It also checks that each base image carries a digest, and that TypeScript
 # stays on major version 6, whose API the adapters and the Svelte tools use.
@@ -76,6 +78,14 @@ for pkg in svelte svelte2tsx; do
     "adapters/typescript/package.json" "$(npm_pin "$pkg" adapters/typescript/package.json)" \
     "package-lock.json" "$(lock_pin "$pkg")"
 done
+
+agree "Rust nightly" \
+  "Dockerfile RUST_NIGHTLY" "$(sed -nE 's/^ARG RUST_NIGHTLY=(.+)$/\1/p' Dockerfile)" \
+  "adapters/rust/src/toolchain.rs NIGHTLY" "$(sed -nE 's/^pub const NIGHTLY: &str = "([^"]+)";$/\1/p' adapters/rust/src/toolchain.rs)"
+
+agree rustdoc-types \
+  "adapters/rust/Cargo.toml" "$(sed -nE 's/^rustdoc-types = "=([^"]+)"$/\1/p' adapters/rust/Cargo.toml)" \
+  "Cargo.lock" "$(awk '/^name = "rustdoc-types"$/{getline; gsub(/version = |"/, ""); print}' Cargo.lock)"
 
 if ((fail)); then
   echo "pins: change every file in a group together (see CONTRIBUTING.md, \"Versions\")."
