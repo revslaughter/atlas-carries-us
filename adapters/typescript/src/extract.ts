@@ -199,7 +199,9 @@ export class Extractor {
         jsx: ts.JsxEmit.Preserve,
         strict: true,
       };
-      rootNames = walk(this.root).filter(f => /\.[cm]?tsx?$/.test(f) && !/\.d\.[cm]?ts$/.test(f));
+      rootNames = walk(this.root, r => this.exclude.match(r)).filter(
+        f => /\.[cm]?tsx?$/.test(f) && !/\.d\.[cm]?ts$/.test(f),
+      );
     }
     options = {
       ...options,
@@ -217,7 +219,7 @@ export class Extractor {
     const host = ts.createCompilerHost(options, true);
     host.jsDocParsingMode = ts.JSDocParsingMode.ParseAll;
     const first = ts.createProgram({ rootNames, options, host });
-    const tests = walk(this.root).filter(
+    const tests = walk(this.root, r => this.exclude.match(r)).filter(
       f => SCRIPT.test(f) && !/\.d\.[cm]?ts$/.test(f) && this.tests.match(this.relRoot(f)),
     );
     this.program = tests.length
@@ -394,10 +396,11 @@ export class Extractor {
   /** Finds the comment that describes a whole file: the first comment that no declaration owns. */
   private fileDoc(sf: ts.SourceFile): string | undefined {
     const text = sf.getFullText();
-    const start = text.startsWith("#!") ? text.indexOf("\n") + 1 : 0;
     const first = sf.statements[0];
     const firstStart = first ? first.getStart(sf) : text.length;
-    const ranges = (ts.getLeadingCommentRanges(text, start) ?? []).filter(r => r.end <= firstStart);
+    // From position 0, TypeScript skips a "#!" line by itself. From any other
+    // position, it collects comments only after a line break.
+    const ranges = (ts.getLeadingCommentRanges(text, 0) ?? []).filter(r => r.end <= firstStart);
     // Join neighbouring line comments into one group.
     const groups: { pos: number; end: number; raw: string; block: boolean }[] = [];
     for (const r of ranges) {
@@ -1414,15 +1417,20 @@ function readPackageName(root: string): string | undefined {
   }
 }
 
-/** Lists the files under a folder, leaving out node_modules and folders whose names start with a dot. */
-function walk(dir: string): string[] {
+/**
+ * Lists the files under a folder. It leaves out node_modules, folders whose
+ * names start with a dot, and folders that `skip` names by their path from
+ * `dir`.
+ */
+function walk(dir: string, skip: (rel: string) => boolean = () => false): string[] {
   const out: string[] = [];
   const visit = (d: string) => {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       if (e.name.startsWith(".") || e.name === "node_modules") continue;
       const p = path.join(d, e.name);
-      if (e.isDirectory()) visit(p);
-      else if (e.isFile()) out.push(p);
+      if (e.isDirectory()) {
+        if (!skip(path.relative(dir, p).split(path.sep).join("/"))) visit(p);
+      } else if (e.isFile()) out.push(p);
     }
   };
   visit(dir);
