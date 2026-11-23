@@ -44,16 +44,35 @@ Behind Docker Hub's pull limit, add `--build-arg REGISTRY=mirror.gcr.io`.
 Behind a TLS-inspecting proxy, see the comment at the top of the `Dockerfile`.
 
 To write `acu` and its adapters to a folder on your machine without
-installing the tools, build the `export` stage:
+installing the build tools, build the `export` stage with the wrapper script:
+
+```sh
+scripts/docker-export.sh                          # writes out/docker
+scripts/docker-export.sh --platform linux/arm64   # another Linux architecture
+scripts/docker-export.sh -- --build-arg REGISTRY=mirror.gcr.io
+```
+
+The script runs this command, which you may also run yourself:
 
 ```sh
 docker build --target export --output type=local,dest=out/docker .
 ```
 
 `out/docker` then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
-`acu-adapter-typescript/`. These programs target Linux on the build machine's
-architecture. The adapters still need Go, Node and the pinned nightly at run
-time. On macOS or Windows, run `acu` from a native build instead:
+`acu-adapter-typescript/`. `acu` finds its adapters beside itself, the
+`acu-adapter-typescript/` folder included, which it runs with Node; they need
+no `PATH` setup. The adapters still need Go, Node and the pinned nightly at
+run time.
+
+The programs target Linux with glibc 2.34 or later; they build on Debian
+bookworm (glibc 2.36). `acu-adapter-go` builds with `CGO_ENABLED=0` and runs
+on any Linux. The architecture follows the build machine unless `--platform`
+names another one, such as `linux/arm64`. A foreign architecture builds under
+QEMU emulation, which takes much longer than a native build (expect an hour
+or more for the Rust release build). Set up emulation once with
+`docker run --privileged --rm tonistiigi/binfmt --install arm64`. The build
+runs in Linux containers, so it cannot make macOS or Windows programs; there,
+run `acu` from a native build instead:
 `npm run build -w viewer && cargo build --release --workspace`. A plain
 `docker build -t acu .` still builds the runtime image; `export` never
 becomes the default target.

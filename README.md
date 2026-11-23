@@ -41,19 +41,37 @@ docker build -t acu .
 docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.0.0:4321
 ```
 
-To get the programs themselves on your machine, build the `export` stage. It
-writes them to `out/docker`:
+To get the programs themselves on your machine, build the `export` stage
+with the wrapper script. It writes them to `out/docker`:
+
+```sh
+scripts/docker-export.sh                          # this machine's architecture
+scripts/docker-export.sh --platform linux/arm64   # another Linux architecture
+```
+
+The script takes another folder as its argument, and passes everything after
+`--` to `docker build`, for example `-- --build-arg REGISTRY=mirror.gcr.io`.
+Without the script, run the build yourself:
 
 ```sh
 docker build --target export --output type=local,dest=out/docker .
 ```
 
 The folder then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
-`acu-adapter-typescript/`. These programs target Linux on the build machine's
-architecture, and they need the same tools at run time as the image holds: Go
-for the Go adapter, Node for the TypeScript adapter, and the pinned nightly
-for the Rust adapter. On macOS or Windows they do not run outside a
-container. There, build from source as the next steps show
+`acu-adapter-typescript/`. `acu` finds its adapters beside itself, the
+`acu-adapter-typescript/` folder included, which it runs with Node. You need
+no `PATH` setup for them. They need the same tools at run time as the image
+holds: Go for the Go adapter, Node for the TypeScript adapter, and the pinned
+nightly for the Rust adapter.
+
+These programs target Linux with glibc 2.34 or later: they build on Debian
+bookworm, which has glibc 2.36. `acu-adapter-go` builds with `CGO_ENABLED=0`
+and runs on any Linux. The architecture follows the build machine unless
+`--platform` names another one. Another architecture builds under emulation
+(QEMU), which takes much longer than a native build; set it up once with
+`docker run --privileged --rm tonistiigi/binfmt --install arm64`. The build
+runs in Linux containers, so it cannot make programs for macOS or Windows.
+There, build from source as the next steps show
 (`npm run build -w viewer && cargo build --release --workspace`).
 
 To build from source instead, you need Go 1.24 or later, Node 20 or later,

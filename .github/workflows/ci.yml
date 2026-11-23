@@ -63,3 +63,29 @@ jobs:
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/mixed.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending-rust/atlas.yaml -o out/lending-rust.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending-rust.json
+      # The export stage writes the same programs to a folder on the runner.
+      # Its build stage already sits in this builder's cache from the step
+      # above. Then acu runs outside any container, with the runner's own Go
+      # and Node, and finds its adapters beside itself.
+      - name: Write acu and its adapters to a folder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: export
+          outputs: type=local,dest=out/docker
+          cache-from: |
+            type=gha,scope=toolchain
+            type=gha,scope=runtime
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: adapters/go/go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Map the Go and TypeScript fixtures with the exported folder
+        run: |
+          ls -l out/docker
+          out/docker/acu --version
+          out/docker/acu extract -c examples/mixed/atlas.yaml -o out/mixed-export.json
+          out/docker/acu check -d out/mixed-export.json
