@@ -132,6 +132,8 @@ export function go(st: State, opts: { noPush?: boolean } = {}) {
   hover = null;
   kbd = null;
   outAccum = 0;
+  // The breadcrumbs come first: the camera leaves room for their height.
+  renderCrumbs();
   if (scene.t === "overview") setOverviewCam(st);
   else {
     camAnim = null;
@@ -140,7 +142,6 @@ export function go(st: State, opts: { noPush?: boolean } = {}) {
   startMorph(prev);
   panel.renderFor(st);
   if (st.v === "symbol" && st.member) panel.symbol(st.id, { member: st.member });
-  renderCrumbs();
   updateNav();
   writeHash(st);
   status(null);
@@ -254,8 +255,17 @@ function vw() {
 function vh() {
   return canvas.height / dpr;
 }
-/** Screen pixels at the top of the canvas that the breadcrumbs cover. */
-const TOP = 48;
+/**
+ * Screen pixels at the top of the canvas that the breadcrumbs cover, with a
+ * margin below them. The breadcrumbs wrap on a narrow screen, so this
+ * measures them; it never returns less than 48.
+ */
+function topSpace() {
+  const el = document.getElementById("crumbs");
+  if (!el) return 48;
+  const bottom = el.getBoundingClientRect().bottom - canvas.getBoundingClientRect().top;
+  return Math.max(48, Math.ceil(bottom) + 12);
+}
 
 /** Fits a world rectangle into the view with `pad` pixels around it and `top` pixels free above it. */
 function fitRect(x: number, y: number, w: number, h: number, pad = 40, top = pad) {
@@ -286,29 +296,30 @@ function setOverviewCam(st: State) {
   if (st.v === "overview" && st.region) {
     const g = OV.regions!.find(g => g.r.id === st.region);
     if (g) {
-      cam = fitRect(g.x, g.y, g.w, g.h, 30, TOP);
+      cam = fitRect(g.x, g.y, g.w, g.h, 30, topSpace());
       return;
     }
   }
-  cam = fitRect(b.x, b.y, b.w, b.h, 30, TOP);
+  cam = fitRect(b.x, b.y, b.w, b.h, 30, topSpace());
 }
 
 /** Focus views start readable: at least 0.8 scale, fitted by width, at the top. */
 function fitCam(sc: Scene) {
   const b = sc.bounds,
-    f = fitRect(b.x, b.y, b.w, b.h, 40, TOP);
+    top = topSpace(),
+    f = fitRect(b.x, b.y, b.w, b.h, 40, top);
   let k = Math.min(1.1, f.k);
   if (k < 0.88) {
     const c = sc.center!;
     if (sc.t === "trace") {
       k = 0.88;
-      return { k, x: 24 - b.x * k, y: TOP - b.y * k };
+      return { k, x: 24 - b.x * k, y: top - b.y * k };
     }
     k = Math.max(0.8, Math.min(1.1, (vw() - 32) / b.w));
     const cxw = b.w * k <= vw() ? b.x + b.w / 2 : c.x + c.w / 2;
-    return { k, x: vw() / 2 - cxw * k, y: TOP - Math.min(b.y, c.y - 40) * k };
+    return { k, x: vw() / 2 - cxw * k, y: top - Math.min(b.y, c.y - 40) * k };
   }
-  return { k, x: vw() / 2 - (b.x + b.w / 2) * k, y: TOP + (vh() - 40 - TOP) / 2 - (b.y + b.h / 2) * k };
+  return { k, x: vw() / 2 - (b.x + b.w / 2) * k, y: top + (vh() - 40 - top) / 2 - (b.y + b.h / 2) * k };
 }
 
 /** Zooms by a factor about a screen point, which stays still, within the allowed zooms. */
@@ -449,13 +460,15 @@ function focusRing(x: number, y: number, w: number, h: number, r: number) {
  */
 function drawOverview(now: number) {
   const showRooms = cam.k >= OV_ROOMS_AT;
-  const badges: Badge[] = [];
+  const badges: Badge[] = [],
+    lines: Line[] = [];
   if (!showRooms)
     for (const l of OV.links!) {
       const hot = hover?.region && (l.from === hover.region || l.to === hover.region),
         fade = hover?.region && !hot,
         w = Math.min(8, 1.5 + l.targets.size / 8);
       const bez = curve(l.from, l.to, edgeColor("calls"), w, fade ? 0.08 : hot ? 0.95 : 0.4);
+      lines.push({ bez, head: px(10 + w) });
       if (hot)
         badges.push({ text: `uses ${l.targets.size} items`, col: edgeColor("calls"), alpha: 1, bez, head: px(10 + w) });
     }
@@ -518,7 +531,7 @@ function drawOverview(now: number) {
     }
   }
   // Badges go over the region boxes, so a box never hides one.
-  placeBadges(badges, OV.regions!, px(1));
+  placeBadges(badges, lines, OV.regions!, px(1));
 }
 
 /** Draws a filled arrowhead with its tip at a point, pointing along an angle. */
@@ -612,7 +625,8 @@ function drawFocus(now: number) {
     if (extra.length) edges = extra;
   }
   const anyHot = edges.some(e => edgeHot(e, h));
-  const badges: Badge[] = [];
+  const badges: Badge[] = [],
+    lines: Line[] = [];
   for (const e of edges) {
     const A = nodePos(e.a, now),
       B = nodePos(e.b, now),
@@ -632,6 +646,7 @@ function drawFocus(now: number) {
       w,
       alpha,
     );
+    lines.push({ bez, head: 10 + w });
     // A badge stays opaque, so its text keeps its contrast, unless a hover fades its line.
     if (e.label)
       badges.push({
@@ -699,6 +714,7 @@ function drawFocus(now: number) {
   }
   placeBadges(
     badges,
+    lines,
     sc.nodes.filter(n => n.t !== "lane").map(n => ({ ...nodePos(n, now), w: n.w, h: n.h })),
   );
   if (sc.empty && sc.center) {
@@ -768,13 +784,17 @@ function bezAt(b: Bez, t: number) {
 }
 
 /** A badge with a line's label, such as a call's order, waiting for a place on its line. */
-interface Badge {
+interface Badge extends Line {
   /** The text in the badge. */
   text: string;
   /** The line's colour, for the badge's outline. */
   col: string;
   /** The badge's opacity. */
   alpha: number;
+}
+
+/** A drawn line, as badge placement sees it: its curve and the length of its arrowhead. */
+interface Line {
   /** The line's curve. */
   bez: Bez;
   /** The length of the line's arrowhead. */
@@ -799,24 +819,25 @@ const BADGE_H = 18;
 /**
  * Places each badge on its line near the end, just before the arrowhead,
  * where lines that leave one box have spread apart. When that spot overlaps
- * an arrowhead, a box in `boxes` or a badge placed before it, the badge
- * moves back along its own line in steps until it finds free space. When no
- * free spot exists on the line, it takes the spot with the least overlap;
- * covering a badge or an arrowhead counts eight times as much as covering a
- * box. `s` scales the badges' size, for views whose text keeps one size on
- * screen.
+ * an arrowhead of any of `lines`, a box in `boxes` or a badge placed before
+ * it, the badge moves back along its own line in steps until it finds free
+ * space. When the line holds no free spot, or the line runs too short for a
+ * badge before its arrowhead, the badge may also sit beside its line. Among
+ * the spots it tries, it takes the one with the least overlap; covering a
+ * badge or an arrowhead counts eight times as much as covering a box. `s`
+ * scales the badges' size, for views whose text keeps one size on screen.
  */
-function placeBadges(badges: Badge[], boxes: Rect[], s = 1) {
+function placeBadges(badges: Badge[], lines: Line[], boxes: Rect[], s = 1) {
   const bh = BADGE_H * s;
   ctx.font = F(700, 11 * s);
   // Each arrowhead takes a square around its middle, half its length back from the tip along the line.
   // Covering a badge or an arrowhead costs more than covering the edge of a box.
-  const taken: (Rect & { cost: number })[] = badges.map(b => {
-    const [, , , , cx, cy, x1, y1] = b.bez,
+  const taken: (Rect & { cost: number })[] = lines.map(l => {
+    const [, , , , cx, cy, x1, y1] = l.bez,
       a = Math.atan2(y1 - cy, x1 - cx),
-      mx = x1 - (Math.cos(a) * b.head) / 2,
-      my = y1 - (Math.sin(a) * b.head) / 2;
-    return { x: mx - b.head / 2 - 2 * s, y: my - b.head / 2, w: b.head + 4 * s, h: b.head, cost: 8 };
+      mx = x1 - (Math.cos(a) * l.head) / 2,
+      my = y1 - (Math.sin(a) * l.head) / 2;
+    return { x: mx - l.head / 2 - 2 * s, y: my - l.head / 2, w: l.head + 4 * s, h: l.head, cost: 8 };
   });
   taken.push(...boxes.map(r => ({ ...r, cost: 1 })));
   // The area of a rectangle that overlaps what the view holds already, weighted by cost.
@@ -843,18 +864,34 @@ function placeBadges(badges: Badge[], boxes: Rect[], s = 1) {
       prev = p;
     }
     const first = b.head + 4 * s + w / 2;
-    const spots = pts.filter(
-      (p, i) => p.d >= first && (i === 0 || Math.floor(p.d / (12 * s)) !== Math.floor(pts[i - 1].d / (12 * s))),
-    );
+    const step = (p: { d: number }, i: number) =>
+      i === 0 || Math.floor(p.d / (12 * s)) !== Math.floor(pts[i - 1].d / (12 * s));
+    const spots = pts.filter((p, i) => p.d >= first && step(p, i));
     const rect = (p: { x: number; y: number }) => ({ x: p.x - w / 2, y: p.y - bh / 2, w, h: bh });
-    // The first free spot, or else the spot with the least overlap; the spot nearer the end wins a tie.
-    let at = spots[0] ?? bezAt(b.bez, 0.5),
-      least = Infinity;
+    // The first free spot on the line, or else the spot with the least overlap; the spot nearer the end wins a tie.
+    let at: { x: number; y: number } = spots[0] ?? bezAt(b.bez, 0.5),
+      least = spots.length ? Infinity : overlap(rect(at));
     for (const p of spots) {
       const o = overlap(rect(p));
       if (o < least) [at, least] = [p, o];
       if (o === 0) break;
     }
+    // Beside the line: each point moved off the line, to either side, far enough that the badge clears it.
+    if (least > 0)
+      for (let i = 1; i < pts.length && least > 0; i++) {
+        if (!step(pts[i], i)) continue;
+        const tx = pts[i - 1].x - pts[i].x,
+          ty = pts[i - 1].y - pts[i].y,
+          len = Math.hypot(tx, ty) || 1,
+          nx = -ty / len,
+          ny = tx / len,
+          off = (Math.abs(nx) * w + Math.abs(ny) * bh) / 2 + 4 * s;
+        for (const side of [1, -1]) {
+          const p = { x: pts[i].x + nx * off * side, y: pts[i].y + ny * off * side };
+          const o = overlap(rect(p));
+          if (o < least) [at, least] = [p, o];
+        }
+      }
     taken.push({ ...rect(at), cost: 8 });
     placed.push({ b, x: at.x, y: at.y, w });
   }
@@ -1007,7 +1044,7 @@ function click(h: Hit | null) {
   if (scene.t === "overview") {
     if (h.node) go({ v: "unit", id: h.node.unit! });
     else if (h.region) {
-      animateCam(fitRect(h.region.x, h.region.y, h.region.w, h.region.h, 30, TOP));
+      animateCam(fitRect(h.region.x, h.region.y, h.region.w, h.region.h, 30, topSpace()));
       panel.region(h.region.r.id);
     }
     return;
@@ -1236,7 +1273,7 @@ function describe(h: Hit): string {
 function activate(open: boolean) {
   if (!kbd) return;
   if (kbd.region) {
-    animateCam(fitRect(kbd.region.x, kbd.region.y, kbd.region.w, kbd.region.h, 30, TOP));
+    animateCam(fitRect(kbd.region.x, kbd.region.y, kbd.region.w, kbd.region.h, 30, topSpace()));
     panel.region(kbd.region.r.id);
     return;
   }
