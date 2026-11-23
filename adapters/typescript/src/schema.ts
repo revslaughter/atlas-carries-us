@@ -233,7 +233,7 @@ export interface Edge {
   to: string;
   /** The relation. */
   kind: EdgeKind;
-  /** "exact" when the type checker resolved the edge; this adapter writes nothing else. */
+  /** "exact" when the type checker resolved the edge; "heuristic" for an edge that a framework's file convention implies, such as a layout around a page. */
   confidence: "exact" | "heuristic";
   /** The first line of the use, in the file of `from`. */
   line?: number;
@@ -263,7 +263,7 @@ export interface EntryPoint {
   registrar?: string;
   /** Where the registration happens. */
   registeredAt: Location;
-  /** The plugin that found the entry point: "express" or "hono". */
+  /** The plugin that found the entry point: "express", "hono" or "sveltekit". */
   plugin: string;
 }
 

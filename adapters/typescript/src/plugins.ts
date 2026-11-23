@@ -5,6 +5,8 @@
 //     and app.use("/prefix", router) for a router that another one mounts.
 //   - hono: app.get("/x", h), app.on("PURGE", "/x", h), app.route("/prefix",
 //     sub) for a mounted app, and new Hono().basePath("/api").
+//   - sveltekit: the file-based routes of a SvelteKit app; sveltekit.ts
+//     holds it.
 //
 // The last argument handles the request; the ones before it run as
 // middleware. An inline handler inside a function names that function as the
@@ -15,10 +17,11 @@
 import ts from "typescript";
 
 import { collapse, type Extractor, shorten, unwrap } from "./extract.js";
+import { SvelteKit } from "./sveltekit.js";
 
 /** Switches on one entry-point plugin. */
 export interface PluginConfig {
-  /** The plugin's name: "express" or "hono". */
+  /** The plugin's name: "express", "hono" or "sveltekit". */
   plugin: string;
   /** The plugin's options, as atlas.yaml writes them. */
   options?: unknown;
@@ -129,12 +132,20 @@ export class Plugins {
   private readonly on: Partial<Record<Framework, RouteOptions>> = {};
   private readonly regs: Registration[] = [];
   private readonly mounts: Mount[] = [];
+  /** The sveltekit plugin, when the request switches it on. */
+  private kit: SvelteKit | undefined;
 
   /** Switches on the plugins that the request names, and fails on an unknown name with a message that lists the known ones. */
   constructor(configs: readonly PluginConfig[]) {
     for (const c of configs) {
+      if (c.plugin === "sveltekit") {
+        this.kit = new SvelteKit(c.options);
+        continue;
+      }
       if (c.plugin !== "express" && c.plugin !== "hono")
-        throw new Error(`the TypeScript adapter has no entry-point plugin named "${c.plugin}" (known: express, hono)`);
+        throw new Error(
+          `the TypeScript adapter has no entry-point plugin named "${c.plugin}" (known: express, hono, sveltekit)`,
+        );
       this.on[c.plugin] = routeOptions(c.plugin, c.options);
     }
   }
@@ -285,6 +296,7 @@ export class Plugins {
           ex.entries.push(ep);
         }
     }
+    this.kit?.finish(ex);
   }
 }
 

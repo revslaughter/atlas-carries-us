@@ -103,7 +103,7 @@ entryPoints:
   - plugin: cobra
 ```
 
-The Go adapter offers three plugins, and the TypeScript adapter two:
+The Go adapter offers three plugins, and the TypeScript adapter three:
 
 1. `go-chi` finds `r.Get("/x", h)`, the other verbs, `Method`, `Handle` and
    `HandleFunc`, and follows `r.Route("/prefix", func(r chi.Router) { … })`.
@@ -117,9 +117,13 @@ The Go adapter offers three plugins, and the TypeScript adapter two:
    files.
 5. `hono` finds `app.get("/x", h)` and the other verbs, `app.on(method, path,
    h)`, and follows `app.route("/prefix", sub)` and `basePath("/api")`.
+6. `sveltekit` reads the file-based routes of a SvelteKit app: pages,
+   `+server` methods and form actions. Its option `routes` names the routes
+   folder, by default `src/routes`.
 
-Every route plugin takes `prefixes` for a mount that happens at run time: the
-routes that the function `inFunc` registers gain `prefix`.
+Every route plugin except `sveltekit` takes `prefixes` for a mount that
+happens at run time: the routes that the function `inFunc` registers gain
+`prefix`.
 
 `notes` show beside every entry point whose path starts with `pathPrefix`.
 

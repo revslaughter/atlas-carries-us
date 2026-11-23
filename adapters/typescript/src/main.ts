@@ -8,7 +8,8 @@
  * [docs/adapters.md](https://github.com/revslaughter/atlas-carries-us/blob/main/docs/adapters.md)).
  * {@link run} reads the project in four passes: declarations, entry points,
  * relations, then docs and tests. The type checker resolves every edge, so
- * every edge counts as exact.
+ * every edge counts as exact, except the layout edges of the sveltekit
+ * plugin. Svelte components join the program through svelte2tsx.
  *
  * For a run by hand, pass flags instead:
  *
@@ -35,13 +36,19 @@ Without --root, the request comes as JSON on standard input (protocol 1).
   --include <glob>    folder to keep (repeatable)
   --exclude <glob>    folder to leave out (repeatable)
   --tests <glob>      files that hold tests (repeatable; default: **/*.test.*, **/*.spec.*, **/__tests__/**)
-  --plugin <name>     entry-point plugin to switch on: express, hono (repeatable)
+  --plugin <name>     entry-point plugin to switch on: express, hono, sveltekit (repeatable)
   --out <file>        output file (default: standard output)
   --indent            indent the JSON
   --version           print the version and exit
 
 The map leaves out these limits; the output's meta.adapters[].notes lists them:
 calls through function values and callbacks, and declaration files (.d.ts).
+
+A project with .svelte files reads its components through svelte2tsx. The map
+leaves out renders of a component that a variable holds and of a snippet that
+a prop passes in. A component that fails to parse stays out, with a note. The
+sveltekit plugin draws layouts around pages, and parent() reads, as heuristic
+edges, because no checker resolves them.
 `;
 
 /** Writes the error to standard error, with the program's name first, and exits with status 1, which acu reports as a failed adapter. */
