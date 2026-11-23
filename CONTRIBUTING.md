@@ -33,7 +33,7 @@ Choose one:
    npm ci
    npm run build -w adapters/typescript
    git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra \
-     corpus/typescript/immer corpus/typescript/hono
+     corpus/typescript/immer corpus/typescript/hono corpus/svelte/realworld
    (cd adapters/go && go install ./cmd/acu-adapter-go)
    ```
 

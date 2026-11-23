@@ -18,3 +18,8 @@
 	url = https://github.com/honojs/hono
 	shallow = true
 	update = none
+[submodule "corpus/svelte/realworld"]
+	path = corpus/svelte/realworld
+	url = https://github.com/sveltejs/realworld
+	shallow = true
+	update = none

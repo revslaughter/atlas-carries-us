@@ -1,0 +1,129 @@
+# Atlas Carries Us config for sveltejs/realworld at commit df79670 (MIT
+# licence, by the RealWorld contributors). The code sits in the submodule
+# corpus/svelte/realworld:
+#
+#   git submodule update --init --checkout --depth 1 corpus/svelte/realworld
+#   acu extract -c examples/realworld/atlas.yaml -o examples/realworld/atlas.json
+#   acu serve -d examples/realworld/atlas.json
+#
+# The app keeps its config in jsconfig.json, which extends the config that
+# svelte-kit sync writes. The adapter installs nothing, so it reads
+# jsconfig.json without that file and says so in its notes.
+version: 1
+project:
+  name: RealWorld in SvelteKit
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+  repo: sveltejs/realworld
+  links: github
+  description: |
+    Conduit, a blogging site after the RealWorld spec, built with SvelteKit
+    and Svelte 5. Readers sign up, write articles, comment on them, favourite
+    them and follow other writers. The app holds no database of its own: its
+    server loads and form actions call the public RealWorld API.
+
+    This map covers commit df79670 of sveltejs/realworld, by the RealWorld
+    contributors under the MIT licence. Each page and each form action
+    appears under "Ways in". The app holds no +server endpoint.
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: typescript
+    root: ../../corpus/svelte/realworld
+entryPoints:
+  - plugin: sveltekit
+regions:
+  - id: frame
+    name: App frame and home
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    paths: ["src", "src/routes"]
+    description: >-
+      The server hook that reads the session cookie, the root layout with its
+      navigation bar, and the home page with its article feed.
+    readingTip: Start with the root layout; every page renders inside it.
+  - id: articles
+    name: Articles
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    paths: ["src/routes/article/**", "src/routes/editor", "src/routes/editor/**"]
+    description: >-
+      One article with its comments, and the editor that writes a new article
+      or changes an old one. Each change posts a form to an action.
+  - id: accounts
+    name: Accounts
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    paths: ["src/routes/login", "src/routes/register", "src/routes/settings"]
+    description: >-
+      Sign in, sign up, and change a reader's settings. Each page posts its
+      form to its own action, which sets or clears the session cookie.
+  - id: profiles
+    name: Profiles
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    paths: ["src/routes/profile", "src/routes/profile/**"]
+    description: >-
+      A writer's page, with the articles that the writer wrote or favourited,
+      and the button that follows the writer.
+  - id: shared
+    name: Shared code
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    paths: ["src/lib", "src/lib/**"]
+    default: true
+    description: >-
+      The client of the RealWorld API, the article list that several pages
+      show, and the build config in the project's root folder.
+layout:
+  rows:
+    - [frame, articles]
+    - [accounts, profiles]
+    - [shared]
+tour:
+  - title: Five parts
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    open: { view: overview }
+    text: >-
+      The app frame and the home page sit at the top, beside the article
+      pages. Accounts and profiles follow. Every part calls the shared client
+      of the RealWorld API at the bottom.
+  - title: Who reads
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    open: { view: symbol, id: "ts:realworld.svelte.dev/src/hooks.server#handle" }
+    text: >-
+      The server hook runs before every request. It reads the jwt cookie and
+      keeps the user in locals, where the server loads and the form actions
+      find it.
+  - title: The frame of every page
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    open: { view: symbol, id: "ts:realworld.svelte.dev/src/routes/+layout.svelte#Layout" }
+    text: >-
+      Every page renders inside the root layout. The layout shows the
+      navigation bar, and a loading bar while a navigation runs. SvelteKit
+      joins a layout to its pages by file names, not by calls, so the map
+      draws those edges as heuristic.
+  - title: The home feed
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    open: { view: trace, entryPoint: "GET /" }
+    text: >-
+      The home page's server load reads the tab, the tag and the page number
+      from the URL. It then asks the RealWorld API for the articles and the
+      tags at once. Every call of the api module goes through send.
+  - title: Signing in
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    open: { view: trace, entryPoint: "POST /login" }
+    text: >-
+      The login form posts to the page's default action. The action asks the
+      API to sign the reader in. On success, it stores the user in the jwt
+      cookie and redirects to the home page; on failure, it returns the
+      errors with status 401.
+  - title: A comment
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    open: { view: trace, entryPoint: "POST /article/[slug]?/createComment" }
+    text: >-
+      A named action answers one form of the article page. createComment
+      refuses a reader who has not signed in, reads the form, and posts the
+      comment to the API.
+  - title: A writer's page
+    drafted: { by: Claude Code, at: "2026-11-23T12:30:00Z" }
+    open: { view: unit, path: "src/routes/profile/@[user]" }
+    text: >-
+      A profile page sits inside its own layout. The layout's server load
+      reads the profile, and the page's server load reads the writer's
+      articles through get_articles.
