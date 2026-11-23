@@ -60,8 +60,8 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
    npm run build -w adapters/typescript
    ```
 
-3. Fetch a public example (chi, cobra, immer, hono or realworld) and look at
-   it:
+3. Fetch a public example (chi, cobra, immer, hono, realworld or
+   svelte-changelog) and look at it:
 
    ```sh
    git submodule update --init --checkout --depth 1 corpus/go/chi
@@ -176,5 +176,5 @@ The design follows research on how developers read code
 Atlas Carries Us carries the MIT licence. The viewer ships the Inter, Fraunces
 and JetBrains Mono fonts under the SIL Open Font License 1.1. The Ahro mark
 belongs to Ahro. The projects under `corpus/` keep their own licences: chi
-(MIT), Cobra (Apache 2.0), Immer (MIT), Hono (MIT) and RealWorld for
-SvelteKit (MIT).
+(MIT), Cobra (Apache 2.0), Immer (MIT), Hono (MIT), RealWorld for SvelteKit
+(MIT) and Svelte Changelog (MIT).

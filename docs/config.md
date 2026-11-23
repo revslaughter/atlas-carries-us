@@ -149,6 +149,10 @@ regions:
    `src/router`, not `src/router` itself; list both when the region needs
    both.
 3. Without any regions, `acu` makes one per top-level folder.
+4. In a glob, `[...]` matches one character from a set. To match a folder
+   whose name holds `[`, such as a SvelteKit route parameter, write `[[]`
+   for the `[`: `src/routes/[[]slug]/**` matches the folders below
+   `src/routes/[slug]`.
 
 ## layout
 

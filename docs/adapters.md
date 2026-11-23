@@ -234,9 +234,12 @@ Svelte rides on the TypeScript adapter. The TypeScript compiler cannot read
 a `.svelte` file, so the adapter turns each component into TypeScript with
 `svelte2tsx`, the tool behind `svelte-check`, and the compiler does the
 rest. Both `svelte2tsx` (0.7.63) and `svelte` (5.57.3), whose compiler
-parses the components, sit pinned in `adapters/typescript/package.json`. On
-sveltejs/realworld at commit df79670 the counts sit in
-`examples/realworld/counts.json`.
+parses the components, sit pinned in `adapters/typescript/package.json`. Two
+public apps hold the count snapshots. sveltejs/realworld at commit df79670
+(`examples/realworld/counts.json`) covers pages, form actions, loads that
+call `parent()`, and layouts, in JavaScript. WarningImHack3r/svelte-changelog
+at commit c100d72 (`examples/svelte-changelog/counts.json`) covers SvelteKit
+3, `+server` methods, param matchers, and code with doc comments.
 
 #### What it reads
 
@@ -352,7 +355,11 @@ The plugin reads routes from file names under `src/routes`; its option
    written: `src/routes/(app)/blog/[slug]` gives `/blog/[slug]`.
 2. A `+server.ts` or `+server.js` module makes an `http` entry for each
    `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` and `HEAD` that it
-   exports, with that method. `fallback` makes `ANY`.
+   exports, with that method. `fallback` makes `ANY`. An export that a
+   factory builds, such as `export const GET = rssHandler(…)`, takes as its
+   handler the first project function that its initializer names, as in the
+   Express and Hono plugins. The same rule holds for a `load` and a form
+   action.
 3. A page (`+page.svelte`, with an optional `+page.ts` and
    `+page.server.ts`) makes one entry, `GET <path>`. Its handler: the `load`
    of `+page.server.ts`, else the `load` of `+page.ts`, else the component.

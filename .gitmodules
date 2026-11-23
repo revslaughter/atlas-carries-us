@@ -23,3 +23,8 @@
 	url = https://github.com/sveltejs/realworld
 	shallow = true
 	update = none
+[submodule "corpus/svelte/svelte-changelog"]
+	path = corpus/svelte/svelte-changelog
+	url = https://github.com/WarningImHack3r/svelte-changelog
+	shallow = true
+	update = none
