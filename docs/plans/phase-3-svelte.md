@@ -22,8 +22,9 @@ the TypeScript adapter. Read `AGENTS.md`, `docs/schema.md`, `docs/adapters.md`
 3. No new runtime dependency beyond these two. Write the source-map decoder
    in the adapter (about 40 lines of VLQ); do not import
    `@jridgewell/sourcemap-codec`, which arrives only through `svelte`.
-4. The data format stays at version 1 with no new field, kind or enum value,
-   unless step 4.3 gets the maintainer's agreement.
+4. The data format stays at version 1 with no new field, kind or enum value.
+   A component that renders another one makes a `calls` edge; the
+   maintainer chose `calls` over a new `renders` kind.
 5. `@sveltejs/kit` stays out of the adapter's dependencies. The plugin reads
    routes from file names; it never runs `svelte.config.js` or
    `vite.config.js`.
@@ -121,11 +122,7 @@ Follow the tables in `docs/adapters.md`. Kinds come from the existing
    tag in the `.svelte` file.
 2. Calls in the markup and in event handlers count for the component, as a
    call in a nested function counts for its declaration.
-3. Optional, and only with the maintainer's agreement (AGENTS.md "Ask
-   first", 1 and 2): a `renders` edge kind. It would touch the schema,
-   `docs/schema.md`, the adapter types, `viewer/src/types.ts`, and the
-   viewer's legend and line style. Without agreement, ship with `calls` and
-   say so in the limits.
+3. No `renders` kind. The maintainer chose `calls` for every render.
 
 ### 5. The `sveltekit` plugin
 
@@ -146,12 +143,31 @@ test). Option `routes`, default `src/routes`.
    named action makes `POST <path>?/<name>`. An inline action at the top
    level becomes a function symbol named after its route, as the existing
    plugins do.
-5. Layouts. Issue #5 lists `+layout.svelte` as a page. A layout answers no
-   request alone, so this plan makes no entry for it. Ask the maintainer;
-   if they want one, use `GET <path>/*` with the layout's `load` as handler.
-6. `hooks.server.ts`, `+error.svelte` and param matchers make no entries.
+5. Layouts make no entry of their own. A layout answers no request alone;
+   it wraps the pages below it. The plugin records that wrap as edges
+   instead (step 5.6).
+6. Layout edges. SvelteKit renders each page inside every `+layout.svelte`
+   from `routes` down to the page's folder. Each layout renders its child
+   through `{@render children()}` (or `<slot />` in legacy code); the page
+   never names its layout. No checker resolves this, so each edge carries
+   `confidence: "heuristic"`, and each points from the user to the thing
+   used:
+   - from each layout component to the nearest layout or page below it, as
+     `calls`;
+   - from a `load` that calls `parent()` to the `load` of each enclosing
+     layout, as `calls`. A `+page.server.ts` or `+layout.server.ts` load
+     points at enclosing `+layout.server.ts` loads. A `+page.ts` or
+     `+layout.ts` load points at enclosing `+layout.ts` loads, and at a
+     layout's `+layout.server.ts` load when that layout has no `+layout.ts`.
+
+   Honour the reset syntax: `+page@.svelte`, `+page@<segment>.svelte` and
+   `+layout@<segment>.svelte` skip the layouts between the file and the
+   named segment. `(group)` folders count as segments for layouts, but not
+   for the path. Read the "Advanced layouts" page of the SvelteKit 3 docs
+   before you write this step, and check the reset syntax there.
+7. `hooks.server.ts`, `+error.svelte` and param matchers make no entries.
    Say so in the limits.
-7. `plugin: "sveltekit"`. Sort entries as every other list.
+8. `plugin: "sveltekit"`. Sort entries and edges as every other list.
 
 ### 6. Fixture and tests
 
@@ -165,7 +181,11 @@ test). Option `routes`, default `src/routes`.
    - `src/routes/+layout.svelte` and `src/routes/+page.svelte`;
    - `src/routes/blog/[slug]/+page.svelte` and `+page.server.ts` with a
      `load` and two actions, one inline;
-   - `src/routes/(marketing)/about/+page.ts`;
+   - `src/routes/(marketing)/+layout.svelte` and
+     `src/routes/(marketing)/about/+page.ts`;
+   - `src/routes/blog/+layout.ts` with a `load`, and a page `load` that
+     calls `parent()`;
+   - one page that resets its layout with `@`;
    - `src/routes/api/items/+server.ts` with `GET` and `POST`;
    - a `.test.ts` file, so that tests record against components.
 2. A golden file `testdata/golden/svelte.json`, and an
@@ -173,7 +193,9 @@ test). Option `routes`, default `src/routes`.
 3. Tests in `test/extract.test.ts`: schema validation; a location inside
    the markup maps to the right `.svelte` line; the component's
    `languageKind`; the props in `signature.params`; the `calls` edge from
-   `+page.svelte` to `Button`; the full list of entries.
+   `+page.svelte` to `Button`; the full list of entries; the layout edges,
+   with `heuristic` confidence, for a nested page, a grouped page and a
+   reset page.
 4. Unit tests for `sourcemap.ts`.
 5. Check that `npm run format:check` passes with `.svelte` files present
    (Prettier has no Svelte plugin here and must skip them).
@@ -203,9 +225,12 @@ form action, the docs panel of a component.
 
 1. `docs/adapters.md`: a "Svelte and SvelteKit" section under TypeScript,
    with what it reads, IDs, the symbol table, edges, the plugin and limits.
-2. The adapter's help text and output notes: the new limits.
-3. `README.md`: the status row for phase 3.
-4. Each new file opens with a comment that says what it holds; each item
+2. `docs/schema.md` and the `confidence` description in the schema: say
+   that `heuristic` also covers an edge that a framework's file convention
+   implies, such as a layout around a page. The enum stays as it stands.
+3. The adapter's help text and output notes: the new limits.
+4. `README.md`: the status row for phase 3.
+5. Each new file opens with a comment that says what it holds; each item
    carries a doc comment. Run `cargo run -- extract -c atlas.yaml -o
    out/self.json` and `node tests/e2e/docs.mjs out/self.json`.
 
@@ -215,8 +240,8 @@ form action, the docs panel of a component.
 2. The acceptance criteria of issue #5 hold.
 3. The immer and Hono snapshots and the TypeScript golden file show no
    change.
-4. The pull request lists the questions for the maintainer: the `renders`
-   edge (4.3) and layouts (5.5).
+4. A symbol view of a page shows its layouts on the left, drawn in the
+   heuristic style, in both themes.
 
 ## Risks
 
