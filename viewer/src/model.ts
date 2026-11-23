@@ -79,6 +79,12 @@ export function andList(words: string[]): string {
   return words.slice(0, -1).join(", ") + " and " + words[words.length - 1];
 }
 
+/** Joins words as "a", "a or b", "a, b or c". */
+export function orList(words: string[]): string {
+  if (words.length <= 1) return words.join("");
+  return words.slice(0, -1).join(", ") + " or " + words[words.length - 1];
+}
+
 export class Model {
   doc: AtlasDoc;
   containers = new Map<string, Container>();
@@ -117,6 +123,31 @@ export class Model {
     this.buildRoutes();
     this.buildTests();
     this.buildRegions();
+  }
+
+  /** The words that a set of units uses for itself, such as "folder" or "module", the most common first. */
+  unitWords(units: Iterable<string> = this.units.keys()): string[] {
+    const n = new Map<string, number>();
+    for (const id of units) {
+      const w = this.wordOf(id);
+      n.set(w, (n.get(w) ?? 0) + 1);
+    }
+    return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(e => e[0]);
+  }
+
+  /** The word for one unit, as its adapter wrote it in `languageKind`. */
+  wordOf(unit: string): string {
+    return this.units.get(unit)?.c.languageKind || "unit";
+  }
+
+  /** Names any one unit of the map: "folder", or "module or folder" in a map of two languages. */
+  anyUnit(): string {
+    return orList(this.unitWords()) || "unit";
+  }
+
+  /** Names many units: "folders", or "modules and folders" in a map of two languages. */
+  allUnits(units?: Iterable<string>): string {
+    return andList(this.unitWords(units).map(plural)) || "units";
   }
 
   /** The unit that holds a symbol or container. */

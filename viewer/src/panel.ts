@@ -3,7 +3,7 @@
 // keyboard and screen-reader path through the same facts.
 
 import { M, go, stateName } from "./app";
-import { plural, type Route } from "./model";
+import type { Route } from "./model";
 import {
   ENTRY_KIND,
   LANES_LEFT,
@@ -35,8 +35,9 @@ import { tour } from "./tour";
 
 const panel = document.getElementById("panel")!;
 
-function word(): string {
-  return M.unitList[0]?.c.languageKind ?? "unit";
+/** Starts a phrase with a capital letter. */
+function cap(s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
 function chip(id: string, extra?: string): string {
@@ -139,7 +140,7 @@ export function region(id: string) {
   panel.innerHTML = `<div class="eyebrow">Region</div><h2 class="sans">${esc(r.name)}</h2>
   ${r.description ? `<div class="doc">${paragraphsHTML(r.description)}</div>` : ""}
   ${r.readingTip ? `<div class="about"><h4>Reading tip</h4><p>${inlineHTML(r.readingTip)}</p></div>` : ""}${draftedNote(r.drafted)}
-  <h3>${esc(plural(word()))}</h3><ul class="plain rlist">${r.units.map(u => `<li>${unitChip(u)}<div class="s">${esc(summary(M.units.get(u)!.c.doc) || `No doc comment on this ${word()}.`)}</div></li>`).join("")}</ul>
+  <h3>${esc(cap(M.allUnits(r.units)))}</h3><ul class="plain rlist">${r.units.map(u => `<li>${unitChip(u)}<div class="s">${esc(summary(M.units.get(u)!.c.doc) || `No doc comment on this ${M.wordOf(u)}.`)}</div></li>`).join("")}</ul>
   <h3>What it uses in other regions</h3>${
     out.size
       ? [...out]
@@ -298,15 +299,16 @@ export function routesIndex() {
 }
 
 export function howTo() {
-  const w = word(),
+  const w = M.anyUnit(),
+    ws = M.allUnits(),
     p = M.doc.project,
     meta = M.doc.meta;
   const notes = meta.adapters.flatMap(a => a.notes ?? []);
   panel.innerHTML = `<div class="eyebrow">Help</div><h2 class="sans">How to read this map</h2>
   <div class="doc">
   <p>The map comes straight from the source. ${esc(meta.adapters.map(a => a.name).join(", "))} adapter${meta.adapters.length > 1 ? "s" : ""} read the code${meta.commit ? ` at commit <code>${esc(meta.commit.slice(0, 10))}</code>` : ""}. Every box links to its code.</p>
-  <p><b>Overview.</b> Regions group ${w}s by their job. Zoom in to see the ${w}s, with their docs and most-used items.</p>
-  <p><b>${esc(w[0].toUpperCase() + w.slice(1))} focus.</b> Click a ${w}, or zoom into it. The map redraws with that ${w} in the centre. The left side lists the ${w}s that use it. The right side lists the ${w}s it uses. Each box names the exact items involved.</p>
+  <p><b>Overview.</b> Regions group ${ws} by their job. Zoom in to see the ${ws}, with their docs and most-used items.</p>
+  <p><b>${esc(cap(w))} focus.</b> Click a ${w}, or zoom into it. The map redraws with it in the centre. The left side lists the ${ws} that use it. The right side lists the ${ws} it uses. Each box names the exact items involved.</p>
   <p><b>Item focus.</b> Click a row in a ${w}. The centre shows its members. The left lists what uses it, by kind of relation. The right lists what it uses. Lines end at the exact member.</p>
   <p><b>Trace.</b> Pick an entry point, or click “trace” beside a callable. The trace follows the calls in order, through each interface to the code that runs.</p>
   <p><b>Moving around.</b> Zoom far out in a focus view to go up one level. Back and Forward retrace your path. The breadcrumbs at the top show where you are.</p>

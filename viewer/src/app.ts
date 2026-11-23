@@ -207,9 +207,13 @@ function vw() {
 function vh() {
   return canvas.height / dpr;
 }
-function fitRect(x: number, y: number, w: number, h: number, pad = 40) {
-  const k = Math.min((vw() - pad * 2) / w, (vh() - pad * 2) / h);
-  return { k, x: vw() / 2 - (x + w / 2) * k, y: vh() / 2 - (y + h / 2) * k };
+/** Screen pixels at the top of the canvas that the breadcrumbs and the hint cover. */
+const TOP = 84;
+
+/** Fits a world rectangle into the view with `pad` pixels around it and `top` pixels free above it. */
+function fitRect(x: number, y: number, w: number, h: number, pad = 40, top = pad) {
+  const k = Math.min((vw() - pad * 2) / w, (vh() - pad - top) / h);
+  return { k, x: vw() / 2 - (x + w / 2) * k, y: top + (vh() - pad - top) / 2 - (y + h / 2) * k };
 }
 function toWorld(sx: number, sy: number) {
   return { x: (sx - cam.x) / cam.k, y: (sy - cam.y) / cam.k };
@@ -232,29 +236,29 @@ function setOverviewCam(st: State) {
   if (st.v === "overview" && st.region) {
     const g = OV.regions!.find(g => g.r.id === st.region);
     if (g) {
-      cam = fitRect(g.x, g.y - 60, g.w, g.h + 60, 30);
+      cam = fitRect(g.x, g.y, g.w, g.h, 30, TOP);
       return;
     }
   }
-  cam = fitRect(b.x, b.y - 60, b.w, b.h + 60, 30);
+  cam = fitRect(b.x, b.y, b.w, b.h, 30, TOP);
 }
 
 /** Focus views start readable: at least 0.8 scale, fitted by width, at the top. */
 function fitCam(sc: Scene) {
   const b = sc.bounds,
-    f = fitRect(b.x, b.y, b.w, b.h, 40);
+    f = fitRect(b.x, b.y, b.w, b.h, 40, TOP);
   let k = Math.min(1.1, f.k);
   if (k < 0.88) {
     const c = sc.center!;
     if (sc.t === "trace") {
       k = 0.88;
-      return { k, x: 24 - b.x * k, y: 64 - b.y * k };
+      return { k, x: 24 - b.x * k, y: TOP - b.y * k };
     }
     k = Math.max(0.8, Math.min(1.1, (vw() - 32) / b.w));
     const cxw = b.w * k <= vw() ? b.x + b.w / 2 : c.x + c.w / 2;
-    return { k, x: vw() / 2 - cxw * k, y: 64 - Math.min(b.y, c.y - 40) * k };
+    return { k, x: vw() / 2 - cxw * k, y: TOP - Math.min(b.y, c.y - 40) * k };
   }
-  return { k, x: vw() / 2 - (b.x + b.w / 2) * k, y: vh() / 2 - (b.y + b.h / 2) * k };
+  return { k, x: vw() / 2 - (b.x + b.w / 2) * k, y: TOP + (vh() - 40 - TOP) / 2 - (b.y + b.h / 2) * k };
 }
 
 function zoomAt(sx: number, sy: number, f: number) {
@@ -796,7 +800,7 @@ function click(h: Hit | null) {
   if (scene.t === "overview") {
     if (h.node) go({ v: "unit", id: h.node.unit! });
     else if (h.region) {
-      animateCam(fitRect(h.region.x, h.region.y, h.region.w, h.region.h, 30));
+      animateCam(fitRect(h.region.x, h.region.y, h.region.w, h.region.h, 30, TOP));
       panel.region(h.region.r.id);
     }
     return;
@@ -1002,7 +1006,7 @@ function describe(h: Hit): string {
 function activate(open: boolean) {
   if (!kbd) return;
   if (kbd.region) {
-    animateCam(fitRect(kbd.region.x, kbd.region.y, kbd.region.w, kbd.region.h, 30));
+    animateCam(fitRect(kbd.region.x, kbd.region.y, kbd.region.w, kbd.region.h, 30, TOP));
     panel.region(kbd.region.r.id);
     return;
   }
@@ -1097,7 +1101,7 @@ export function status(h: Hit | null) {
     st.textContent = !scene
       ? ""
       : scene.t === "overview"
-        ? `Click a region to zoom to it. Click a ${M.unitList[0]?.c.languageKind ?? "unit"}, or zoom into it, to see what it uses and what uses it.`
+        ? `Click a region to zoom to it. Click a ${M.anyUnit()}, or zoom into it, to see what it uses and what uses it.`
         : scene.t === "trace"
           ? "Numbers give the call order inside each function. Dashed lines lead from an interface to the code that runs. Click a box twice to open it."
           : "Click a box to read its docs. Click it again to put it in the centre. Zoom far out to go up a level.";
@@ -1132,22 +1136,22 @@ export function status(h: Hit | null) {
 export function hint() {
   const el = document.getElementById("hint")!;
   if (!scene) return;
-  const word = M.unitList[0]?.c.languageKind ?? "unit";
   let s: string;
   if (scene.t === "overview")
     s =
       cam.k < OV_ROOMS_AT
-        ? `Zoom in to see the ${word}s of each region.`
-        : `Zoom into a ${word}, or click it, to open its focus view.`;
+        ? `Zoom in to see the ${M.allUnits()} of each region.`
+        : `Zoom into a ${M.anyUnit()}, or click it, to open its focus view.`;
   else if (outAccum > 0) {
-    const v = current().v;
-    s = `Keep zooming out to go up to ${v === "symbol" ? "the " + word : v === "unit" ? "the overview" : "the starting item"}.`;
+    const st = current();
+    const up = st.v === "symbol" ? "the " + M.wordOf(M.items.get(st.id)?.unit ?? "") : "";
+    s = `Keep zooming out to go up to ${st.v === "symbol" ? up : st.v === "unit" ? "the overview" : "the starting item"}.`;
   } else
     s =
       scene.t === "symbol"
         ? "Left: what uses it.   Right: what it uses.   Arrows point at the thing used."
         : scene.t === "unit"
-          ? `Hover a ${word} to see the exact items it uses. Hover a row to see who uses it.`
+          ? `Hover a ${M.anyUnit()} to see the exact items it uses. Hover a row to see who uses it.`
           : "Read left to right. Numbers give the call order.";
   el.textContent = s;
   el.hidden = false;
@@ -1160,7 +1164,7 @@ function renderCrumbs() {
     parts: { label: string; st: State }[] = [];
   const m = document.createElement("span");
   m.className = "mode";
-  const word = M.unitList[0]?.c.languageKind ?? "unit";
+  const word = st.v === "unit" ? M.wordOf(st.id) : M.anyUnit();
   m.textContent = {
     overview: "Overview",
     unit: `${word[0].toUpperCase() + word.slice(1)} focus`,
@@ -1218,11 +1222,11 @@ function legendLine(k: string, label: string, heuristic = false) {
 export function renderLegend() {
   const el = document.getElementById("legend")!,
     st = current();
-  const word = M.unitList[0]?.c.languageKind ?? "unit";
+  const word = st.v === "unit" ? M.wordOf(st.id) : M.anyUnit();
   const anyHeuristic = M.doc.edges.some(e => e.confidence === "heuristic");
   const guess = anyHeuristic ? legendLine("uses", "matched by name, not checked by a compiler", true) : "";
   if (st.v === "overview")
-    el.innerHTML = `<h2>Overview</h2>${legendLine("calls", "uses code in")}<p>Each region groups ${word}s by their job. Hover a region to see which regions it uses.</p>`;
+    el.innerHTML = `<h2>Overview</h2>${legendLine("calls", "uses code in")}<p>Each region groups ${M.allUnits()} by their job. Hover a region to see which regions it uses.</p>`;
   else if (st.v === "unit")
     el.innerHTML = `<h2>${esc(word[0].toUpperCase() + word.slice(1))} focus</h2>${legendLine("uses", "uses")}<p>Thicker lines carry more items. Hover a box to see the exact items.</p>`;
   else if (st.v === "symbol")
