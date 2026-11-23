@@ -99,7 +99,8 @@ v4.13.17 the counts sit in `examples/immer/counts.json` and
    files (`.d.ts`), `node_modules` and test files stay out.
 3. Test files match the request's `tests` globs, by default `**/*.test.*`,
    `**/*.spec.*` and `**/__tests__/**`. The adapter adds them to the program,
-   so that their uses resolve, but never maps them.
+   so that their uses resolve, but never maps them. Its search for them
+   skips the folders that `exclude` names.
 4. The adapter installs nothing. An import of an outside package that the
    project has not installed resolves to nothing, and a note in the output
    counts such imports.
@@ -166,7 +167,8 @@ without a `package.json` name drops the package part.
 5. The doc of a file comes from its first comment that no declaration owns: a
    comment with `@file`, `@module` or `@packageDocumentation`, or a comment
    that a blank line parts from the code. Licence headers and tool directives
-   never count. A folder takes the doc of its `index` file.
+   never count. A folder takes the doc of the file that carries
+   `@packageDocumentation`, or else the doc of its `index` file.
 6. A parameter property takes the text of its `@param` tag on the constructor.
 
 #### Edges

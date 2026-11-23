@@ -68,6 +68,7 @@ Behind a TLS-inspecting proxy, see the comment at the top of the `Dockerfile`.
 | Viewer | The TypeScript type check, unit tests (including the language-word test), and the build. |
 | `acu` | `cargo fmt`, `cargo clippy` with warnings as errors, the tests, and a release build. |
 | End to end | For each example: `acu extract`, the count snapshot, `acu build`, and the smoke test in both themes. |
+| This project's map | `acu extract -c atlas.yaml`, the doc check (`tests/e2e/docs.mjs`), `acu build`, and the smoke test in both themes. |
 
 ## 4. Conventions that hold everywhere
 
@@ -146,11 +147,25 @@ give the same bytes. Golden files depend on this.
 
 ### 4.8 Comments and doc comments
 
-1. Every source file opens with a comment that says what it holds.
-2. Every exported item carries a doc comment whose first sentence stands on
-   its own. The map shows that sentence on every box, so it matters here more
+1. Every source file opens with a comment that says what it holds. In Go, a
+   blank line keeps a file's comment apart from the package clause, so that
+   it never becomes the package doc.
+2. Every item carries a doc comment whose first sentence stands on its own:
+   exported or not, because the map shows every item. So does every exported
+   member. The map shows that sentence on every box, so it matters here more
    than in most projects.
-3. A comment explains why; the code shows what.
+3. Write the first sentence for a reader of the map. Say what the code does,
+   in the project's words ("addEdge records one use"), not a label ("A
+   helper function").
+4. Link what belongs together. Go doc links (`[Run]`, `[schema.Document]`)
+   and TSDoc links (`{@link Model}`) become links on the map, and a Markdown
+   link to a file under `docs/` carries a reader to the reason.
+5. A folder or package gets one doc: a Go package doc, or a TypeScript file
+   that carries `@packageDocumentation` (or an `index` file).
+6. A comment explains why; the code shows what.
+7. This project's own map (`atlas.yaml`) must stay complete:
+   `node tests/e2e/docs.mjs out/self.json` names every unit, file, item and
+   exported member that lacks a doc, and `scripts/check.sh` runs it.
 
 ### 4.9 Formatting
 

@@ -10,6 +10,7 @@ export interface Globs {
   match(path: string): boolean;
 }
 
+/** Turns one glob into an anchored regular expression. */
 function globRegExp(p: string): RegExp {
   let re = "^";
   for (let i = 0; i < p.length; i++) {

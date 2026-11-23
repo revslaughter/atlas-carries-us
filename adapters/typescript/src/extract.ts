@@ -27,13 +27,21 @@ export const ADAPTER_VERSION = "0.1.0";
 
 /** What the acu command asks the adapter to read. It arrives as JSON on standard input (protocol 1, see docs/adapters.md). */
 export interface Request {
+  /** The protocol version; this adapter speaks 1. */
   protocol: number;
+  /** The repository root; every path in the output is relative to it. The default is the root. */
   repoRoot?: string;
+  /** The folder to read: the project's root, which holds its tsconfig. */
   root: string;
+  /** Globs of folders to keep; an empty list keeps all. */
   include?: string[];
+  /** Globs of folders to leave out. */
   exclude?: string[];
+  /** Globs that mark test files; the default is {@link DEFAULT_TESTS}. */
   tests?: string[];
+  /** The settings that only this adapter reads. */
   options?: Options;
+  /** The entry-point plugins to switch on. */
   entryPoints?: PluginConfig[];
 }
 
@@ -46,8 +54,11 @@ export interface Options {
 /** The globs that mark test files when the request names none. */
 export const DEFAULT_TESTS = ["**/*.test.*", "**/*.spec.*", "**/__tests__/**"];
 
+/** Matches the files that hold code: TypeScript and JavaScript, as modules or scripts. */
 const SCRIPT = /\.(?:[cm]?tsx?|[cm]?jsx?)$/;
+/** The symbol kinds that a call can reach, and that a trace can start from. */
 const CALLABLE = new Set(["function", "method", "constructor"]);
+/** Node's built-in modules, which never count as outside packages. */
 const BUILTIN = new Set(builtinModules);
 
 /** Joins the lines of a piece of source text, and drops the spaces that line breaks leave inside brackets. */
@@ -74,10 +85,12 @@ export function unwrap(e: ts.Expression): ts.Expression {
   }
 }
 
+/** Reports whether a node is a function written as a value: an arrow function or a function expression. */
 function isFunctionLike(e: ts.Node | undefined): e is ts.ArrowFunction | ts.FunctionExpression {
   return !!e && (ts.isArrowFunction(e) || ts.isFunctionExpression(e));
 }
 
+/** Reports whether a comment holds a licence header, which documents no code. */
 function isLicence(t: string): boolean {
   return (
     /^(Copyright|SPDX-License-Identifier|@license|@preserve)/.test(t) ||
@@ -85,58 +98,93 @@ function isLicence(t: string): boolean {
   );
 }
 
+/** Reports whether a comment talks to a tool (a linter, the compiler, a test runner) rather than to a reader. */
 function isDirective(t: string): boolean {
   return /^(eslint|@ts-|prettier-ignore|tslint|jshint|global |istanbul|c8 |biome-ignore|#region|#endregion|<reference|@jsx|@vitest-environment|@jest-environment|deno-)/.test(
     t,
   );
 }
 
+/** A doc comment that waits until every symbol exists, so that its links can resolve. */
 interface PendingDoc {
+  /** The comment without its markers. */
   raw: string;
+  /** The file that holds the comment; its scope resolves link names. */
   sf: ts.SourceFile;
+  /** The node that the comment documents. */
   at: ts.Node;
+  /** Stores the finished doc on its owner. */
   set: (d: S.Doc) => void;
 }
 
 /** Holds the state of one run. The plugins and the test index read it too. */
 export class Extractor {
+  /** The request as it arrived. */
   readonly req: Request;
+  /** The absolute folder to read. */
   readonly root: string;
+  /** The absolute repository root. */
   readonly repoRoot: string;
+  /** The name in the root's package.json, which starts every ID; undefined without one. */
   readonly pkgName: string | undefined;
+  /** The program: the project's files and the test files, parsed and bound. */
   program!: ts.Program;
+  /** The type checker that resolves every name, type and call. */
   checker!: ts.TypeChecker;
   /** The files that the map holds, sorted by path. */
   readonly files: ts.SourceFile[] = [];
+  /** The test files, which feed the test index but never the map. */
   readonly testFiles: ts.SourceFile[] = [];
+  /** The file names of {@link Extractor.files}, for a quick check. */
   readonly mapped = new Set<string>();
+  /** Every container, by ID. */
   readonly conts = new Map<string, S.Container>();
+  /** Every symbol, by ID. */
   readonly syms = new Map<string, S.Symbol>();
   /** Declaration nodes, and the function nodes inside them, to symbol IDs. */
   readonly idOfNode = new Map<ts.Node, string>();
   /** Nodes whose calls count as calls of a symbol: bodies, initializers and inline handlers. */
   readonly callerOfNode = new Map<ts.Node, string>();
+  /** The entry points that the plugins found. */
   readonly entries: S.EntryPoint[] = [];
+  /** The tests of each symbol ID, keyed by place and name so that a test counts once. */
   readonly testUses = new Map<string, Map<string, S.TestUse>>();
+  /** Extra limits of this run, for the output's notes. */
   readonly notes: string[] = [];
+  /** Every edge, by "from, to, kind", so that a repeated use raises a count. */
   private readonly edges = new Map<string, S.Edge>();
+  /** The doc comments that wait for pass 4. */
   private readonly docs: PendingDoc[] = [];
+  /** The symbols that already hold a pending doc, so an overload's second comment never wins. */
   private readonly docQueued = new Set<string>();
+  /** The symbols made from each compiler symbol, by category, so overloads and merges join one symbol. */
   private readonly byTsSymbol = new Map<ts.Symbol, Map<string, S.Symbol>>();
+  /** Each symbol's path inside its module, such as "Immer.produce", by ID. */
   private readonly pathOf = new Map<string, string>();
+  /** Every declared name, so the call pass resolves only calls that may reach the map. */
   private readonly names = new Set<string>();
+  /** The declarations that each module exports; null for a script, whose declarations are global. */
   private readonly exportsOf = new Map<ts.SourceFile, Set<ts.Node> | null>();
+  /** The local names that each file's imports bind. */
   private readonly aliasesOf = new Map<ts.SourceFile, Set<string>>();
+  /** The names in scope at the top of each file, for doc links. */
   private readonly scopeOf = new Map<ts.SourceFile, Map<string, ts.Symbol>>();
+  /** The file docs, by file container ID, until a folder claims one. */
   private readonly fileDocs = new Map<string, string>();
   /** Work that needs every symbol to exist: the refs of types. */
   private readonly later: (() => void)[] = [];
+  /** The entry-point plugins that the request switches on. */
   private readonly plugins: Plugins;
+  /** The folders to keep. */
   private include: Globs;
+  /** The folders to leave out. */
   private exclude: Globs;
+  /** The files that hold tests. */
   private tests: Globs;
+  /** The imports of outside packages that resolved to nothing, for a note. */
   private unresolved = 0;
 
+  /** Prepares a run: resolves the paths, compiles the globs and switches on the plugins. Nothing reads code yet. */
   constructor(req: Request) {
     this.req = req;
     this.root = path.resolve(req.root);
@@ -199,7 +247,9 @@ export class Extractor {
         jsx: ts.JsxEmit.Preserve,
         strict: true,
       };
-      rootNames = walk(this.root).filter(f => /\.[cm]?tsx?$/.test(f) && !/\.d\.[cm]?ts$/.test(f));
+      rootNames = walk(this.root, r => this.exclude.match(r)).filter(
+        f => /\.[cm]?tsx?$/.test(f) && !/\.d\.[cm]?ts$/.test(f),
+      );
     }
     options = {
       ...options,
@@ -217,7 +267,7 @@ export class Extractor {
     const host = ts.createCompilerHost(options, true);
     host.jsDocParsingMode = ts.JSDocParsingMode.ParseAll;
     const first = ts.createProgram({ rootNames, options, host });
-    const tests = walk(this.root).filter(
+    const tests = walk(this.root, r => this.exclude.match(r)).filter(
       f => SCRIPT.test(f) && !/\.d\.[cm]?ts$/.test(f) && this.tests.match(this.relRoot(f)),
     );
     this.program = tests.length
@@ -394,10 +444,11 @@ export class Extractor {
   /** Finds the comment that describes a whole file: the first comment that no declaration owns. */
   private fileDoc(sf: ts.SourceFile): string | undefined {
     const text = sf.getFullText();
-    const start = text.startsWith("#!") ? text.indexOf("\n") + 1 : 0;
     const first = sf.statements[0];
     const firstStart = first ? first.getStart(sf) : text.length;
-    const ranges = (ts.getLeadingCommentRanges(text, start) ?? []).filter(r => r.end <= firstStart);
+    // From position 0, TypeScript skips a "#!" line by itself. From any other
+    // position, it collects comments only after a line break.
+    const ranges = (ts.getLeadingCommentRanges(text, 0) ?? []).filter(r => r.end <= firstStart);
     // Join neighbouring line comments into one group.
     const groups: { pos: number; end: number; raw: string; block: boolean }[] = [];
     for (const r of ranges) {
@@ -424,14 +475,26 @@ export class Extractor {
     return undefined;
   }
 
-  /** Gives each folder the doc of its index file. */
+  /**
+   * Gives each folder a doc: the doc of the file that carries
+   * `@packageDocumentation`, or else the doc of its index file. That file's
+   * own container keeps no doc, as a Go package's doc file keeps none.
+   */
   private unitDocs() {
+    const owner = new Map<string, ts.SourceFile>();
+    for (const sf of this.files) {
+      const d = this.fileDocs.get(this.fileId(sf));
+      if (!d) continue;
+      const dir = this.dirIdOf(sf);
+      if (/(^|\n)\s*@packageDocumentation\b/.test(d)) owner.set(dir, sf);
+      else if (!owner.has(dir) && /^(index|mod)\.[cm]?[jt]sx?$/.test(path.basename(sf.fileName))) owner.set(dir, sf);
+    }
     for (const sf of this.files) {
       const fid = this.fileId(sf);
       const d = this.fileDocs.get(fid);
       if (!d) continue;
-      const isIndex = /^(index|mod)\.[cm]?[jt]sx?$/.test(path.basename(sf.fileName));
-      const target = isIndex ? this.conts.get(this.dirIdOf(sf))! : this.conts.get(fid)!;
+      const dir = this.dirIdOf(sf);
+      const target = owner.get(dir) === sf ? this.conts.get(dir)! : this.conts.get(fid)!;
       this.queue(d, sf, sf, x => (target.doc = x));
     }
   }
@@ -1367,6 +1430,7 @@ export function cmp(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/** The name that a call reaches for: f in f(), get in a.get(), "super" in super(), or a JSX tag's name. */
 function calleeName(n: ts.Node): string | undefined {
   let e: ts.Node | undefined;
   if (ts.isCallExpression(n) || ts.isNewExpression(n) || ts.isDecorator(n)) e = n.expression;
@@ -1381,6 +1445,7 @@ function calleeName(n: ts.Node): string | undefined {
   return undefined;
 }
 
+/** Reads and parses a tsconfig file, with its extends chain, or throws with a message that names the file. */
 function parseConfig(file: string): ts.ParsedCommandLine {
   const host: ts.ParseConfigFileHost = {
     ...ts.sys,
@@ -1393,6 +1458,7 @@ function parseConfig(file: string): ts.ParsedCommandLine {
   return parsed;
 }
 
+/** Returns the name in a folder's package.json, or undefined when it has none. */
 function readPackageName(root: string): string | undefined {
   try {
     const p = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as { name?: unknown };
@@ -1402,15 +1468,16 @@ function readPackageName(root: string): string | undefined {
   }
 }
 
-/** Lists the files under a folder, leaving out node_modules and folders whose names start with a dot. */
-function walk(dir: string): string[] {
+/** Lists the files under a folder. It leaves out node_modules, folders whose names start with a dot, and folders that `skip` names by their path from `dir`. */
+function walk(dir: string, skip: (rel: string) => boolean = () => false): string[] {
   const out: string[] = [];
   const visit = (d: string) => {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       if (e.name.startsWith(".") || e.name === "node_modules") continue;
       const p = path.join(d, e.name);
-      if (e.isDirectory()) visit(p);
-      else if (e.isFile()) out.push(p);
+      if (e.isDirectory()) {
+        if (!skip(path.relative(dir, p).split(path.sep).join("/"))) visit(p);
+      } else if (e.isFile()) out.push(p);
     }
   };
   visit(dir);

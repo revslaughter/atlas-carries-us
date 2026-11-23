@@ -5,21 +5,34 @@ import { M, go } from "./app";
 import { ENTRY_KIND, type State } from "./scene";
 import { esc, inlinePlain, summary } from "./text";
 
+/** One thing that the search can find. */
 interface Entry {
+  /** The kind word shown before the name, such as "region" or the item's own word. */
   k: string;
+  /** The name shown, such as "store.Store" or "Store.Get". */
   n: string;
+  /** The text shown after the name: the first doc sentence, or the handler of a route. */
   p: string;
+  /** The view that a pick opens. */
   st: State;
+  /** The name in lower case, which the query matches. */
   l: string;
+  /** The ranking group: "region", "unit", "route", "item" or "member". */
   kind: string;
 }
+/** Every searchable thing, built once at start-up. */
 let IDX: Entry[] = [];
+/** The highlighted result, or -1. */
 let cur = -1,
+  /** The results on show. */
   shown: Entry[] = [];
 
+/** The search box. */
 const q = document.getElementById("q") as HTMLInputElement;
+/** The list of results under the search box. */
 const results = document.getElementById("results")!;
 
+/** Builds the index: regions, units, entry points, items and members, each with the view it opens. */
 export function buildSearch() {
   const add = (k: string, n: string, p: string, st: State, kind: string) =>
     IDX.push({ k, n, p, st, l: n.toLowerCase(), kind });
@@ -57,6 +70,12 @@ export function buildSearch() {
   }
 }
 
+/**
+ * Finds the 40 best matches for a query. A name whose last part equals the
+ * query ranks first, then one whose last part starts with it, then any name
+ * that holds it; regions and units rank a little higher, members a little
+ * lower.
+ */
 export function search(t: string): Entry[] {
   t = t.trim().toLowerCase();
   if (!t) return [];
@@ -78,6 +97,7 @@ export function search(t: string): Entry[] {
     .map(x => x[1]);
 }
 
+/** Draws the results on show and keeps the highlighted one in view and announced. */
 function render() {
   results.innerHTML = shown
     .map(
@@ -93,6 +113,7 @@ function render() {
   }
 }
 
+/** Opens a result's view and clears the search. */
 function pick(it: Entry) {
   results.hidden = true;
   q.value = "";
@@ -100,6 +121,7 @@ function pick(it: Entry) {
   go(it.st);
 }
 
+/** Connects the search box: typing searches, arrows move, Enter opens, Escape closes. */
 export function wireSearch() {
   q.addEventListener("input", () => {
     shown = search(q.value);

@@ -1,3 +1,14 @@
+// Entry-point plugins find the ways into the code: HTTP routes and CLI
+// commands. Each one switches on from the config file.
+//
+//   - go-chi: r.Get("/x", h), r.Method("GET", "/x", h), r.Handle("/x", h),
+//     with r.Route("/prefix", func(r chi.Router) { … }) nesting.
+//   - go-nethttp: mux.HandleFunc("GET /x", h) and http.HandleFunc("/x", h).
+//   - cobra: &cobra.Command{Use: "serve", RunE: run}.
+//
+// A plugin that cannot tell the handler (an inline function) records the
+// registering function as the handler and marks the entry point inline.
+
 package extract
 
 import (
@@ -13,34 +24,33 @@ import (
 	"github.com/revslaughter/atlas-carries-us/adapters/go/internal/schema"
 )
 
-// Entry-point plugins find the ways into the code: HTTP routes and CLI
-// commands. Each one switches on from the config file.
-//
-//   - go-chi: r.Get("/x", h), r.Method("GET", "/x", h), r.Handle("/x", h),
-//     with r.Route("/prefix", func(r chi.Router) { … }) nesting.
-//   - go-nethttp: mux.HandleFunc("GET /x", h) and http.HandleFunc("/x", h).
-//   - cobra: &cobra.Command{Use: "serve", RunE: run}.
-//
-// A plugin that cannot tell the handler (an inline function) records the
-// registering function as the handler and marks the entry point inline.
-
+// prefixRule puts a path in front of the routes that one function registers.
+// A router that the code mounts at run time (with Mount or
+// http.StripPrefix) needs one, because the type checker cannot see the mount.
 type prefixRule struct {
 	// InFunc names a function or method. Routes registered inside it gain
 	// Prefix. Use this for routers that the code mounts under a path.
 	InFunc string `json:"inFunc"`
+	// Prefix holds the path to put in front, such as "/api".
 	Prefix string `json:"prefix"`
 }
 
+// routeOptions holds the options of a route plugin, as atlas.yaml writes them.
 type routeOptions struct {
+	// Prefixes lists the prefix rules, matched by function name.
 	Prefixes []prefixRule `json:"prefixes"`
 }
 
+// plugins holds the plugins that a request switches on. A nil option means
+// that plugin stays off.
 type plugins struct {
 	chi     *routeOptions
 	nethttp *routeOptions
 	cobra   bool
 }
 
+// newPlugins switches on the plugins that the request names, and fails on an
+// unknown name with a message that lists the known ones.
 func newPlugins(cfgs []PluginConfig) (*plugins, error) {
 	pl := &plugins{}
 	for _, c := range cfgs {
@@ -64,6 +74,7 @@ func newPlugins(cfgs []PluginConfig) (*plugins, error) {
 	return pl, nil
 }
 
+// prefixFor returns the prefix for the routes that funcName registers, or "".
 func (o *routeOptions) prefixFor(funcName string) string {
 	if o == nil {
 		return ""
@@ -76,11 +87,14 @@ func (o *routeOptions) prefixFor(funcName string) string {
 	return ""
 }
 
+// chiVerbs maps each of chi's method helpers, such as Get, to its HTTP method.
 var chiVerbs = map[string]string{
 	"Get": "GET", "Post": "POST", "Put": "PUT", "Patch": "PATCH", "Delete": "DELETE",
 	"Head": "HEAD", "Options": "OPTIONS", "Connect": "CONNECT", "Trace": "TRACE",
 }
 
+// walk looks for registrations in the body of one function (caller), and
+// follows r.Route("/prefix", func …) into its closure with the longer prefix.
 func (pl *plugins) walk(ex *extractor, p *packages.Package, body ast.Node, caller, funcName string) {
 	if pl.chi == nil && pl.nethttp == nil && !pl.cobra {
 		return
@@ -117,11 +131,14 @@ func (pl *plugins) walk(ex *extractor, p *packages.Package, body ast.Node, calle
 	visit(body, pl.chi.prefixFor(funcName))
 }
 
+// isChi reports whether an expression has a type from the chi module.
 func isChi(p *packages.Package, e ast.Expr) bool {
 	tv, ok := p.TypesInfo.Types[e]
 	return ok && tv.Type != nil && strings.Contains(tv.Type.String(), "github.com/go-chi/chi")
 }
 
+// constString returns the value of a constant string expression, such as a
+// route pattern, by asking the type checker.
 func constString(p *packages.Package, e ast.Expr) (string, bool) {
 	tv, ok := p.TypesInfo.Types[e]
 	if !ok || tv.Value == nil || tv.Value.Kind() != constant.String {
@@ -144,6 +161,8 @@ func chiRoute(p *packages.Package, ce *ast.CallExpr) (string, *ast.FuncLit) {
 	return pat, lit
 }
 
+// chiRegistration turns a call such as r.Get("/x", h) on a chi router into an
+// entry point, or returns nil for any other call.
 func chiRegistration(ex *extractor, p *packages.Package, ce *ast.CallExpr, prefix, caller string) *schema.EntryPoint {
 	sel, ok := ast.Unparen(ce.Fun).(*ast.SelectorExpr)
 	if !ok || !isChi(p, sel.X) {
@@ -176,6 +195,8 @@ func chiRegistration(ex *extractor, p *packages.Package, ce *ast.CallExpr, prefi
 	return ex.httpEntry(p, ce, method, prefix+pattern, handler, caller, "go-chi")
 }
 
+// netHTTPRegistration turns mux.HandleFunc("GET /x", h) or http.Handle("/x",
+// h) into an entry point. A pattern without a method serves "ANY" method.
 func netHTTPRegistration(ex *extractor, p *packages.Package, ce *ast.CallExpr, prefix, caller string) *schema.EntryPoint {
 	sel, ok := ast.Unparen(ce.Fun).(*ast.SelectorExpr)
 	if !ok || (sel.Sel.Name != "HandleFunc" && sel.Sel.Name != "Handle") || len(ce.Args) != 2 {
@@ -204,6 +225,7 @@ func netHTTPRegistration(ex *extractor, p *packages.Package, ce *ast.CallExpr, p
 	return ex.httpEntry(p, ce, method, prefix+path, ce.Args[1], caller, "go-nethttp")
 }
 
+// httpEntry builds the entry point of one HTTP route and names its handler.
 func (ex *extractor) httpEntry(p *packages.Package, at ast.Node, method, path string, handler ast.Expr, caller, plugin string) *schema.EntryPoint {
 	rel, line := ex.rel(p.Fset, at.Pos())
 	name := method + " " + path
@@ -229,6 +251,8 @@ func (ex *extractor) setHandler(p *packages.Package, ep *schema.EntryPoint, hand
 	}
 }
 
+// cobraCommand turns &cobra.Command{Use: "serve", RunE: run} into an entry
+// point named by the first word of Use. RunE wins over Run.
 func cobraCommand(ex *extractor, p *packages.Package, cl *ast.CompositeLit, caller string) *schema.EntryPoint {
 	tv, ok := p.TypesInfo.Types[cl]
 	if !ok || tv.Type == nil || tv.Type.String() != "github.com/spf13/cobra.Command" {

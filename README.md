@@ -69,6 +69,21 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
 
    Then open <http://127.0.0.1:4321/>. Press `T` for the tour.
 
+## The map of this project
+
+Atlas Carries Us maps itself. [`atlas.yaml`](atlas.yaml) in the repository
+root covers the Go adapter, the TypeScript adapter and the viewer, with
+regions named by job and a tour that follows one run through the code. After
+step 2 above, run this in the repository root:
+
+```sh
+./target/release/acu serve
+```
+
+Every unit, file and function on that map carries a doc comment, and
+`scripts/check.sh` fails when one does not. The `acu` command joins the map in
+phase 4, with the Rust adapter.
+
 ## Map your own project
 
 1. Write an `atlas.yaml` beside your code. The smallest one:
@@ -84,7 +99,11 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
    site to `site/`, or `acu serve` to look at it locally.
 3. Add regions (groups of packages, named by their job), entry-point plugins
    (HTTP routes, CLI commands) and a tour. [`docs/config.md`](docs/config.md)
-   lists every field, and [`examples/`](examples) holds six full configs.
+   lists every field. [`examples/`](examples) holds six full configs, and
+   [`atlas.yaml`](atlas.yaml) maps this project.
+4. Write doc comments for the map. Every box shows the first sentence of its
+   doc, so a first sentence that says what the code does, in the project's
+   own words, helps a reader most.
 
 `acu check` reports problems, such as a tour step that points at code that no
 longer exists, without writing anything.
@@ -121,6 +140,7 @@ the conventions that keep the languages consistent. Coding agents read
 
 | Path | Holds |
 | --- | --- |
+| `atlas.yaml`, `tsconfig.atlas.json` | The map of this project. |
 | `schema/` | The data format and the config format, as JSON Schema. |
 | `adapters/go/` | The Go adapter: reads a module with the Go type checker. |
 | `adapters/typescript/` | The TypeScript adapter: reads a project with the TypeScript compiler API. |
@@ -128,7 +148,7 @@ the conventions that keep the languages consistent. Coding agents read
 | `viewer/` | The viewer: TypeScript, one canvas plus a docs panel, no framework. |
 | `examples/` | Configs for the test fixtures and for the public corpus. |
 | `corpus/` | Public projects pinned as shallow submodules, for testing. A plain clone leaves them out. |
-| `tests/e2e/` | The smoke test: opens every view in Chromium and fails on console errors. |
+| `tests/e2e/` | The smoke test (opens every view in Chromium and fails on console errors), the count check and the doc check. |
 | `Dockerfile`, `.devcontainer/` | The pinned toolchain, the release image and the VS Code devcontainer. |
 | `scripts/check.sh` | Every check that CI runs. |
 | `docs/` | The data format, the config, adapter notes, and the research behind the design. |

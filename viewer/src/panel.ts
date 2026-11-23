@@ -33,6 +33,7 @@ import {
 import type { Param, Symbol } from "./types";
 import { tour } from "./tour";
 
+/** The docs panel beside the canvas. */
 const panel = document.getElementById("panel")!;
 
 /** Starts a phrase with a capital letter. */
@@ -40,18 +41,22 @@ function cap(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
+/** A button that opens an item, labelled "unit.Item", with an optional small note such as the members involved. */
 function chip(id: string, extra?: string): string {
   if (!M.items.has(id)) return "";
   return `<button class="chip" data-sym="${esc(id)}">${esc(M.qual(id))}${extra ? `<small>${esc(extra)}</small>` : ""}</button>`;
 }
+/** A button that opens a unit. */
 function unitChip(id: string): string {
   const u = M.units.get(id);
   return u ? `<button class="chip" data-unit="${esc(id)}">${esc(u.name)}</button>` : "";
 }
+/** A small label in a region's colour, with the region's name: colour never works alone. */
 function rpill(id: string | undefined): string {
   const r = id ? M.regions.find(x => x.id === id) : undefined;
   return r ? `<span class="kindpill" style="color:${regionColor(r.color)}">${esc(r.name)}</span>` : "";
 }
+/** The "Put it in the centre" button, for a panel that describes something that the canvas does not centre. */
 function topBar(focusBtn: boolean | undefined, st: State): string {
   return focusBtn
     ? `<div class="top"><button class="btn primary" data-go='${esc(JSON.stringify(st))}'>Put it in the centre</button></div>`
@@ -73,12 +78,14 @@ function typeHTML(t: string, refs: string[] | undefined): string {
     return id ? `<span class="tlink" role="link" tabindex="0" data-sym="${esc(id)}">${m}</span>` : m;
   });
 }
+/** A parameter list with linked types, for a member's signature line. */
 function paramsHTML(list: Param[]): string {
   return list
     .map(p => (p.name ? esc(p.name) + " " : "") + `<span class="ty">${typeHTML(p.type, p.refs)}</span>`)
     .join(", ");
 }
 
+/** The "Tests that use it" section of an item: up to 12 tests, each linked to its source. */
 function testsHTML(id: string): string {
   const t = M.tests.get(id);
   if (!t?.length) return "";
@@ -91,6 +98,7 @@ function testsHTML(id: string): string {
     .join("")}${t.length > 12 ? `<li><span>+ ${t.length - 12} more</span></li>` : ""}</ul>`;
 }
 
+/** A list of entry points: method, path, and handler; each opens its trace. */
 function routeList(list: Route[]): string {
   return `<ul class="plain routes">${list
     .map(
@@ -100,6 +108,7 @@ function routeList(list: Route[]): string {
     .join("")}</ul>`;
 }
 
+/** Writes the panel for a view state: the overview, a region, a unit, an item or a trace. */
 export function renderFor(st: State) {
   if (st.v === "overview") return st.region ? region(st.region) : overview();
   if (st.v === "unit") return unit(st.id);
@@ -107,6 +116,7 @@ export function renderFor(st: State) {
   if (st.v === "trace") return trace(st);
 }
 
+/** Writes the overview's panel: the project's description, the ways in (tour, entry points, help) and the regions. */
 export function overview() {
   const p = M.doc.project;
   const steps = M.doc.tour?.length ?? 0;
@@ -122,6 +132,7 @@ export function overview() {
     .join("")}</ul>`;
 }
 
+/** Writes a region's panel: its description and reading tip, its units, and what it uses and what uses it in other regions. */
 export function region(id: string) {
   const r = M.regions.find(x => x.id === id);
   if (!r) return overview();
@@ -157,6 +168,11 @@ export function region(id: string) {
   <h3>Regions that use it</h3><div class="chips">${[...inc].map(rpill).join(" ") || `<span class="nodoc">No other region uses it.</span>`}</div>`;
 }
 
+/**
+ * Writes a unit's panel: its doc, the exported items that other code uses
+ * most ("Start reading here"), its entry points, its imports both ways, its
+ * outside libraries and its files.
+ */
 export function unit(id: string, opt: { focusBtn?: boolean } = {}) {
   const u = M.units.get(id)!,
     r = M.regionOfUnit.get(id),
@@ -174,6 +190,7 @@ export function unit(id: string, opt: { focusBtn?: boolean } = {}) {
   ${u.files.length ? `<h3>Files</h3><ul class="plain files">${u.files.map(f => `<li>${sourceLink(f.name, f.path ?? f.name)}${f.doc ? `<div class="s">${esc(summary(f.doc))}</div>` : ""}</li>`).join("")}</ul>` : ""}`;
 }
 
+/** One member of an item: its signature or type, its modifiers, its first doc sentence, and links to trace it and to its source. */
 function memberHTML(itemId: string, m: Symbol, actions: boolean): string {
   const callable = !!m.signature;
   const sig = callable
@@ -188,6 +205,7 @@ function memberHTML(itemId: string, m: Symbol, actions: boolean): string {
   return `<div class="mem">${acts}<div class="sig">${sig}</div>${mods.length ? `<div class="tag">${esc(mods.join(" · "))}</div>` : ""}${(m.annotations ?? []).map(a => `<div class="tag">${esc(a)}</div>`).join("")}${m.doc ? `<div class="d">${inlineHTML(m.doc.summary)}${m.doc.description.length > 1 || (m.doc.description[0]?.type === "paragraph" && inlinePlain(m.doc.description[0].text) !== inlinePlain(m.doc.summary)) ? ` <button class="linkbtn more" data-memberdoc="${esc(m.id)}">more</button>` : ""}</div>` : ""}</div>`;
 }
 
+/** A side of an item's relations as lists: one list per lane, each headed by its line style and verb. */
 function lanesHTML(bag: Bag, list: Lane[], title: string): string {
   const parts = list
     .filter(l => bag[l.id]?.size)
@@ -201,6 +219,11 @@ function lanesHTML(bag: Bag, list: Lane[], title: string): string {
   return parts.length ? `<h3>${title}</h3>${parts.join("")}` : "";
 }
 
+/**
+ * Writes an item's panel: its doc, its signature or type, its members, its
+ * relations on both sides as lists (which mirror the canvas for screen
+ * readers), its entry points and its tests.
+ */
 export function symbol(id: string, opt: { focusBtn?: boolean; member?: string } = {}) {
   const it = M.items.get(id);
   if (!it) return;
@@ -241,6 +264,7 @@ export function symbol(id: string, opt: { focusBtn?: boolean; member?: string } 
   panel.innerHTML = h;
 }
 
+/** A line that names the tests of one member, up to six. */
 function testsOfMember(memberId: string): string {
   const t = M.doc.tests?.[memberId];
   if (!t?.length) return "";
@@ -250,6 +274,7 @@ function testsOfMember(memberId: string): string {
     .join(", ")}${t.length > 6 ? ` and ${t.length - 6} more` : ""}.</p>`;
 }
 
+/** Writes a trace's panel: how to read a trace, the entry point's facts, and the doc of the starting code. */
 export function trace(st: Extract<State, { v: "trace" }>) {
   const root = traceRoot(M, st);
   if (!root) return;
@@ -264,6 +289,7 @@ export function trace(st: Extract<State, { v: "trace" }>) {
   panel.innerHTML = h;
 }
 
+/** Where an entry point registers, which note from atlas.yaml applies, and whether its handler sits inline or outside the code. */
 function routeFacts(r: Route): string {
   const note = noteFor(M, r);
   return `<h3>Registered at</h3><div class="where">${sourceLink(r.registeredAt.path + ":" + r.registeredAt.line, r.registeredAt.path, r.registeredAt.line)}${r.registrar && M.owner.has(r.registrar) ? " by " + chip(M.owner.get(r.registrar)!, M.memberName(r.registrar)) : ""}</div>
@@ -271,6 +297,7 @@ function routeFacts(r: Route): string {
   ${r.externalHandler ? `<p class="note">The handler, ${esc(r.externalHandler)}, lives outside this code.</p>` : r.inline ? `<p class="note">The handler sits inline in the code that registers it.</p>` : ""}`;
 }
 
+/** Writes an entry point's panel: its facts and its handler. */
 export function route(id: string) {
   const r = M.routeById.get(id);
   if (!r) return;
@@ -278,6 +305,7 @@ export function route(id: string) {
   ${!r.inline && r.member !== undefined ? `<h3>Handler</h3><div class="chips">${chip(r.item, r.member)}</div>` : ""}`;
 }
 
+/** Writes the index of entry points, grouped by the first part of each path. */
 export function routesIndex() {
   const groups = new Map<string, Route[]>();
   for (const r of M.routes) {
@@ -298,6 +326,7 @@ export function routesIndex() {
   }`;
 }
 
+/** Writes the help: how to read each view, how to move around, what the colours and lines mean, and the limits that each adapter reported. */
 export function howTo() {
   const w = M.anyUnit(),
     ws = M.allUnits(),

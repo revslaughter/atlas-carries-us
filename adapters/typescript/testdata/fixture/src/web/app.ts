@@ -1,5 +1,9 @@
-// The readers' web app, on Hono. It mounts the book routes under /books, the
-// loan routes under /api, and serves the static files.
+/**
+ * The readers' web app, on Hono. It mounts the book routes under /books, the
+ * loan routes under /api, and serves the static files.
+ *
+ * @packageDocumentation
+ */
 
 import { type Context, Hono, serveStatic } from "hono";
 

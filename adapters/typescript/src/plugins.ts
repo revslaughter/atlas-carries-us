@@ -18,22 +18,30 @@ import { collapse, type Extractor, shorten, unwrap } from "./extract.js";
 
 /** Switches on one entry-point plugin. */
 export interface PluginConfig {
+  /** The plugin's name: "express" or "hono". */
   plugin: string;
+  /** The plugin's options, as atlas.yaml writes them. */
   options?: unknown;
 }
 
+/** Puts a path in front of the routes that one function registers, for a mount that happens at run time. */
 interface PrefixRule {
   /** Routes registered inside the function or method of this name gain the prefix. */
   inFunc: string;
+  /** The path to put in front, such as "/reports". */
   prefix: string;
 }
 
+/** The options of a route plugin. */
 interface RouteOptions {
+  /** The prefix rules, matched by function name. */
   prefixes: PrefixRule[];
 }
 
+/** The frameworks that the plugins know. */
 type Framework = "express" | "hono";
 
+/** Maps each Express routing method, such as get, to its HTTP method. */
 const EXPRESS_VERBS: Record<string, string> = {
   get: "GET",
   post: "POST",
@@ -44,6 +52,7 @@ const EXPRESS_VERBS: Record<string, string> = {
   options: "OPTIONS",
   all: "ANY",
 };
+/** Maps each Hono routing method, such as get, to its HTTP method. Hono's on() takes its methods as an argument. */
 const HONO_VERBS: Record<string, string> = {
   get: "GET",
   post: "POST",
@@ -53,26 +62,44 @@ const HONO_VERBS: Record<string, string> = {
   options: "OPTIONS",
   all: "ANY",
 };
+/** The methods that return their app or route, so that a chain such as app.route("/x").get(h) can follow. */
 const CHAINABLE = new Set([...Object.keys(EXPRESS_VERBS), "use", "route", "on", "basePath"]);
+/** The names of the Express types that route requests: an app, a router or a route. */
 const EXPRESS_TYPES = new Set(["Express", "Application", "Router", "IRouter", "Route", "IRoute"]);
+/** The names of Hono's app classes. */
 const HONO_TYPES = new Set(["Hono", "HonoBase"]);
 
+/** One route registration, as the scan finds it, before the mounts that set its full path are known. */
 interface Registration {
+  /** The plugin that found it. */
   plugin: Framework;
+  /** The HTTP methods; Hono's on() may name several. */
   methods: string[];
+  /** The paths as written, before any prefix. */
   paths: string[];
+  /** The base path that a basePath() call in the same chain adds. */
   chainPrefix: string;
+  /** The variable or property that holds the app or router, through imports. */
   key: ts.Symbol | undefined;
+  /** The last argument: the handler. */
   handler: ts.Expression;
+  /** The symbol whose code makes the registration, if any. */
   caller: string | undefined;
+  /** The file of the registration. */
   sf: ts.SourceFile;
+  /** The method name of the registering call, whose line the entry point records. */
   at: ts.Node;
 }
 
+/** One mount: app.use("/admin", router) in Express, or app.route("/books", books) in Hono. */
 interface Mount {
+  /** The app or router that mounts. */
   parent: ts.Symbol | undefined;
+  /** The base path that the parent's own chain adds. */
   parentPrefix: string;
+  /** The app or router that the parent mounts. */
   child: ts.Symbol;
+  /** The path that the mount puts in front of the child's routes. */
   prefix: string;
 }
 
@@ -83,6 +110,7 @@ export function joinPath(a: string, b: string): string {
   return a.replace(/\/+$/, "") + (b.startsWith("/") ? b : "/" + b);
 }
 
+/** Reads a route plugin's options, and fails with a message when a prefix rule lacks a field. */
 function routeOptions(plugin: string, raw: unknown): RouteOptions {
   const o = (raw ?? {}) as { prefixes?: unknown };
   const list = Array.isArray(o.prefixes) ? o.prefixes : [];
@@ -102,6 +130,7 @@ export class Plugins {
   private readonly regs: Registration[] = [];
   private readonly mounts: Mount[] = [];
 
+  /** Switches on the plugins that the request names, and fails on an unknown name with a message that lists the known ones. */
   constructor(configs: readonly PluginConfig[]) {
     for (const c of configs) {
       if (c.plugin !== "express" && c.plugin !== "hono")

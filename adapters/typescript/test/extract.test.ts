@@ -149,6 +149,12 @@ test("docs resolve links and keep their tags", () => {
   );
   const unit = doc.containers.find(c => c.id === "ts:dir:lending-web/src/domain");
   assert.match(unit?.doc?.summary ?? "", /^Books, members and loans/, "the folder takes the doc of its index file");
+  const web = doc.containers.find(c => c.id === "ts:dir:lending-web/src/web");
+  assert.match(
+    web?.doc?.summary ?? "",
+    /^The readers' web app/,
+    "the folder takes the doc that @packageDocumentation marks",
+  );
 });
 
 test("the test index names each test by its titles", () => {

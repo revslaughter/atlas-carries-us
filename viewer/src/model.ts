@@ -8,65 +8,105 @@
 
 import type { AtlasDoc, Container, Doc, EdgeKind, EntryPoint, Location, Region, Symbol, TestUse } from "./types";
 
+/** One box in a unit: a top-level symbol, or the group of a file's constants and variables. */
 export interface Item {
+  /** The symbol's ID, or "values:" and the file's ID for a group. */
   id: string;
+  /** The symbol, unless the item groups values. */
   sym?: Symbol;
+  /** The symbol's neutral kind, or "values" for a group. */
   kind: string;
+  /** The word to show: the symbol's own, or the plural words of a group's members. */
   languageKind: string;
+  /** The name to show: the symbol's, or "values in" and the file's name. */
   name: string;
+  /** The ID of the unit that holds the item. */
   unit: string;
+  /** Reports whether code outside the unit may use it; a group counts when any member does. */
   exported: boolean;
+  /** The symbol's doc. */
   doc?: Doc;
+  /** Where the item starts. */
   location: Location;
+  /** The members: methods, fields and properties, or a group's values. Exported members sort first. */
   members: Symbol[];
 }
 
+/** One unit, with its files, its items and the units it imports. */
 export interface Unit {
+  /** The container's ID. */
   id: string;
+  /** The container. */
   c: Container;
+  /** The name to show. */
   name: string;
+  /** The path from the repository root. */
   path: string;
+  /** The files below the unit, by name. */
   files: Container[];
+  /** The items in the unit. */
   items: Item[];
+  /** The IDs of the units that this unit imports. */
   imports: string[];
+  /** The IDs of the units that import this one. */
   importedBy: string[];
 }
 
+/** A region as the overview draws it: its colour settled and its units checked. */
 export interface RegionInfo extends Region {
+  /** The palette index, from the data or by order. */
   color: number;
+  /** The IDs of the units in the region that the map holds, each unit in one region only. */
   units: string[];
 }
 
 /** One relation between two items, with the members at each end. */
 export interface Rel {
+  /** The item that uses. */
   a: string;
+  /** The member of `a` that uses, or "" for the item itself. */
   am: string;
+  /** The item used. */
   b: string;
+  /** The member of `b` used, or "". */
   bm: string;
+  /** The relation. */
   kind: EdgeKind;
+  /** The first line of the use; calls sort by it. */
   line: number;
+  /** Marks an edge that an adapter matched by name, not by a type checker. */
   heuristic: boolean;
 }
 
+/** One use between two different items, with the relation named as the lanes name it. */
 export interface Use {
+  /** The item that uses. */
   u: string;
+  /** The item used. */
   t: string;
+  /** The relation: "calls", "field", "param", "result", "implements" and so on. */
   kind: string;
 }
 
+/** An entry point joined to the item and member that serve it. */
 export interface Route extends EntryPoint {
+  /** The item that holds the handler. */
   item: string;
+  /** The handler's member name inside the item, or "" when the item is the handler. */
   member: string;
 }
 
+/** Adds a value to the list under a key, and makes the list when the key has none. */
 function push<K, V>(m: Map<K, V[]>, k: K, v: V) {
   let a = m.get(k);
   if (!a) m.set(k, (a = []));
   a.push(v);
 }
 
+/** The kinds that a unit groups per file, rather than showing one box each. */
 const VALUE_KINDS = new Set(["constant", "variable"]);
 
+/** Makes an English plural: "class" becomes "classes", "property" becomes "properties". */
 export function plural(word: string): string {
   if (/(s|x|z|ch|sh)$/.test(word)) return word + "es";
   if (/[^aeiou]y$/.test(word)) return word.slice(0, -1) + "ies";
@@ -85,34 +125,65 @@ export function orList(words: string[]): string {
   return words.slice(0, -1).join(", ") + " or " + words[words.length - 1];
 }
 
+/**
+ * The model: lookup tables over one atlas.json, built once when the page
+ * loads. Every view reads it; nothing writes to it afterwards.
+ *
+ * It turns symbols into {@link Item}s grouped by {@link Unit}, and edges into
+ * {@link Rel}s between items that keep the member at each end, so that a line
+ * on the map can end at the exact method or field.
+ */
 export class Model {
+  /** The data as loaded. */
   doc: AtlasDoc;
+  /** Every container, by ID. */
   containers = new Map<string, Container>();
+  /** Every symbol, by ID. */
   symbols = new Map<string, Symbol>();
+  /** Every unit, by ID. */
   units = new Map<string, Unit>();
+  /** The units, sorted by path. */
   unitList: Unit[] = [];
+  /** Every item, by ID. */
   items = new Map<string, Item>();
   /** Any symbol ID to the ID of its item. */
   owner = new Map<string, string>();
+  /** The regions in order; units that no region names go to "Other code". */
   regions: RegionInfo[] = [];
+  /** The region of each unit. */
   regionOfUnit = new Map<string, RegionInfo>();
+  /** Region IDs row by row: the layout's rows, then the rest, three to a row. */
   rows: string[][] = [];
+  /** The relations from each item. */
   out = new Map<string, Rel[]>();
+  /** The relations into each item. */
   inc = new Map<string, Rel[]>();
-  /** Calls, keyed by "item\0member" of the caller (mc) or callee (mcIn). */
+  /** Calls, keyed by "item\0member" of the caller: what each member calls, in source order. */
   mc = new Map<string, Rel[]>();
+  /** Calls, keyed by "item\0member" of the callee: who calls each member. */
   mcIn = new Map<string, Rel[]>();
+  /** The items that implement each interface item, for "runs" lines in a trace. */
   implBy = new Map<string, string[]>();
+  /** The overriding members of each member, keyed by "item\0member". */
   overriddenBy = new Map<string, Rel[]>();
+  /** Every use between two different items. */
   uses: Use[] = [];
+  /** The uses of each item: who uses it. */
   users = new Map<string, Use[]>();
+  /** The uses by each item: what it uses. */
   useds = new Map<string, Use[]>();
+  /** Every entry point whose handler the map holds. */
   routes: Route[] = [];
+  /** Every route, by entry point ID. */
   routeById = new Map<string, Route>();
+  /** The routes that each item serves. */
   routesByHandler = new Map<string, Route[]>();
+  /** How many routes each unit serves, for the overview's counts. */
   routeCountByUnit = new Map<string, number>();
+  /** The tests of each item, its members' tests rolled up, by file and line. */
   tests = new Map<string, TestUse[]>();
 
+  /** Builds every table from the data: units, items, relations, routes, tests, then regions. */
   constructor(doc: AtlasDoc) {
     this.doc = doc;
     for (const c of doc.containers) this.containers.set(c.id, c);
@@ -160,6 +231,7 @@ export class Model {
     return undefined;
   }
 
+  /** Makes a unit of each container marked unit, and gives each unit its files. */
   private buildUnits() {
     for (const c of this.doc.containers) {
       if (!c.unit) continue;
@@ -185,6 +257,7 @@ export class Model {
     this.unitList.sort((a, b) => a.path.localeCompare(b.path) || a.name.localeCompare(b.name));
   }
 
+  /** Makes an item of each top-level symbol, groups each file's values into one item, and hangs members on their items. */
   private buildItems() {
     const groups = new Map<string, Item>();
     for (const s of this.doc.symbols) {
@@ -267,10 +340,12 @@ export class Model {
     return this.symbols.get(id)?.name ?? "";
   }
 
+  /** Finds a member of an item by name. */
   member(itemId: string, name: string): Symbol | undefined {
     return this.items.get(itemId)?.members.find(m => m.name === name);
   }
 
+  /** Turns edges into unit imports and item relations, and indexes calls, implementations and overrides. */
   private buildRelations() {
     for (const e of this.doc.edges) {
       if (e.kind === "imports") {
@@ -325,6 +400,7 @@ export class Model {
     }
   }
 
+  /** Joins each entry point to the item and member that serve it. */
   private buildRoutes() {
     for (const e of this.doc.entryPoints ?? []) {
       const item = this.owner.get(e.handler);
@@ -338,6 +414,7 @@ export class Model {
     }
   }
 
+  /** Rolls each member's tests up to its item, once per test. */
   private buildTests() {
     for (const [id, uses] of Object.entries(this.doc.tests ?? {})) {
       const it = this.owner.get(id);
@@ -350,6 +427,7 @@ export class Model {
       l.sort((a, b) => a.location.path.localeCompare(b.location.path) || a.location.line - b.location.line);
   }
 
+  /** Settles the regions: each unit joins its first region, the rest go to "Other code", and the layout's rows come first. */
   private buildRegions() {
     const given = this.doc.regions?.length
       ? this.doc.regions
@@ -383,6 +461,7 @@ export class Model {
     this.rows = rows;
   }
 
+  /** The region that holds an item's unit. */
   regionOfItem(id: string): RegionInfo | undefined {
     const it = this.items.get(id);
     return it ? this.regionOfUnit.get(it.unit) : undefined;
@@ -416,6 +495,7 @@ export class Model {
     return short ? short + "." + it.name : it.name;
   }
 
+  /** Reports whether an item is an interface or a trait: a contract that other items implement. */
   isInterfaceLike(id: string): boolean {
     const k = this.items.get(id)?.kind;
     return k === "interface" || k === "trait";

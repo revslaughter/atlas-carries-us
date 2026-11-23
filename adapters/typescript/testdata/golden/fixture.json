@@ -110,7 +110,18 @@
    "parent": "ts:pkg:lending-web",
    "externalImports": [
     "hono"
-   ]
+   ],
+   "doc": {
+    "raw": "The readers' web app, on Hono. It mounts the book routes under /books, the\nloan routes under /api, and serves the static files.\n\n@packageDocumentation",
+    "format": "tsdoc",
+    "summary": "The readers' web app, on Hono.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The readers' web app, on Hono. It mounts the book routes under /books, the loan routes under /api, and serves the static files."
+     }
+    ]
+   }
   },
   {
    "id": "ts:file:lending-web/src/admin/handlers.ts",
@@ -277,18 +288,7 @@
    "name": "app.ts",
    "path": "src/web/app.ts",
    "parent": "ts:dir:lending-web/src/web",
-   "language": "ts",
-   "doc": {
-    "raw": "The readers' web app, on Hono. It mounts the book routes under /books, the\nloan routes under /api, and serves the static files.",
-    "format": "jsdoc",
-    "summary": "The readers' web app, on Hono.",
-    "description": [
-     {
-      "type": "paragraph",
-      "text": "The readers' web app, on Hono. It mounts the book routes under /books, the loan routes under /api, and serves the static files."
-     }
-    ]
-   }
+   "language": "ts"
   },
   {
    "id": "ts:file:lending-web/src/web/books.ts",
@@ -2734,8 +2734,8 @@
    "exported": false,
    "location": {
     "path": "src/web/app.ts",
-    "line": 22,
-    "endLine": 22
+    "line": 26,
+    "endLine": 26
    },
    "signature": {
     "params": [
@@ -2761,8 +2761,8 @@
    "exported": false,
    "location": {
     "path": "src/web/app.ts",
-    "line": 16,
-    "endLine": 16
+    "line": 20,
+    "endLine": 20
    },
    "signature": {
     "params": [
@@ -2788,10 +2788,10 @@
    "exported": false,
    "location": {
     "path": "src/web/app.ts",
-    "line": 21,
-    "endLine": 21
+    "line": 25,
+    "endLine": 25
    },
-   "group": "app.ts:21",
+   "group": "app.ts:25",
    "type": {
     "text": "Hono"
    },
@@ -2806,10 +2806,10 @@
    "exported": true,
    "location": {
     "path": "src/web/app.ts",
-    "line": 14,
-    "endLine": 14
+    "line": 18,
+    "endLine": 18
    },
-   "group": "app.ts:14",
+   "group": "app.ts:18",
    "type": {
     "text": "Hono"
    },
@@ -2835,10 +2835,10 @@
    "exported": true,
    "location": {
     "path": "src/web/app.ts",
-    "line": 11,
-    "endLine": 11
+    "line": 15,
+    "endLine": 15
    },
-   "group": "app.ts:11",
+   "group": "app.ts:15",
    "type": {
     "text": "CachingClient",
     "refs": [
@@ -2867,8 +2867,8 @@
    "exported": true,
    "location": {
     "path": "src/web/app.ts",
-    "line": 26,
-    "endLine": 28
+    "line": 30,
+    "endLine": 32
    },
    "signature": {
     "params": [
@@ -3486,14 +3486,14 @@
    "to": "ts:lending-web/src/client/api#HttpClient.loans",
    "kind": "calls",
    "confidence": "exact",
-   "line": 22
+   "line": 26
   },
   {
    "from": "ts:lending-web/src/web/app#client",
    "to": "ts:lending-web/src/client/cache#CachingClient.constructor",
    "kind": "calls",
    "confidence": "exact",
-   "line": 11
+   "line": 15
   },
   {
    "from": "ts:lending-web/src/web/books#GET /books/:id",
@@ -3602,7 +3602,7 @@
    "handler": "ts:lending-web/src/web/app#GET /health",
    "registeredAt": {
     "path": "src/web/app.ts",
-    "line": 16
+    "line": 20
    },
    "plugin": "hono"
   },
@@ -3615,7 +3615,7 @@
    "handler": "ts:lending-web/src/web/app#version",
    "registeredAt": {
     "path": "src/web/app.ts",
-    "line": 17
+    "line": 21
    },
    "plugin": "hono"
   },
@@ -3628,7 +3628,7 @@
    "handler": "ts:lending-web/src/web/app#version",
    "registeredAt": {
     "path": "src/web/app.ts",
-    "line": 17
+    "line": 21
    },
    "plugin": "hono"
   },
@@ -3641,7 +3641,7 @@
    "handler": "ts:lending-web/src/web/app#app",
    "registeredAt": {
     "path": "src/web/app.ts",
-    "line": 19
+    "line": 23
    },
    "plugin": "hono",
    "externalHandler": "serveStatic({root: \"./public\"})"
@@ -3655,7 +3655,7 @@
    "handler": "ts:lending-web/src/web/app#GET /api/loans/:member",
    "registeredAt": {
     "path": "src/web/app.ts",
-    "line": 22
+    "line": 26
    },
    "plugin": "hono"
   },

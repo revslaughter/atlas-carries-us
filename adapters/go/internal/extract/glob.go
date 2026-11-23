@@ -1,3 +1,7 @@
+// Path globs for the include and exclude lists of a request. "**" matches
+// any number of folders, "*" matches within one folder, and "?" matches one
+// character. The TypeScript adapter follows the same rules.
+
 package extract
 
 import (
@@ -6,6 +10,7 @@ import (
 	"strings"
 )
 
+// glob is one compiled pattern.
 type glob struct {
 	re *regexp.Regexp
 	// contents is true for a pattern that ends in "**". Such a pattern also
@@ -13,6 +18,8 @@ type glob struct {
 	contents bool
 }
 
+// globs is a list of compiled patterns; a path matches the list when it
+// matches any one of them.
 type globs []glob
 
 // compileGlobs turns path globs into regular expressions. "**" matches any
@@ -29,6 +36,7 @@ func compileGlobs(patterns []string) (globs, error) {
 	return out, nil
 }
 
+// globRegexp turns one glob into an anchored regular expression.
 func globRegexp(p string) (*regexp.Regexp, error) {
 	var b strings.Builder
 	b.WriteString("^")

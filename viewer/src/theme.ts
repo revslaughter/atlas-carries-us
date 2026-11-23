@@ -3,14 +3,19 @@
 // set based on Okabe–Ito, with no red and green pair. Every colour also has a
 // second cue: a dash pattern, a shape, or a text label.
 
+/** The theme's colour tokens, read from styles.css, by name: bg, surface, fg, muted, link and so on. */
 export const T: Record<string, string> & { light?: boolean } = {};
+/** The sans-serif font stack, from the --sans token. */
 let sans = "system-ui, sans-serif",
+  /** The monospace font stack, from the --mono token. */
   mono = "ui-monospace, monospace";
 
+/** Reads one CSS custom property from the page. */
 function cssVar(n: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 }
 
+/** Reads the colour and font tokens of the theme in force; call it again after the theme changes. */
 export function readTheme() {
   for (const k of ["bg", "surface", "surface-2", "line", "edge", "fg", "muted", "faint", "focus", "link"])
     T[k.replace("-2", "2")] = cssVar("--" + k);
@@ -19,14 +24,18 @@ export function readTheme() {
   mono = cssVar("--mono") || mono;
 }
 
+/** Returns the sans-serif font stack. */
 export const SANS = () => sans;
+/** Returns the monospace font stack, for names and code. */
 export const MONO = () => mono;
 
+/** Returns a colour's perceived brightness, from 0 to 1, to tell a light theme from a dark one. */
 function lum(hex: string): number {
   const n = parseInt((hex || "#000").replace("#", ""), 16);
   return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
 }
 
+/** Turns a hex colour into an rgba() colour with alpha a. */
 export function rgba(hex: string, a: number): string {
   const n = parseInt(hex.replace("#", ""), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
@@ -45,16 +54,22 @@ const REGION: [string, string][] = [
   ["#9aa3af", "#5c6672"], // grey
 ];
 
+/** Returns region colour i (0 to 8) for the theme in force, or the muted colour for none. */
 export function regionColor(i: number | undefined): string {
   if (i === undefined) return T.muted;
   const c = REGION[((i % 9) + 9) % 9];
   return T.light ? c[1] : c[0];
 }
 
+/** How the map draws one kind of relation: two colours, a dash pattern and a verb. */
 export interface EdgeStyle {
+  /** The colour on the dark theme. */
   dark: string;
+  /** The colour on the light theme. */
   light: string;
+  /** The dash pattern; empty for a solid line. Colour never works alone. */
   dash: number[];
+  /** The verb that the legend shows, such as "has a field of". */
   name: string;
 }
 
@@ -71,11 +86,13 @@ export const EDGE: Record<string, EdgeStyle> = {
   runs: { dark: "#f0e442", light: "#7a6b00", dash: [12, 6], name: "runs as" },
 };
 
+/** Returns the colour of a relation's line for the theme in force. */
 export function edgeColor(kind: string): string {
   const e = EDGE[kind] ?? EDGE.uses;
   return T.light ? e.light : e.dark;
 }
 
+/** Turns a token name ("fg", "muted") or a colour into a colour. */
 export function color(c: string): string {
   return c.startsWith("#") || c.startsWith("rgb") ? c : T[c] || T.fg;
 }

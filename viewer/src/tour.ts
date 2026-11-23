@@ -6,9 +6,12 @@ import type { State } from "./scene";
 import { draftedNote, esc, inlineHTML } from "./text";
 import type { View } from "./types";
 
+/** The tour card. */
 const el = document.getElementById("tour")!;
+/** The step on show, or -1 when the tour has ended. */
 let stepIndex = -1;
 
+/** Turns a view from the data into the viewer's state: a member opens its item with the member picked. */
 export function viewToState(v: View): State {
   switch (v.view) {
     case "overview":
@@ -28,6 +31,7 @@ export function viewToState(v: View): State {
   }
 }
 
+/** Opens step i: goes to its view and shows its card with its text and drafted mark. */
 function show(i: number) {
   const steps = M.doc.tour ?? [];
   if (i < 0 || i >= steps.length) return;
@@ -43,6 +47,7 @@ function show(i: number) {
   el.querySelector<HTMLButtonElement>("#tNext")!.onclick = () => (last ? tour.end() : show(i + 1));
 }
 
+/** Controls the tour: start, end, next, previous, a step by number, and whether a step is on show. */
 export const tour = {
   start() {
     if (M.doc.tour?.length) show(0);

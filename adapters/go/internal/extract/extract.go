@@ -1,7 +1,9 @@
 // Package extract reads the Go packages of a module with the type checker and
 // builds an Atlas Carries Us document (schema version 1) from them.
 //
-// The extraction runs in three passes:
+// [Run] loads the packages with golang.org/x/tools/go/packages, which runs
+// go list and the type checker, so every fact comes from the compiler and
+// every edge counts as exact. The extraction then runs in three passes:
 //
 //  1. Declarations: packages, files, types, fields, interface methods,
 //     functions, constants and variables.
@@ -9,6 +11,12 @@
 //     calls, entry points and test usage.
 //  3. Docs: every doc comment turns into the normal form once all symbols
 //     exist, so doc links can resolve to symbol IDs.
+//
+// IDs come from import paths ("go:" + package path + "#" + name), so a link
+// to a symbol keeps working after a rebuild. [docs/adapters.md] records the
+// decisions and the limits.
+//
+// [docs/adapters.md]: https://github.com/revslaughter/atlas-carries-us/blob/main/docs/adapters.md
 package extract
 
 import (
@@ -33,12 +41,19 @@ const AdapterVersion = "0.1.0"
 // Request holds what the acu command asks the adapter to read. It arrives as
 // JSON on standard input (protocol 1, see docs/adapters.md).
 type Request struct {
-	Protocol    int            `json:"protocol"`
-	RepoRoot    string         `json:"repoRoot"`
-	Root        string         `json:"root"`
-	Include     []string       `json:"include"`
-	Exclude     []string       `json:"exclude"`
-	Options     Options        `json:"options"`
+	// Protocol holds the protocol version; this adapter speaks 1.
+	Protocol int `json:"protocol"`
+	// RepoRoot holds the repository root; every path in the output is relative to it.
+	RepoRoot string `json:"repoRoot"`
+	// Root holds the folder to read: the module's root.
+	Root string `json:"root"`
+	// Include lists globs of package folders to keep; an empty list keeps all.
+	Include []string `json:"include"`
+	// Exclude lists globs of package folders to leave out.
+	Exclude []string `json:"exclude"`
+	// Options holds the settings that only this adapter reads.
+	Options Options `json:"options"`
+	// EntryPoints lists the plugins to switch on.
 	EntryPoints []PluginConfig `json:"entryPoints"`
 }
 
@@ -52,36 +67,62 @@ type Options struct {
 
 // PluginConfig switches on one entry-point plugin.
 type PluginConfig struct {
-	Plugin  string          `json:"plugin"`
+	// Plugin names the plugin: "go-chi", "go-nethttp" or "cobra".
+	Plugin string `json:"plugin"`
+	// Options holds the plugin's options as JSON; the plugin parses them.
 	Options json.RawMessage `json:"options"`
 }
 
+// edgeKey identifies one edge, so a repeated use raises a count instead of
+// adding a second edge.
 type edgeKey struct{ from, to, kind string }
 
+// pendingDoc is a doc comment that waits for pass 3, when every symbol exists
+// and its doc links can resolve. set stores the result on its owner.
 type pendingDoc struct {
 	set     func(*schema.Doc)
 	raw     string
 	pkgPath string
 }
 
+// extractor holds the state of one run: the loaded packages, the containers
+// and symbols found so far, and the indexes that the later passes need.
 type extractor struct {
-	req       Request
-	repoRoot  string
-	module    string
-	in        []*packages.Package
-	inMod     map[string]bool
-	conts     map[string]*schema.Container
-	syms      map[string]*schema.Symbol
-	byObj     map[types.Object]string
-	named     []*types.TypeName
-	ifaces    []*types.TypeName
-	edges     map[edgeKey]*schema.Edge
-	docs      []pendingDoc
+	// req holds the request as it arrived.
+	req Request
+	// repoRoot holds the absolute repository root.
+	repoRoot string
+	// module holds the main module's path, such as "github.com/go-chi/chi/v5".
+	module string
+	// in lists the packages that the map holds, sorted by path.
+	in []*packages.Package
+	// inMod reports whether a package path belongs to the map.
+	inMod map[string]bool
+	// conts maps a container ID to its container.
+	conts map[string]*schema.Container
+	// syms maps a symbol ID to its symbol.
+	syms map[string]*schema.Symbol
+	// byObj maps a type checker object to the ID of its symbol.
+	byObj map[types.Object]string
+	// named lists the named types, for the implements check.
+	named []*types.TypeName
+	// ifaces lists the interfaces that declare methods.
+	ifaces []*types.TypeName
+	// edges maps an edge's key to the edge, so repeats raise its count.
+	edges map[edgeKey]*schema.Edge
+	// docs lists the doc comments that wait for pass 3.
+	docs []pendingDoc
+	// pkgByName maps a package name to its path, so doc links such as
+	// [store.Store] resolve.
 	pkgByName map[string]string
-	entries   []*schema.EntryPoint
-	testUses  map[string]map[string]schema.TestUse
-	plugins   *plugins
-	notes     []string
+	// entries lists the entry points that the plugins found.
+	entries []*schema.EntryPoint
+	// testUses maps a symbol ID to its tests, keyed by file and name.
+	testUses map[string]map[string]schema.TestUse
+	// plugins holds the plugins that the request switches on.
+	plugins *plugins
+	// notes lists extra limits of this run for the output's notes.
+	notes []string
 }
 
 // Run loads the packages that req names and returns the document.
@@ -186,6 +227,7 @@ func Run(req Request) (*schema.Document, error) {
 	return ex.document(), nil
 }
 
+// relDir returns a package's folder relative to the repository root.
 func (ex *extractor) relDir(p *packages.Package) string {
 	files := p.GoFiles
 	if len(files) == 0 {
@@ -203,11 +245,22 @@ func (ex *extractor) relDir(p *packages.Package) string {
 
 /* IDs. See docs/schema.md, section 3. */
 
+// symID returns a symbol's ID: its package path, "#", and its path inside
+// the package, such as "Mux.Get".
 func symID(pkgPath, path string) string { return "go:" + pkgPath + "#" + path }
-func pkgID(pkgPath string) string       { return "go:pkg:" + pkgPath }
-func fileID(rel string) string          { return "go:file:" + rel }
-func modID(mod string) string           { return "go:mod:" + mod }
 
+// pkgID returns the ID of a package's container.
+func pkgID(pkgPath string) string { return "go:pkg:" + pkgPath }
+
+// fileID returns the ID of a file's container, from its path relative to the
+// repository root.
+func fileID(rel string) string { return "go:file:" + rel }
+
+// modID returns the ID of a module's container.
+func modID(mod string) string { return "go:mod:" + mod }
+
+// rel returns the file of a position, relative to the repository root, and
+// its line.
 func (ex *extractor) rel(fset *token.FileSet, pos token.Pos) (string, int) {
 	p := fset.Position(pos)
 	r, err := filepath.Rel(ex.repoRoot, p.Filename)
@@ -217,6 +270,8 @@ func (ex *extractor) rel(fset *token.FileSet, pos token.Pos) (string, int) {
 	return filepath.ToSlash(r), p.Line
 }
 
+// unitName returns a package's display name: its path inside the module,
+// such as "internal/store", or its package name at the module's root.
 func (ex *extractor) unitName(p *packages.Package) string {
 	if ex.module == "" || !strings.HasPrefix(p.PkgPath, ex.module) {
 		return p.PkgPath
@@ -228,6 +283,8 @@ func (ex *extractor) unitName(p *packages.Package) string {
 	return r
 }
 
+// qual writes type names as a reader of package self writes them: bare for
+// its own types, with the package name for others.
 func qual(self *types.Package) types.Qualifier {
 	return func(p *types.Package) string {
 		if p == self {
@@ -237,6 +294,8 @@ func qual(self *types.Package) types.Qualifier {
 	}
 }
 
+// addSym adds a symbol. A second symbol with the same ID gains a suffix,
+// "@file:line", as docs/schema.md section 3 asks.
 func (ex *extractor) addSym(s *schema.Symbol) *schema.Symbol {
 	if old, dup := ex.syms[s.ID]; dup {
 		// Two declarations share a qualified name (rare: build-tag twins).
@@ -248,6 +307,7 @@ func (ex *extractor) addSym(s *schema.Symbol) *schema.Symbol {
 	return s
 }
 
+// addCont adds a container once, and returns the one that the map holds.
 func (ex *extractor) addCont(c *schema.Container) *schema.Container {
 	if old, ok := ex.conts[c.ID]; ok {
 		return old
@@ -256,6 +316,7 @@ func (ex *extractor) addCont(c *schema.Container) *schema.Container {
 	return c
 }
 
+// queueDoc keeps a doc comment for pass 3; an empty comment needs no work.
 func (ex *extractor) queueDoc(raw, pkgPath string, set func(*schema.Doc)) {
 	if strings.TrimSpace(raw) == "" {
 		return
@@ -263,6 +324,8 @@ func (ex *extractor) queueDoc(raw, pkgPath string, set func(*schema.Doc)) {
 	ex.docs = append(ex.docs, pendingDoc{set: set, raw: raw, pkgPath: pkgPath})
 }
 
+// addEdge records one use. A repeated use raises the edge's count and keeps
+// its first line, so a trace can sort calls in source order.
 func (ex *extractor) addEdge(from, to, kind string, line int) {
 	// A call from a function to itself (recursion) counts; other self-edges do not.
 	if from == "" || to == "" || (from == to && kind != "calls") {
@@ -332,6 +395,8 @@ func (ex *extractor) refs(t types.Type) []string {
 	return r
 }
 
+// params describes a parameter or result list. The last parameter of a
+// variadic function reads "...T" and counts as rest.
 func (ex *extractor) params(tup *types.Tuple, q types.Qualifier, variadic bool) []schema.Param {
 	ps := []schema.Param{}
 	for i := 0; i < tup.Len(); i++ {
@@ -349,6 +414,7 @@ func (ex *extractor) params(tup *types.Tuple, q types.Qualifier, variadic bool) 
 	return ps
 }
 
+// typeParamString writes type parameters as Go does, such as "[K comparable, V any]".
 func typeParamString(tps *types.TypeParamList, q types.Qualifier) string {
 	if tps == nil || tps.Len() == 0 {
 		return ""
@@ -361,6 +427,8 @@ func typeParamString(tps *types.TypeParamList, q types.Qualifier) string {
 	return "[" + strings.Join(parts, ", ") + "]"
 }
 
+// sigText writes a whole signature as Go does, such as
+// "func (m *Mux) Get(pattern string, h http.HandlerFunc)".
 func sigText(name, recv string, sig *types.Signature, q types.Qualifier) string {
 	var b strings.Builder
 	b.WriteString("func ")
@@ -374,6 +442,7 @@ func sigText(name, recv string, sig *types.Signature, q types.Qualifier) string 
 	return b.String()
 }
 
+// signature describes a function or method for the data format.
 func (ex *extractor) signature(name, recv string, sig *types.Signature, q types.Qualifier) *schema.Signature {
 	return &schema.Signature{
 		TypeParams: typeParamString(sig.TypeParams(), q),
@@ -383,6 +452,8 @@ func (ex *extractor) signature(name, recv string, sig *types.Signature, q types.
 	}
 }
 
+// docText returns the text of the first comment group that holds any, so a
+// caller can list a doc comment first and a line comment after it.
 func docText(groups ...*ast.CommentGroup) string {
 	for _, g := range groups {
 		if g != nil {
@@ -394,6 +465,8 @@ func docText(groups ...*ast.CommentGroup) string {
 	return ""
 }
 
+// recvNamed returns the named type of a method's receiver, through a
+// pointer or an alias, or nil for a function.
 func recvNamed(sig *types.Signature) *types.TypeName {
 	if sig.Recv() == nil {
 		return nil
@@ -437,6 +510,8 @@ func (ex *extractor) funcID(f *types.Func) string {
 
 /* Pass 1: declarations. */
 
+// declarations runs pass 1: the module, each package and its doc, each file
+// and its comment, and the declarations in each file.
 func (ex *extractor) declarations() {
 	if ex.module != "" {
 		modDir := ""
@@ -533,6 +608,8 @@ func isPackageDoc(text, name string) bool {
 	return strings.HasPrefix(text, "Package "+name) || (name == "main" && strings.HasPrefix(text, "Command "))
 }
 
+// collectFile declares a file's types, constants, variables and functions.
+// Methods wait for pass 2, once every type they attach to exists.
 func (ex *extractor) collectFile(p *packages.Package, f *ast.File, rel string, q types.Qualifier) {
 	fset := p.Fset
 	parent := fileID(rel)
@@ -606,6 +683,8 @@ func (ex *extractor) collectFile(p *packages.Package, f *ast.File, rel string, q
 	}
 }
 
+// shorten cuts a value to 80 characters, so a long literal does not crowd
+// the map.
 func shorten(s string) string {
 	if len(s) > 80 {
 		return s[:77] + "..."
@@ -613,6 +692,8 @@ func shorten(s string) string {
 	return s
 }
 
+// collectType declares a named type: a struct with its fields, an interface
+// with its methods, an alias, or a type over another type.
 func (ex *extractor) collectType(p *packages.Package, d *ast.GenDecl, ts *ast.TypeSpec, rel, parent string, q types.Qualifier) {
 	fset := p.Fset
 	obj, _ := p.TypesInfo.Defs[ts.Name].(*types.TypeName)
@@ -666,6 +747,8 @@ func (ex *extractor) collectType(p *packages.Package, d *ast.GenDecl, ts *ast.Ty
 	ex.queueDoc(raw, p.PkgPath, func(dd *schema.Doc) { s.Doc = dd })
 }
 
+// collectFields declares a struct's fields, with their tags and docs. An
+// embedded field gains the modifier "embedded".
 func (ex *extractor) collectFields(p *packages.Package, ts *ast.TypeSpec, s *schema.Symbol, u *types.Struct, q types.Qualifier) {
 	st, _ := ts.Type.(*ast.StructType)
 	if st == nil {
@@ -705,6 +788,8 @@ func (ex *extractor) collectFields(p *packages.Package, ts *ast.TypeSpec, s *sch
 	}
 }
 
+// collectInterface declares an interface's methods, and each interface it
+// embeds as a member that pass 2 turns into an extends edge.
 func (ex *extractor) collectInterface(p *packages.Package, ts *ast.TypeSpec, s *schema.Symbol, u *types.Interface, q types.Qualifier) {
 	it, _ := ts.Type.(*ast.InterfaceType)
 	docs := map[string]string{}
@@ -743,6 +828,8 @@ func (ex *extractor) collectInterface(p *packages.Package, ts *ast.TypeSpec, s *
 
 /* Pass 2: relations. */
 
+// relations runs pass 2: it attaches methods to their types, then records
+// type edges, implementations and calls.
 func (ex *extractor) relations() {
 	// Methods with bodies attach to their type symbols.
 	for _, p := range ex.in {
@@ -817,6 +904,8 @@ func (ex *extractor) relations() {
 	ex.calls()
 }
 
+// sortedSyms returns the symbols in ID order, so every pass that walks them
+// gives the same result on every run.
 func (ex *extractor) sortedSyms() []*schema.Symbol {
 	list := make([]*schema.Symbol, 0, len(ex.syms))
 	for _, s := range ex.syms {
@@ -826,6 +915,9 @@ func (ex *extractor) sortedSyms() []*schema.Symbol {
 	return list
 }
 
+// implementations records which module types implement which module
+// interfaces, by value or by pointer, and which well-known outside
+// interfaces each type satisfies.
 func (ex *extractor) implementations() {
 	std := stdInterfaces(ex.in)
 	stdNames := make([]string, 0, len(std))
@@ -908,6 +1000,8 @@ func (ex *extractor) calls() {
 	}
 }
 
+// calleeIdent returns the name that a call expression calls: f in f(),
+// Get in r.Get(), Map in Map[K, V](), or nil.
 func calleeIdent(fun ast.Expr) *ast.Ident {
 	switch fn := ast.Unparen(fun).(type) {
 	case *ast.Ident:
@@ -922,6 +1016,8 @@ func calleeIdent(fun ast.Expr) *ast.Ident {
 	return nil
 }
 
+// walkCalls records each call in body to a module function or method as an
+// edge from caller. Calls inside closures count for the enclosing function.
 func (ex *extractor) walkCalls(p *packages.Package, body ast.Node, caller string) {
 	ast.Inspect(body, func(n ast.Node) bool {
 		ce, ok := n.(*ast.CallExpr)
@@ -985,6 +1081,8 @@ func stdInterfaces(in []*packages.Package) map[string]*types.Interface {
 
 /* Output. */
 
+// document assembles the output: it sorts every list, drops edges and refs
+// to things outside the map, and gives a repeated entry point ID its suffix.
 func (ex *extractor) document() *schema.Document {
 	d := &schema.Document{
 		Version: schema.Version,
@@ -1085,6 +1183,7 @@ func (ex *extractor) document() *schema.Document {
 	return d
 }
 
+// absRoot returns the folder that the request names, as an absolute path.
 func (ex *extractor) absRoot() string {
 	r, _ := filepath.Abs(ex.req.Root)
 	return r

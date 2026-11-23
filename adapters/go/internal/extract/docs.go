@@ -1,3 +1,7 @@
+// Doc comments: Go's own comment parser (go/doc/comment) reads each doc,
+// and this file writes the result in the normal form of docs/schema.md,
+// section 8. Doc links such as [Mux.Get] become sym: links.
+
 package extract
 
 import (
@@ -18,6 +22,9 @@ func (ex *extractor) resolveDocs() {
 	}
 }
 
+// normalise parses one doc comment from package pkgPath and returns its
+// normal form, or nil for an empty comment. A paragraph that starts
+// "Deprecated:" fills the Deprecated field instead of the description.
 func (ex *extractor) normalise(raw, pkgPath string) *schema.Doc {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -92,6 +99,8 @@ func (ex *extractor) inline(ts []comment.Text, pkgPath string) string {
 	return b.String()
 }
 
+// docLinkTarget turns a doc link into a link target: "sym:<id>" when the
+// map holds the symbol or package, or else its page on pkg.go.dev.
 func (ex *extractor) docLinkTarget(l *comment.DocLink, pkgPath string) string {
 	ip := l.ImportPath
 	if ip == "" {
@@ -113,6 +122,8 @@ func (ex *extractor) docLinkTarget(l *comment.DocLink, pkgPath string) string {
 	return "https://pkg.go.dev/" + ip + "#" + path
 }
 
+// plainText returns the words of comment text without its markup, so a test
+// such as "starts with Deprecated:" can read it.
 func plainText(ts []comment.Text) string {
 	var b strings.Builder
 	for _, t := range ts {
@@ -133,11 +144,15 @@ func plainText(ts []comment.Text) string {
 // reflow joins the lines of wrapped comment text with spaces.
 func reflow(s string) string { return strings.ReplaceAll(s, "\n", " ") }
 
+// inlineEscaper puts a backslash before each character that the inline
+// subset gives a meaning to.
 var inlineEscaper = strings.NewReplacer(`\`, `\\`, "`", "\\`", `*`, `\*`, `[`, `\[`, `]`, `\]`)
 
 // escapeInline escapes the characters that the inline subset gives meaning to.
 func escapeInline(s string) string { return inlineEscaper.Replace(s) }
 
+// escapeURL encodes the characters that would end a link target early in the
+// inline subset: parentheses and spaces.
 func escapeURL(u string) string {
 	return strings.NewReplacer("(", "%28", ")", "%29", " ", "%20").Replace(u)
 }

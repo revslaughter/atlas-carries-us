@@ -73,7 +73,9 @@ languages:
    Jest. Test files never appear on the map; they fill "Tests that use it".
 3. `options.tsconfig` names the TypeScript project file, relative to `root`.
    It defaults to `tsconfig.json`. A tsconfig that only lists `references`
-   reads every project it references.
+   reads every project it references: this repository's own `atlas.yaml`
+   reads the viewer and the TypeScript adapter that way, through
+   `tsconfig.atlas.json`.
 4. One config may hold several languages. `acu` merges their output into one
    map; [`examples/mixed`](../examples/mixed) holds Go and TypeScript
    together.
