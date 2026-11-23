@@ -3,3 +3,5 @@
 node_modules/
 dist/
 dist-test/
+# Golden files hold the adapter's exact bytes; the tests compare them.
+adapters/typescript/testdata/golden/

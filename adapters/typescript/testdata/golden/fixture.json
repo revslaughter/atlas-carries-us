@@ -1,0 +1,3795 @@
+{
+ "version": 1,
+ "meta": {
+  "schemaVersion": 1,
+  "tool": {
+   "name": "acu-adapter-typescript",
+   "version": "0.1.0"
+  },
+  "generated": "2000-01-01T00:00:00Z",
+  "languages": [
+   "ts"
+  ],
+  "adapters": [
+   {
+    "name": "typescript",
+    "version": "0.1.0",
+    "language": "ts",
+    "notes": [
+     "Calls through function values, callbacks and computed property names do not appear.",
+     "A call through an interface points at the interface member.",
+     "Declaration files (.d.ts) do not appear; they describe code that lives elsewhere."
+    ]
+   }
+  ]
+ },
+ "containers": [
+  {
+   "id": "ts:dir:lending-web/src",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src",
+   "path": "src",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:lending-web",
+   "doc": {
+    "raw": "@packageDocumentation\nThe web side of the invented lending library. A Hono app serves readers, an\nExpress app serves staff, and a typed client talks to the Go lending API.",
+    "format": "tsdoc",
+    "summary": "The web side of the invented lending library.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The web side of the invented lending library. A Hono app serves readers, an Express app serves staff, and a typed client talks to the Go lending API."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:dir:lending-web/src/admin",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/admin",
+   "path": "src/admin",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:lending-web",
+   "externalImports": [
+    "express"
+   ]
+  },
+  {
+   "id": "ts:dir:lending-web/src/client",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/client",
+   "path": "src/client",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:lending-web"
+  },
+  {
+   "id": "ts:dir:lending-web/src/domain",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/domain",
+   "path": "src/domain",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:lending-web",
+   "doc": {
+    "raw": "@module\nBooks, members and loans: the words that every part of the web side shares.\nThe Go service owns the data; these types mirror its JSON.",
+    "format": "jsdoc",
+    "summary": "Books, members and loans: the words that every part of the web side shares.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Books, members and loans: the words that every part of the web side shares. The Go service owns the data; these types mirror its JSON."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:dir:lending-web/src/ui",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/ui",
+   "path": "src/ui",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:lending-web"
+  },
+  {
+   "id": "ts:dir:lending-web/src/web",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/web",
+   "path": "src/web",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:lending-web",
+   "externalImports": [
+    "hono"
+   ]
+  },
+  {
+   "id": "ts:file:lending-web/src/admin/handlers.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "handlers.ts",
+   "path": "src/admin/handlers.ts",
+   "parent": "ts:dir:lending-web/src/admin",
+   "language": "ts",
+   "doc": {
+    "raw": "The staff handlers. Each one takes a request and writes a response.",
+    "format": "jsdoc",
+    "summary": "The staff handlers.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The staff handlers. Each one takes a request and writes a response."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/admin/server.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "server.ts",
+   "path": "src/admin/server.ts",
+   "parent": "ts:dir:lending-web/src/admin",
+   "language": "ts",
+   "doc": {
+    "raw": "The staff server, on Express. Staff add books and read the loan report.",
+    "format": "jsdoc",
+    "summary": "The staff server, on Express.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The staff server, on Express. Staff add books and read the loan report."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/client/api.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "api.ts",
+   "path": "src/client/api.ts",
+   "parent": "ts:dir:lending-web/src/client",
+   "language": "ts",
+   "doc": {
+    "raw": "The client for the Go lending API: one interface, and the classes that\nspeak HTTP to the service.",
+    "format": "jsdoc",
+    "summary": "The client for the Go lending API: one interface, and the classes that speak HTTP to the service.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The client for the Go lending API: one interface, and the classes that speak HTTP to the service."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/client/cache.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "cache.ts",
+   "path": "src/client/cache.ts",
+   "parent": "ts:dir:lending-web/src/client",
+   "language": "ts",
+   "doc": {
+    "raw": "A client that keeps the books it reads, so the web side asks the service\nless often.",
+    "format": "jsdoc",
+    "summary": "A client that keeps the books it reads, so the web side asks the service less often.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A client that keeps the books it reads, so the web side asks the service less often."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/domain/book.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "book.ts",
+   "path": "src/domain/book.ts",
+   "parent": "ts:dir:lending-web/src/domain",
+   "language": "ts",
+   "doc": {
+    "raw": "The book: its ID, where it sits, and its genre.",
+    "format": "jsdoc",
+    "summary": "The book: its ID, where it sits, and its genre.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The book: its ID, where it sits, and its genre."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/domain/index.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "index.ts",
+   "path": "src/domain/index.ts",
+   "parent": "ts:dir:lending-web/src/domain",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:lending-web/src/domain/loan.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "loan.ts",
+   "path": "src/domain/loan.ts",
+   "parent": "ts:dir:lending-web/src/domain",
+   "language": "ts",
+   "doc": {
+    "raw": "Loans and members, and the rule for how many books a member may hold.",
+    "format": "jsdoc",
+    "summary": "Loans and members, and the rule for how many books a member may hold.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Loans and members, and the rule for how many books a member may hold."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/index.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "index.ts",
+   "path": "src/index.ts",
+   "parent": "ts:dir:lending-web/src",
+   "language": "ts"
+  },
+  {
+   "id": "ts:file:lending-web/src/ui/BookCard.tsx",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "BookCard.tsx",
+   "path": "src/ui/BookCard.tsx",
+   "parent": "ts:dir:lending-web/src/ui",
+   "language": "ts",
+   "doc": {
+    "raw": "The book card: one book as the readers' pages show it.",
+    "format": "jsdoc",
+    "summary": "The book card: one book as the readers' pages show it.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The book card: one book as the readers' pages show it."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/web/app.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "app.ts",
+   "path": "src/web/app.ts",
+   "parent": "ts:dir:lending-web/src/web",
+   "language": "ts",
+   "doc": {
+    "raw": "The readers' web app, on Hono. It mounts the book routes under /books, the\nloan routes under /api, and serves the static files.",
+    "format": "jsdoc",
+    "summary": "The readers' web app, on Hono.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The readers' web app, on Hono. It mounts the book routes under /books, the loan routes under /api, and serves the static files."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:lending-web/src/web/books.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "books.ts",
+   "path": "src/web/books.ts",
+   "parent": "ts:dir:lending-web/src/web",
+   "language": "ts",
+   "doc": {
+    "raw": "The book routes. app.ts mounts them under /books.",
+    "format": "jsdoc",
+    "summary": "The book routes.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The book routes. app.ts mounts them under /books."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:pkg:lending-web",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "lending-web",
+   "path": ".",
+   "language": "ts"
+  }
+ ],
+ "symbols": [
+  {
+   "id": "ts:lending-web/src/admin/handlers#addBook",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "addBook",
+   "parent": "ts:file:lending-web/src/admin/handlers.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/handlers.ts",
+    "line": 19,
+    "endLine": 21
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "Request"
+     },
+     {
+      "name": "res",
+      "type": "Response"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<void>"
+     }
+    ],
+    "text": "async function addBook(req: Request, res: Response)"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Adds a book from the request body.",
+    "format": "jsdoc",
+    "summary": "Adds a book from the request body.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Adds a book from the request body."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/handlers#clearCache",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "clearCache",
+   "parent": "ts:file:lending-web/src/admin/handlers.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/handlers.ts",
+    "line": 35,
+    "endLine": 37
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "_req",
+      "type": "Request"
+     },
+     {
+      "name": "res",
+      "type": "Response"
+     }
+    ],
+    "results": [],
+    "text": "function clearCache(_req: Request, res: Response)"
+   },
+   "doc": {
+    "raw": "Answers that the cache is empty. The staff server has no cache of its own.",
+    "format": "jsdoc",
+    "summary": "Answers that the cache is empty.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Answers that the cache is empty. The staff server has no cache of its own."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/handlers#client",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "client",
+   "parent": "ts:file:lending-web/src/admin/handlers.ts",
+   "exported": false,
+   "location": {
+    "path": "src/admin/handlers.ts",
+    "line": 8,
+    "endLine": 8
+   },
+   "group": "handlers.ts:8",
+   "type": {
+    "text": "HttpClient",
+    "refs": [
+     "ts:lending-web/src/client/api#HttpClient"
+    ]
+   },
+   "value": "new HttpClient(\"http://localhost:8080\", fetch)"
+  },
+  {
+   "id": "ts:lending-web/src/admin/handlers#listBooks",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "listBooks",
+   "parent": "ts:file:lending-web/src/admin/handlers.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/handlers.ts",
+    "line": 16,
+    "endLine": 16
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "_req",
+      "type": "Request"
+     },
+     {
+      "name": "res",
+      "type": "Response"
+     }
+    ],
+    "results": [
+     {
+      "type": "Response"
+     }
+    ],
+    "text": "const listBooks = (_req: Request, res: Response) => …"
+   },
+   "doc": {
+    "raw": "Lists the catalogue. Staff see every book, lent or not.",
+    "format": "jsdoc",
+    "summary": "Lists the catalogue.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lists the catalogue. Staff see every book, lent or not."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/handlers#loanReport",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "loanReport",
+   "parent": "ts:file:lending-web/src/admin/handlers.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/handlers.ts",
+    "line": 30,
+    "endLine": 32
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "Request"
+     },
+     {
+      "name": "res",
+      "type": "Response"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<void>"
+     }
+    ],
+    "text": "const loanReport = async (req: Request, res: Response) => …"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Writes the loan report for one member.",
+    "format": "jsdoc",
+    "summary": "Writes the loan report for one member.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Writes the loan report for one member."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/handlers#requireStaff",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "requireStaff",
+   "parent": "ts:file:lending-web/src/admin/handlers.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/handlers.ts",
+    "line": 24,
+    "endLine": 27
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "Request"
+     },
+     {
+      "name": "res",
+      "type": "Response"
+     },
+     {
+      "name": "next",
+      "type": "NextFunction"
+     }
+    ],
+    "results": [
+     {
+      "type": "Response | undefined"
+     }
+    ],
+    "text": "function requireStaff(req: Request, res: Response, next: NextFunction)"
+   },
+   "doc": {
+    "raw": "Lets a request through only when it carries the staff token.",
+    "format": "jsdoc",
+    "summary": "Lets a request through only when it carries the staff token.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lets a request through only when it carries the staff token."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/handlers#showBook",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "showBook",
+   "parent": "ts:file:lending-web/src/admin/handlers.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/handlers.ts",
+    "line": 11,
+    "endLine": 13
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "Request"
+     },
+     {
+      "name": "res",
+      "type": "Response"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<void>"
+     }
+    ],
+    "text": "async function showBook(req: Request, res: Response)"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Shows one book.",
+    "format": "jsdoc",
+    "summary": "Shows one book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Shows one book."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/server#admin",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "admin",
+   "parent": "ts:file:lending-web/src/admin/server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/server.ts",
+    "line": 9,
+    "endLine": 9
+   },
+   "group": "server.ts:9",
+   "type": {
+    "text": "express.Router"
+   },
+   "value": "Router()",
+   "doc": {
+    "raw": "The router for the staff pages. server mounts it under /admin.",
+    "format": "jsdoc",
+    "summary": "The router for the staff pages.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The router for the staff pages. server mounts it under /admin."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/server#routes",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "routes",
+   "parent": "ts:file:lending-web/src/admin/server.ts",
+   "exported": false,
+   "location": {
+    "path": "src/admin/server.ts",
+    "line": 27,
+    "endLine": 30
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "app",
+      "type": "express.Express"
+     }
+    ],
+    "results": [],
+    "text": "function routes(app: express.Express)"
+   },
+   "doc": {
+    "raw": "Adds the report routes. The fixture's config puts them under /reports.",
+    "format": "jsdoc",
+    "summary": "Adds the report routes.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Adds the report routes. The fixture's config puts them under /reports."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/admin/server#server",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "server",
+   "parent": "ts:file:lending-web/src/admin/server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/admin/server.ts",
+    "line": 18,
+    "endLine": 24
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "client",
+      "type": "HttpClient",
+      "refs": [
+       "ts:lending-web/src/client/api#HttpClient"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "express.Express"
+     }
+    ],
+    "text": "function server(client: HttpClient)"
+   },
+   "doc": {
+    "raw": "Builds the staff server.\n\n@param client - the client for the Go service",
+    "format": "jsdoc",
+    "summary": "Builds the staff server.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Builds the staff server."
+     }
+    ],
+    "params": {
+     "client": "the client for the Go service"
+    }
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#BaseClient",
+   "kind": "class",
+   "languageKind": "class",
+   "name": "BaseClient",
+   "parent": "ts:file:lending-web/src/client/api.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 33,
+    "endLine": 63
+   },
+   "modifiers": [
+    "abstract"
+   ],
+   "doc": {
+    "raw": "BaseClient holds what every client shares: the service's address and the\nway to send a request.",
+    "format": "jsdoc",
+    "summary": "BaseClient holds what every client shares: the service's address and the way to send a request.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "BaseClient holds what every client shares: the service's address and the way to send a request."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#BaseClient.base",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "base",
+   "parent": "ts:lending-web/src/client/api#BaseClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 42
+   },
+   "type": {
+    "text": "string"
+   },
+   "modifiers": [
+    "readonly"
+   ],
+   "doc": {
+    "raw": "the address of the Go service, without a trailing slash",
+    "format": "jsdoc",
+    "summary": "the address of the Go service, without a trailing slash",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "the address of the Go service, without a trailing slash"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#BaseClient.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "ts:lending-web/src/client/api#BaseClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 41,
+    "endLine": 44
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "base",
+      "type": "string"
+     },
+     {
+      "name": "fetch",
+      "type": "Fetch",
+      "refs": [
+       "ts:lending-web/src/client/api#Fetch"
+      ]
+     }
+    ],
+    "results": [],
+    "text": "constructor(readonly base: string, private readonly fetch: Fetch)"
+   },
+   "doc": {
+    "raw": "@param base - the address of the Go service, without a trailing slash\n@param fetch - the function that sends requests",
+    "format": "jsdoc",
+    "summary": "",
+    "description": [],
+    "params": {
+     "base": "the address of the Go service, without a trailing slash",
+     "fetch": "the function that sends requests"
+    }
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#BaseClient.describe",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "describe",
+   "parent": "ts:lending-web/src/client/api#BaseClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 62,
+    "endLine": 62
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "abstract describe(): string"
+   },
+   "modifiers": [
+    "abstract"
+   ],
+   "doc": {
+    "raw": "Describes the client for logs.",
+    "format": "jsdoc",
+    "summary": "Describes the client for logs.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Describes the client for logs."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#BaseClient.fetch",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "fetch",
+   "parent": "ts:lending-web/src/client/api#BaseClient",
+   "exported": false,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 43
+   },
+   "type": {
+    "text": "Fetch",
+    "refs": [
+     "ts:lending-web/src/client/api#Fetch"
+    ]
+   },
+   "modifiers": [
+    "private",
+    "readonly"
+   ],
+   "doc": {
+    "raw": "the function that sends requests",
+    "format": "jsdoc",
+    "summary": "the function that sends requests",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "the function that sends requests"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#BaseClient.send",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "send",
+   "parent": "ts:lending-web/src/client/api#BaseClient",
+   "exported": false,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 51,
+    "endLine": 59
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "path",
+      "type": "string"
+     },
+     {
+      "name": "method",
+      "type": "string",
+      "optional": true,
+      "default": "\"GET\""
+     },
+     {
+      "name": "body",
+      "type": "unknown",
+      "optional": true
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<T>"
+     }
+    ],
+    "typeParams": "<T>",
+    "text": "async send<T>(path: string, method = \"GET\", body?: unknown): Promise<T>"
+   },
+   "modifiers": [
+    "protected",
+    "async"
+   ],
+   "doc": {
+    "raw": "Sends one request and returns the decoded JSON body.\n\n@throws {HttpError} when the service answers with an error status",
+    "format": "jsdoc",
+    "summary": "Sends one request and returns the decoded JSON body.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Sends one request and returns the decoded JSON body."
+     }
+    ],
+    "throws": [
+     {
+      "text": "when the service answers with an error status",
+      "type": "HttpError"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#BaseClient.sent",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "sent",
+   "parent": "ts:lending-web/src/client/api#BaseClient",
+   "exported": false,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 35,
+    "endLine": 35
+   },
+   "type": {
+    "text": "number"
+   },
+   "modifiers": [
+    "protected"
+   ],
+   "doc": {
+    "raw": "How many requests this client has sent.",
+    "format": "jsdoc",
+    "summary": "How many requests this client has sent.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "How many requests this client has sent."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#Fetch",
+   "kind": "type_alias",
+   "languageKind": "type alias",
+   "name": "Fetch",
+   "parent": "ts:file:lending-web/src/client/api.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 24,
+    "endLine": 27
+   },
+   "type": {
+    "text": "(url: string, init?: {method?: string; body?: string}) => Promise<{ok: boolean; status: number; json(): Promise<unkno..."
+   },
+   "doc": {
+    "raw": "Fetch is the part of the global fetch function that the client needs.",
+    "format": "jsdoc",
+    "summary": "Fetch is the part of the global fetch function that the client needs.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Fetch is the part of the global fetch function that the client needs."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient",
+   "kind": "class",
+   "languageKind": "class",
+   "name": "HttpClient",
+   "parent": "ts:file:lending-web/src/client/api.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 85,
+    "endLine": 137
+   },
+   "doc": {
+    "raw": "HttpClient speaks HTTP to the Go lending service.\n\n@example\nRead one book:\n```ts\nconst client = new HttpClient(\"http://localhost:8080\", fetch);\nconst book = await client.getBook(\"b-1\");\n```",
+    "format": "jsdoc",
+    "summary": "HttpClient speaks HTTP to the Go lending service.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "HttpClient speaks HTTP to the Go lending service."
+     }
+    ],
+    "examples": [
+     {
+      "code": "const client = new HttpClient(\"http://localhost:8080\", fetch);\nconst book = await client.getBook(\"b-1\");",
+      "language": "ts",
+      "title": "Read one book:"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.#timeout",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "#timeout",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": false,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 88,
+    "endLine": 88
+   },
+   "type": {
+    "text": "number"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.add",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "add",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 130,
+    "endLine": 132
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "book",
+      "type": "NewBook",
+      "refs": [
+       "ts:lending-web/src/domain/book#NewBook"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Book>",
+      "refs": [
+       "ts:lending-web/src/domain/book#Book"
+      ]
+     }
+    ],
+    "text": "add(book: NewBook): Promise<Book>"
+   },
+   "doc": {
+    "raw": "Adds a book to the catalogue.",
+    "format": "jsdoc",
+    "summary": "Adds a book to the catalogue.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Adds a book to the catalogue."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "borrow",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 114,
+    "endLine": 118
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "id",
+      "type": "BookID",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     },
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Loan>",
+      "refs": [
+       "ts:lending-web/src/domain/loan#Loan"
+      ]
+     }
+    ],
+    "text": "async borrow(id: BookID, member: string): Promise<Loan>"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Lends a book. It checks the member's open loans first, as the service\ndoes, so that a refusal costs no request.\n\n@param id - the book\n@param member - the member's ID",
+    "format": "jsdoc",
+    "summary": "Lends a book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lends a book. It checks the member's open loans first, as the service does, so that a refusal costs no request."
+     }
+    ],
+    "params": {
+     "id": "the book",
+     "member": "the member's ID"
+    }
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.canBorrow",
+   "kind": "method",
+   "languageKind": "arrow function",
+   "name": "canBorrow",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 120,
+    "endLine": 120
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<boolean>"
+     }
+    ],
+    "text": "canBorrow = async (member: string): Promise<boolean> => …"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 90,
+    "endLine": 93
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "base",
+      "type": "string"
+     },
+     {
+      "name": "fetch",
+      "type": "Fetch",
+      "refs": [
+       "ts:lending-web/src/client/api#Fetch"
+      ]
+     }
+    ],
+    "results": [],
+    "text": "constructor(base: string, fetch: Fetch)"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.count",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "count",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 87,
+    "endLine": 87
+   },
+   "type": {
+    "text": "number"
+   },
+   "modifiers": [
+    "static"
+   ],
+   "doc": {
+    "raw": "The number of clients made so far.",
+    "format": "jsdoc",
+    "summary": "The number of clients made so far.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The number of clients made so far."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.describe",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "describe",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 134,
+    "endLine": 136
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "describe(): string"
+   },
+   "modifiers": [
+    "override"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "getBook",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 103,
+    "endLine": 105
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "id",
+      "type": "BookID",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Book>",
+      "refs": [
+       "ts:lending-web/src/domain/book#Book"
+      ]
+     }
+    ],
+    "text": "getBook(id: BookID): Promise<Book>"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.loans",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "loans",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 123,
+    "endLine": 127
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Loan[]>",
+      "refs": [
+       "ts:lending-web/src/domain/loan#Loan"
+      ]
+     }
+    ],
+    "text": "loans(member: string): Promise<Loan[]>"
+   },
+   "doc": {
+    "raw": "Lists a member's open loans, or every loan with `all`.",
+    "format": "jsdoc",
+    "summary": "Lists a member's open loans, or every loan with `all`.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lists a member's open loans, or every loan with `all`."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpClient.timeout",
+   "kind": "property",
+   "languageKind": "accessor",
+   "name": "timeout",
+   "parent": "ts:lending-web/src/client/api#HttpClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 96,
+    "endLine": 101
+   },
+   "type": {
+    "text": "number"
+   },
+   "modifiers": [
+    "get",
+    "set"
+   ],
+   "doc": {
+    "raw": "The request timeout in milliseconds. It never drops below 100.",
+    "format": "jsdoc",
+    "summary": "The request timeout in milliseconds.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The request timeout in milliseconds. It never drops below 100."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpError",
+   "kind": "class",
+   "languageKind": "class",
+   "name": "HttpError",
+   "parent": "ts:file:lending-web/src/client/api.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 66,
+    "endLine": 73
+   },
+   "doc": {
+    "raw": "HttpError reports a failed request: its status and its path.",
+    "format": "jsdoc",
+    "summary": "HttpError reports a failed request: its status and its path.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "HttpError reports a failed request: its status and its path."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpError.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "ts:lending-web/src/client/api#HttpError",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 67,
+    "endLine": 72
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "status",
+      "type": "number"
+     },
+     {
+      "name": "path",
+      "type": "string"
+     }
+    ],
+    "results": [],
+    "text": "constructor(readonly status: number, readonly path: string)"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpError.path",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "path",
+   "parent": "ts:lending-web/src/client/api#HttpError",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 69
+   },
+   "type": {
+    "text": "string"
+   },
+   "modifiers": [
+    "readonly"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/client/api#HttpError.status",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "status",
+   "parent": "ts:lending-web/src/client/api#HttpError",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 68
+   },
+   "type": {
+    "text": "number"
+   },
+   "modifiers": [
+    "readonly"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/client/api#LendingApi",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "LendingApi",
+   "parent": "ts:file:lending-web/src/client/api.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 14,
+    "endLine": 21
+   },
+   "doc": {
+    "raw": "LendingApi lists what the web side asks of the lending service.\n\n@remarks\nTwo classes implement it: {@link HttpClient} and {@link CachingClient}.\nCode that uses it should not care which one it holds.",
+    "format": "tsdoc",
+    "summary": "LendingApi lists what the web side asks of the lending service.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "LendingApi lists what the web side asks of the lending service."
+     },
+     {
+      "type": "paragraph",
+      "text": "Two classes implement it: [HttpClient](sym:ts:lending-web/src/client/api#HttpClient) and CachingClient. Code that uses it should not care which one it holds."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#LendingApi.borrow",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "borrow",
+   "parent": "ts:lending-web/src/client/api#LendingApi",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 18,
+    "endLine": 18
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "id",
+      "type": "BookID",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     },
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Loan>",
+      "refs": [
+       "ts:lending-web/src/domain/loan#Loan"
+      ]
+     }
+    ],
+    "text": "borrow(id: BookID, member: string): Promise<Loan>"
+   },
+   "doc": {
+    "raw": "Lends a book to a member and returns the new loan.",
+    "format": "jsdoc",
+    "summary": "Lends a book to a member and returns the new loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lends a book to a member and returns the new loan."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#LendingApi.canBorrow",
+   "kind": "method",
+   "languageKind": "property",
+   "name": "canBorrow",
+   "parent": "ts:lending-web/src/client/api#LendingApi",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 20,
+    "endLine": 20
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<boolean>"
+     }
+    ],
+    "text": "canBorrow: (member: string) => Promise<boolean>"
+   },
+   "doc": {
+    "raw": "Asks whether a member may borrow one more book.",
+    "format": "jsdoc",
+    "summary": "Asks whether a member may borrow one more book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Asks whether a member may borrow one more book."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/api#LendingApi.getBook",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "getBook",
+   "parent": "ts:lending-web/src/client/api#LendingApi",
+   "exported": true,
+   "location": {
+    "path": "src/client/api.ts",
+    "line": 16,
+    "endLine": 16
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "id",
+      "type": "BookID",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Book>",
+      "refs": [
+       "ts:lending-web/src/domain/book#Book"
+      ]
+     }
+    ],
+    "text": "getBook(id: BookID): Promise<Book>"
+   },
+   "doc": {
+    "raw": "Reads one book.",
+    "format": "jsdoc",
+    "summary": "Reads one book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reads one book."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#Cache",
+   "kind": "namespace",
+   "languageKind": "namespace",
+   "name": "Cache",
+   "parent": "ts:file:lending-web/src/client/cache.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 8,
+    "endLine": 16
+   },
+   "doc": {
+    "raw": "Settings and types of the cache.",
+    "format": "jsdoc",
+    "summary": "Settings and types of the cache.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Settings and types of the cache."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#Cache.Entry",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Entry",
+   "parent": "ts:lending-web/src/client/cache#Cache",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 12,
+    "endLine": 15
+   },
+   "doc": {
+    "raw": "A cached book and the time it arrived.",
+    "format": "jsdoc",
+    "summary": "A cached book and the time it arrived.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A cached book and the time it arrived."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#Cache.Entry.at",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "at",
+   "parent": "ts:lending-web/src/client/cache#Cache.Entry",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 14,
+    "endLine": 14
+   },
+   "type": {
+    "text": "number"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#Cache.Entry.book",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "book",
+   "parent": "ts:lending-web/src/client/cache#Cache.Entry",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 13,
+    "endLine": 13
+   },
+   "type": {
+    "text": "Book",
+    "refs": [
+     "ts:lending-web/src/domain/book#Book"
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#Cache.ttl",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "ttl",
+   "parent": "ts:lending-web/src/client/cache#Cache",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 10,
+    "endLine": 10
+   },
+   "group": "cache.ts:10",
+   "type": {
+    "text": "60000"
+   },
+   "value": "60_000",
+   "doc": {
+    "raw": "How long a cached book stays fresh, in milliseconds.",
+    "format": "jsdoc",
+    "summary": "How long a cached book stays fresh, in milliseconds.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "How long a cached book stays fresh, in milliseconds."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#CachingClient",
+   "kind": "class",
+   "languageKind": "class",
+   "name": "CachingClient",
+   "parent": "ts:file:lending-web/src/client/cache.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 19,
+    "endLine": 42
+   },
+   "doc": {
+    "raw": "CachingClient keeps each book it reads for {@link Cache.ttl} milliseconds.",
+    "format": "jsdoc",
+    "summary": "CachingClient keeps each book it reads for [Cache.ttl](sym:ts:lending-web/src/client/cache#Cache.ttl) milliseconds.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "CachingClient keeps each book it reads for [Cache.ttl](sym:ts:lending-web/src/client/cache#Cache.ttl) milliseconds."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#CachingClient.books",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "books",
+   "parent": "ts:lending-web/src/client/cache#CachingClient",
+   "exported": false,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 20,
+    "endLine": 20
+   },
+   "type": {
+    "text": "Map<`b-${number}`, Cache.Entry>",
+    "refs": [
+     "ts:lending-web/src/client/cache#Cache.Entry"
+    ]
+   },
+   "modifiers": [
+    "private",
+    "readonly"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#CachingClient.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "ts:lending-web/src/client/cache#CachingClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 22,
+    "endLine": 28
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "base",
+      "type": "string"
+     },
+     {
+      "name": "fetch",
+      "type": "Fetch",
+      "refs": [
+       "ts:lending-web/src/client/api#Fetch"
+      ]
+     },
+     {
+      "name": "now",
+      "type": "() => number",
+      "optional": true,
+      "default": "Date.now"
+     }
+    ],
+    "results": [],
+    "text": "constructor(base: string, fetch: Fetch, private readonly now: () => number = Date.now)"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#CachingClient.describe",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "describe",
+   "parent": "ts:lending-web/src/client/cache#CachingClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 39,
+    "endLine": 41
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "describe(): string"
+   },
+   "modifiers": [
+    "override"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#CachingClient.getBook",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "getBook",
+   "parent": "ts:lending-web/src/client/cache#CachingClient",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 31,
+    "endLine": 37
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "id",
+      "type": "BookID",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Book>",
+      "refs": [
+       "ts:lending-web/src/domain/book#Book"
+      ]
+     }
+    ],
+    "text": "async getBook(id: BookID): Promise<Book>"
+   },
+   "modifiers": [
+    "async",
+    "override"
+   ],
+   "doc": {
+    "raw": "Reads a book from the cache, or from the service when the cache holds none.",
+    "format": "jsdoc",
+    "summary": "Reads a book from the cache, or from the service when the cache holds none.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reads a book from the cache, or from the service when the cache holds none."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#CachingClient.now",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "now",
+   "parent": "ts:lending-web/src/client/cache#CachingClient",
+   "exported": false,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 25
+   },
+   "type": {
+    "text": "() => number"
+   },
+   "modifiers": [
+    "private",
+    "readonly"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/client/cache#cachedIds",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "cachedIds",
+   "parent": "ts:file:lending-web/src/client/cache.ts",
+   "exported": true,
+   "location": {
+    "path": "src/client/cache.ts",
+    "line": 45,
+    "endLine": 47
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "c",
+      "type": "{keys(): Iterable<BookID>}",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Generator<BookID>",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     }
+    ],
+    "text": "function* cachedIds(c: {keys(): Iterable<BookID>}): Generator<BookID>"
+   },
+   "modifiers": [
+    "generator"
+   ],
+   "doc": {
+    "raw": "Yields the IDs of the cached books, oldest first.",
+    "format": "jsdoc",
+    "summary": "Yields the IDs of the cached books, oldest first.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Yields the IDs of the cached books, oldest first."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Book",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Book",
+   "parent": "ts:file:lending-web/src/domain/book.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 28,
+    "endLine": 34
+   },
+   "doc": {
+    "raw": "Book is one title in the catalogue.\n\n@see {@link Loan} for a book that a member has borrowed.",
+    "format": "jsdoc",
+    "summary": "Book is one title in the catalogue.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Book is one title in the catalogue."
+     }
+    ],
+    "seeAlso": [
+     "[Loan](sym:ts:lending-web/src/domain/loan#Loan) for a book that a member has borrowed."
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Book.genre",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "genre",
+   "parent": "ts:lending-web/src/domain/book#Book",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 33,
+    "endLine": 33
+   },
+   "type": {
+    "text": "Genre",
+    "refs": [
+     "ts:lending-web/src/domain/book#Genre"
+    ]
+   },
+   "modifiers": [
+    "optional"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Book.id",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "id",
+   "parent": "ts:lending-web/src/domain/book#Book",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 30,
+    "endLine": 30
+   },
+   "type": {
+    "text": "BookID",
+    "refs": [
+     "ts:lending-web/src/domain/book#BookID"
+    ]
+   },
+   "doc": {
+    "raw": "The book's ID.",
+    "format": "jsdoc",
+    "summary": "The book's ID.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The book's ID."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Book.shelf",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "shelf",
+   "parent": "ts:lending-web/src/domain/book#Book",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 32,
+    "endLine": 32
+   },
+   "type": {
+    "text": "Shelf",
+    "refs": [
+     "ts:lending-web/src/domain/book#Shelf"
+    ]
+   },
+   "modifiers": [
+    "readonly"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Book.title",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "title",
+   "parent": "ts:lending-web/src/domain/book#Book",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 31,
+    "endLine": 31
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#BookID",
+   "kind": "type_alias",
+   "languageKind": "type alias",
+   "name": "BookID",
+   "parent": "ts:file:lending-web/src/domain/book.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 6,
+    "endLine": 6
+   },
+   "type": {
+    "text": "`b-${number}`"
+   },
+   "doc": {
+    "raw": "A book's ID, as the Go service writes it: \"b-\" and a number.",
+    "format": "jsdoc",
+    "summary": "A book's ID, as the Go service writes it: \"b-\" and a number.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A book's ID, as the Go service writes it: \"b-\" and a number."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Genre",
+   "kind": "enum",
+   "languageKind": "enum",
+   "name": "Genre",
+   "parent": "ts:file:lending-web/src/domain/book.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 17,
+    "endLine": 21
+   },
+   "modifiers": [
+    "const"
+   ],
+   "doc": {
+    "raw": "Genres, as small numbers for the wire.",
+    "format": "jsdoc",
+    "summary": "Genres, as small numbers for the wire.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Genres, as small numbers for the wire."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Genre.Fiction",
+   "kind": "constant",
+   "languageKind": "enum member",
+   "name": "Fiction",
+   "parent": "ts:lending-web/src/domain/book#Genre",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 18
+   },
+   "value": "0"
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Genre.History",
+   "kind": "constant",
+   "languageKind": "enum member",
+   "name": "History",
+   "parent": "ts:lending-web/src/domain/book#Genre",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 20
+   },
+   "value": "10"
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Genre.Science",
+   "kind": "constant",
+   "languageKind": "enum member",
+   "name": "Science",
+   "parent": "ts:lending-web/src/domain/book#Genre",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 19
+   },
+   "value": "1"
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#NewBook",
+   "kind": "type_alias",
+   "languageKind": "type alias",
+   "name": "NewBook",
+   "parent": "ts:file:lending-web/src/domain/book.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 37,
+    "endLine": 37
+   },
+   "type": {
+    "text": "Omit<Book, \"id\" | \"shelf\">",
+    "refs": [
+     "ts:lending-web/src/domain/book#Book"
+    ]
+   },
+   "doc": {
+    "raw": "The fields that a new book needs. The service picks the ID and the shelf.",
+    "format": "jsdoc",
+    "summary": "The fields that a new book needs.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The fields that a new book needs. The service picks the ID and the shelf."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Shelf",
+   "kind": "enum",
+   "languageKind": "enum",
+   "name": "Shelf",
+   "parent": "ts:file:lending-web/src/domain/book.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 9,
+    "endLine": 14
+   },
+   "doc": {
+    "raw": "Where a book sits. The values match the Go service's status strings.",
+    "format": "jsdoc",
+    "summary": "Where a book sits.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Where a book sits. The values match the Go service's status strings."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Shelf.Borrowed",
+   "kind": "constant",
+   "languageKind": "enum member",
+   "name": "Borrowed",
+   "parent": "ts:lending-web/src/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 12
+   },
+   "value": "\"borrowed\""
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Shelf.Lost",
+   "kind": "constant",
+   "languageKind": "enum member",
+   "name": "Lost",
+   "parent": "ts:lending-web/src/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 13
+   },
+   "value": "\"lost\""
+  },
+  {
+   "id": "ts:lending-web/src/domain/book#Shelf.OnShelf",
+   "kind": "constant",
+   "languageKind": "enum member",
+   "name": "OnShelf",
+   "parent": "ts:lending-web/src/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "src/domain/book.ts",
+    "line": 11
+   },
+   "value": "\"on-shelf\"",
+   "doc": {
+    "raw": "On the shelf, ready to lend.",
+    "format": "jsdoc",
+    "summary": "On the shelf, ready to lend.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "On the shelf, ready to lend."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#LOAN_DAYS",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "LOAN_DAYS",
+   "parent": "ts:file:lending-web/src/domain/loan.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 25,
+    "endLine": 25
+   },
+   "group": "loan.ts:24",
+   "type": {
+    "text": "21"
+   },
+   "value": "21"
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Loan",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Loan",
+   "parent": "ts:file:lending-web/src/domain/loan.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 16,
+    "endLine": 21
+   },
+   "typeParams": "<T = string>",
+   "doc": {
+    "raw": "A loan: one member holds one book until the due date.\n\n@typeParam T - the kind of note that the loan carries",
+    "format": "tsdoc",
+    "summary": "A loan: one member holds one book until the due date.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A loan: one member holds one book until the due date."
+     }
+    ],
+    "typeParams": {
+     "T": "the kind of note that the loan carries"
+    }
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Loan.book",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "book",
+   "parent": "ts:lending-web/src/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 17,
+    "endLine": 17
+   },
+   "type": {
+    "text": "Book",
+    "refs": [
+     "ts:lending-web/src/domain/book#Book"
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Loan.due",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "due",
+   "parent": "ts:lending-web/src/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 19,
+    "endLine": 19
+   },
+   "type": {
+    "text": "Date"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Loan.member",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "member",
+   "parent": "ts:lending-web/src/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 18,
+    "endLine": 18
+   },
+   "type": {
+    "text": "Member",
+    "refs": [
+     "ts:lending-web/src/domain/loan#Member"
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Loan.note",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "note",
+   "parent": "ts:lending-web/src/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 20,
+    "endLine": 20
+   },
+   "type": {
+    "text": "T"
+   },
+   "modifiers": [
+    "optional"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#MAX_LOANS",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "MAX_LOANS",
+   "parent": "ts:file:lending-web/src/domain/loan.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 24,
+    "endLine": 24
+   },
+   "group": "loan.ts:24",
+   "type": {
+    "text": "5"
+   },
+   "value": "5",
+   "doc": {
+    "raw": "The most books that one member may hold at once. It matches MaxLoans in the Go service.",
+    "format": "jsdoc",
+    "summary": "The most books that one member may hold at once.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The most books that one member may hold at once. It matches MaxLoans in the Go service."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Member",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "Member",
+   "parent": "ts:file:lending-web/src/domain/loan.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 6,
+    "endLine": 9
+   },
+   "doc": {
+    "raw": "A member of the library.",
+    "format": "jsdoc",
+    "summary": "A member of the library.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A member of the library."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Member.id",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "id",
+   "parent": "ts:lending-web/src/domain/loan#Member",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 7,
+    "endLine": 7
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#Member.name",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "name",
+   "parent": "ts:lending-web/src/domain/loan#Member",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 8,
+    "endLine": 8
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#bookPath",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "bookPath",
+   "parent": "ts:file:lending-web/src/domain/loan.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 43,
+    "endLine": 43
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "id",
+      "type": "BookID",
+      "refs": [
+       "ts:lending-web/src/domain/book#BookID"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "const bookPath = (id: BookID): string => …"
+   },
+   "doc": {
+    "raw": "Turns a book ID into the path that the Go API expects.",
+    "format": "jsdoc",
+    "summary": "Turns a book ID into the path that the Go API expects.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Turns a book ID into the path that the Go API expects."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/domain/loan#mayBorrow",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "mayBorrow",
+   "parent": "ts:file:lending-web/src/domain/loan.ts",
+   "exported": true,
+   "location": {
+    "path": "src/domain/loan.ts",
+    "line": 38,
+    "endLine": 40
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "loans",
+      "type": "readonly Loan[]",
+      "refs": [
+       "ts:lending-web/src/domain/loan#Loan"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "function mayBorrow(loans: readonly Loan[]): boolean"
+   },
+   "doc": {
+    "raw": "Reports whether a member may borrow one more book.\n\nRead the Go service's rule in\n[lending.go](https://github.com/revslaughter/atlas-carries-us/blob/main/adapters/go/testdata/fixture/internal/service/lending.go).\n\n@param loans - the member's open loans\n@returns `true` when the member holds fewer than {@link MAX_LOANS} books\n@deprecated Ask the service instead: {@link Member} rules may change.\n@since 0.2.0",
+    "format": "jsdoc",
+    "summary": "Reports whether a member may borrow one more book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reports whether a member may borrow one more book."
+     },
+     {
+      "type": "paragraph",
+      "text": "Read the Go service's rule in [lending.go](https://github.com/revslaughter/atlas-carries-us/blob/main/adapters/go/testdata/fixture/internal/service/lending.go)."
+     }
+    ],
+    "returns": "`true` when the member holds fewer than [MAX_LOANS](sym:ts:lending-web/src/domain/loan#MAX_LOANS) books",
+    "deprecated": "Ask the service instead: [Member](sym:ts:lending-web/src/domain/loan#Member) rules may change.",
+    "since": "0.2.0",
+    "params": {
+     "loans": "the member's open loans"
+    }
+   }
+  },
+  {
+   "id": "ts:lending-web/src/ui/BookCard#Badge",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "Badge",
+   "parent": "ts:file:lending-web/src/ui/BookCard.tsx",
+   "exported": true,
+   "location": {
+    "path": "src/ui/BookCard.tsx",
+    "line": 22,
+    "endLine": 22
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "props",
+      "type": "{text: string}"
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "const Badge = (props: {text: string}) => …"
+   },
+   "doc": {
+    "raw": "A small label beside a title.",
+    "format": "jsdoc",
+    "summary": "A small label beside a title.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A small label beside a title."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/ui/BookCard#BookCard",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "BookCard",
+   "parent": "ts:file:lending-web/src/ui/BookCard.tsx",
+   "exported": true,
+   "location": {
+    "path": "src/ui/BookCard.tsx",
+    "line": 12,
+    "endLine": 19
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{book, compact = false}",
+      "type": "BookCardProps",
+      "refs": [
+       "ts:lending-web/src/ui/BookCard#BookCardProps"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "function BookCard({book, compact = false}: BookCardProps)"
+   },
+   "doc": {
+    "raw": "Draws one book: its title, and a badge when someone has borrowed it.",
+    "format": "jsdoc",
+    "summary": "Draws one book: its title, and a badge when someone has borrowed it.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Draws one book: its title, and a badge when someone has borrowed it."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/ui/BookCard#BookCardProps",
+   "kind": "interface",
+   "languageKind": "interface",
+   "name": "BookCardProps",
+   "parent": "ts:file:lending-web/src/ui/BookCard.tsx",
+   "exported": true,
+   "location": {
+    "path": "src/ui/BookCard.tsx",
+    "line": 6,
+    "endLine": 9
+   },
+   "doc": {
+    "raw": "The props of the book card.",
+    "format": "jsdoc",
+    "summary": "The props of the book card.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The props of the book card."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/ui/BookCard#BookCardProps.book",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "book",
+   "parent": "ts:lending-web/src/ui/BookCard#BookCardProps",
+   "exported": true,
+   "location": {
+    "path": "src/ui/BookCard.tsx",
+    "line": 7,
+    "endLine": 7
+   },
+   "type": {
+    "text": "Book",
+    "refs": [
+     "ts:lending-web/src/domain/book#Book"
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/ui/BookCard#BookCardProps.compact",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "compact",
+   "parent": "ts:lending-web/src/ui/BookCard#BookCardProps",
+   "exported": true,
+   "location": {
+    "path": "src/ui/BookCard.tsx",
+    "line": 8,
+    "endLine": 8
+   },
+   "type": {
+    "text": "boolean"
+   },
+   "modifiers": [
+    "optional"
+   ]
+  },
+  {
+   "id": "ts:lending-web/src/ui/BookCard#BookList",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "BookList",
+   "parent": "ts:file:lending-web/src/ui/BookCard.tsx",
+   "exported": true,
+   "location": {
+    "path": "src/ui/BookCard.tsx",
+    "line": 25,
+    "endLine": 33
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "props",
+      "type": "{books: Book[]}",
+      "refs": [
+       "ts:lending-web/src/domain/book#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "function BookList(props: {books: Book[]})"
+   },
+   "doc": {
+    "raw": "Draws a list of books.",
+    "format": "jsdoc",
+    "summary": "Draws a list of books.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Draws a list of books."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/app#GET /api/loans/:member",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "GET /api/loans/:member",
+   "parent": "ts:file:lending-web/src/web/app.ts",
+   "exported": false,
+   "location": {
+    "path": "src/web/app.ts",
+    "line": 22,
+    "endLine": 22
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "c",
+      "type": "Context"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Response>"
+     }
+    ],
+    "text": "async (c) => …"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/app#GET /health",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "GET /health",
+   "parent": "ts:file:lending-web/src/web/app.ts",
+   "exported": false,
+   "location": {
+    "path": "src/web/app.ts",
+    "line": 16,
+    "endLine": 16
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "c",
+      "type": "Context"
+     }
+    ],
+    "results": [
+     {
+      "type": "Response"
+     }
+    ],
+    "text": "(c) => …"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/app#api",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "api",
+   "parent": "ts:file:lending-web/src/web/app.ts",
+   "exported": false,
+   "location": {
+    "path": "src/web/app.ts",
+    "line": 21,
+    "endLine": 21
+   },
+   "group": "app.ts:21",
+   "type": {
+    "text": "Hono"
+   },
+   "value": "new Hono().basePath(\"/api\")"
+  },
+  {
+   "id": "ts:lending-web/src/web/app#app",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "app",
+   "parent": "ts:file:lending-web/src/web/app.ts",
+   "exported": true,
+   "location": {
+    "path": "src/web/app.ts",
+    "line": 14,
+    "endLine": 14
+   },
+   "group": "app.ts:14",
+   "type": {
+    "text": "Hono"
+   },
+   "value": "new Hono()",
+   "doc": {
+    "raw": "The app: every reader's request starts here.",
+    "format": "jsdoc",
+    "summary": "The app: every reader's request starts here.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The app: every reader's request starts here."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/app#client",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "client",
+   "parent": "ts:file:lending-web/src/web/app.ts",
+   "exported": true,
+   "location": {
+    "path": "src/web/app.ts",
+    "line": 11,
+    "endLine": 11
+   },
+   "group": "app.ts:11",
+   "type": {
+    "text": "CachingClient",
+    "refs": [
+     "ts:lending-web/src/client/cache#CachingClient"
+    ]
+   },
+   "value": "new CachingClient(\"http://localhost:8080\", fetch)",
+   "doc": {
+    "raw": "The client that every handler shares.",
+    "format": "jsdoc",
+    "summary": "The client that every handler shares.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The client that every handler shares."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/app#version",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "version",
+   "parent": "ts:file:lending-web/src/web/app.ts",
+   "exported": true,
+   "location": {
+    "path": "src/web/app.ts",
+    "line": 26,
+    "endLine": 28
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "c",
+      "type": "Context"
+     }
+    ],
+    "results": [
+     {
+      "type": "Response"
+     }
+    ],
+    "text": "function version(c: Context)"
+   },
+   "doc": {
+    "raw": "Answers with the app's version and the number of clients.",
+    "format": "jsdoc",
+    "summary": "Answers with the app's version and the number of clients.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Answers with the app's version and the number of clients."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/books#GET /books/:id",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "GET /books/:id",
+   "parent": "ts:file:lending-web/src/web/books.ts",
+   "exported": false,
+   "location": {
+    "path": "src/web/books.ts",
+    "line": 11,
+    "endLine": 11
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "c",
+      "type": "Context"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Response>"
+     }
+    ],
+    "text": "async (c) => …"
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/books#books",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "books",
+   "parent": "ts:file:lending-web/src/web/books.ts",
+   "exported": true,
+   "location": {
+    "path": "src/web/books.ts",
+    "line": 9,
+    "endLine": 9
+   },
+   "group": "books.ts:9",
+   "type": {
+    "text": "Hono"
+   },
+   "value": "new Hono()",
+   "doc": {
+    "raw": "The book routes, as one Hono app.",
+    "format": "jsdoc",
+    "summary": "The book routes, as one Hono app.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The book routes, as one Hono app."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:lending-web/src/web/books#borrowBook",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "borrowBook",
+   "parent": "ts:file:lending-web/src/web/books.ts",
+   "exported": false,
+   "location": {
+    "path": "src/web/books.ts",
+    "line": 15,
+    "endLine": 18
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "c",
+      "type": "Context"
+     }
+    ],
+    "results": [
+     {
+      "type": "Promise<Response>"
+     }
+    ],
+    "text": "async function borrowBook(c: Context)"
+   },
+   "modifiers": [
+    "async"
+   ],
+   "doc": {
+    "raw": "Lends a book to the member that the request body names.",
+    "format": "jsdoc",
+    "summary": "Lends a book to the member that the request body names.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lends a book to the member that the request body names."
+     }
+    ]
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": "ts:dir:lending-web/src",
+   "to": "ts:dir:lending-web/src/client",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:dir:lending-web/src",
+   "to": "ts:dir:lending-web/src/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:dir:lending-web/src",
+   "to": "ts:dir:lending-web/src/web",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:dir:lending-web/src/admin",
+   "to": "ts:dir:lending-web/src/client",
+   "kind": "imports",
+   "confidence": "exact",
+   "count": 2
+  },
+  {
+   "from": "ts:dir:lending-web/src/admin",
+   "to": "ts:dir:lending-web/src/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:dir:lending-web/src/client",
+   "to": "ts:dir:lending-web/src/domain",
+   "kind": "imports",
+   "confidence": "exact",
+   "count": 3
+  },
+  {
+   "from": "ts:dir:lending-web/src/ui",
+   "to": "ts:dir:lending-web/src/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:dir:lending-web/src/web",
+   "to": "ts:dir:lending-web/src/client",
+   "kind": "imports",
+   "confidence": "exact",
+   "count": 2
+  },
+  {
+   "from": "ts:dir:lending-web/src/web",
+   "to": "ts:dir:lending-web/src/domain",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:lending-web/src/admin/handlers#addBook",
+   "to": "ts:lending-web/src/client/api#HttpClient.add",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 20
+  },
+  {
+   "from": "ts:lending-web/src/admin/handlers#client",
+   "to": "ts:lending-web/src/client/api#HttpClient.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 8
+  },
+  {
+   "from": "ts:lending-web/src/admin/handlers#loanReport",
+   "to": "ts:lending-web/src/client/api#HttpClient.loans",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 31
+  },
+  {
+   "from": "ts:lending-web/src/admin/handlers#showBook",
+   "to": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 12
+  },
+  {
+   "from": "ts:lending-web/src/admin/server#server",
+   "to": "ts:lending-web/src/admin/server#routes",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 22
+  },
+  {
+   "from": "ts:lending-web/src/admin/server#server",
+   "to": "ts:lending-web/src/client/api#HttpClient",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 18
+  },
+  {
+   "from": "ts:lending-web/src/admin/server#server",
+   "to": "ts:lending-web/src/client/api#HttpClient.describe",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 21
+  },
+  {
+   "from": "ts:lending-web/src/client/api#BaseClient.constructor",
+   "to": "ts:lending-web/src/client/api#Fetch",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 41
+  },
+  {
+   "from": "ts:lending-web/src/client/api#BaseClient.fetch",
+   "to": "ts:lending-web/src/client/api#Fetch",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 43
+  },
+  {
+   "from": "ts:lending-web/src/client/api#BaseClient.send",
+   "to": "ts:lending-web/src/client/api#HttpError.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 57
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient",
+   "to": "ts:lending-web/src/client/api#BaseClient",
+   "kind": "extends",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient",
+   "to": "ts:lending-web/src/client/api#LendingApi",
+   "kind": "implements",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.add",
+   "to": "ts:lending-web/src/client/api#BaseClient.send",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 131
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.add",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 130
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.add",
+   "to": "ts:lending-web/src/domain/book#NewBook",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 130
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "to": "ts:lending-web/src/client/api#BaseClient.send",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 117
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "to": "ts:lending-web/src/client/api#HttpClient.loans",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 115
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "to": "ts:lending-web/src/client/api#HttpError.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 116
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 114
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "to": "ts:lending-web/src/domain/loan#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 114
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "to": "ts:lending-web/src/domain/loan#bookPath",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 116,
+   "count": 2
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "to": "ts:lending-web/src/domain/loan#mayBorrow",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 116
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.canBorrow",
+   "to": "ts:lending-web/src/client/api#HttpClient.loans",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 120
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.canBorrow",
+   "to": "ts:lending-web/src/domain/loan#mayBorrow",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 120
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.constructor",
+   "to": "ts:lending-web/src/client/api#BaseClient.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 91
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.constructor",
+   "to": "ts:lending-web/src/client/api#Fetch",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 90
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.describe",
+   "to": "ts:lending-web/src/client/api#BaseClient.describe",
+   "kind": "overrides",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "to": "ts:lending-web/src/client/api#BaseClient.send",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 104
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 103
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 103
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "to": "ts:lending-web/src/domain/loan#bookPath",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 104
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.loans",
+   "to": "ts:lending-web/src/client/api#BaseClient.send",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 126
+  },
+  {
+   "from": "ts:lending-web/src/client/api#HttpClient.loans",
+   "to": "ts:lending-web/src/domain/loan#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 123
+  },
+  {
+   "from": "ts:lending-web/src/client/api#LendingApi.borrow",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 18
+  },
+  {
+   "from": "ts:lending-web/src/client/api#LendingApi.borrow",
+   "to": "ts:lending-web/src/domain/loan#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 18
+  },
+  {
+   "from": "ts:lending-web/src/client/api#LendingApi.getBook",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 16
+  },
+  {
+   "from": "ts:lending-web/src/client/api#LendingApi.getBook",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 16
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#Cache.Entry.book",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 13
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient",
+   "to": "ts:lending-web/src/client/api#HttpClient",
+   "kind": "extends",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.books",
+   "to": "ts:lending-web/src/client/cache#Cache.Entry",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 20
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.constructor",
+   "to": "ts:lending-web/src/client/api#Fetch",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 22
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.constructor",
+   "to": "ts:lending-web/src/client/api#HttpClient.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 27
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.describe",
+   "to": "ts:lending-web/src/client/api#HttpClient.describe",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 40
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.describe",
+   "to": "ts:lending-web/src/client/api#HttpClient.describe",
+   "kind": "overrides",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.getBook",
+   "to": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 34
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.getBook",
+   "to": "ts:lending-web/src/client/api#HttpClient.getBook",
+   "kind": "overrides",
+   "confidence": "exact"
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.getBook",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 31
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#CachingClient.getBook",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 31
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#cachedIds",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 45
+  },
+  {
+   "from": "ts:lending-web/src/client/cache#cachedIds",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 45
+  },
+  {
+   "from": "ts:lending-web/src/domain/book#Book.genre",
+   "to": "ts:lending-web/src/domain/book#Genre",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 33
+  },
+  {
+   "from": "ts:lending-web/src/domain/book#Book.id",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 30
+  },
+  {
+   "from": "ts:lending-web/src/domain/book#Book.shelf",
+   "to": "ts:lending-web/src/domain/book#Shelf",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 32
+  },
+  {
+   "from": "ts:lending-web/src/domain/loan#Loan.book",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "ts:lending-web/src/domain/loan#Loan.member",
+   "to": "ts:lending-web/src/domain/loan#Member",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 18
+  },
+  {
+   "from": "ts:lending-web/src/domain/loan#bookPath",
+   "to": "ts:lending-web/src/domain/book#BookID",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 43
+  },
+  {
+   "from": "ts:lending-web/src/domain/loan#mayBorrow",
+   "to": "ts:lending-web/src/domain/loan#Loan",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 38
+  },
+  {
+   "from": "ts:lending-web/src/ui/BookCard#BookCard",
+   "to": "ts:lending-web/src/ui/BookCard#Badge",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 16
+  },
+  {
+   "from": "ts:lending-web/src/ui/BookCard#BookCard",
+   "to": "ts:lending-web/src/ui/BookCard#BookCardProps",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 12
+  },
+  {
+   "from": "ts:lending-web/src/ui/BookCard#BookCardProps.book",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 7
+  },
+  {
+   "from": "ts:lending-web/src/ui/BookCard#BookList",
+   "to": "ts:lending-web/src/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 25
+  },
+  {
+   "from": "ts:lending-web/src/ui/BookCard#BookList",
+   "to": "ts:lending-web/src/ui/BookCard#BookCard",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 29
+  },
+  {
+   "from": "ts:lending-web/src/web/app#GET /api/loans/:member",
+   "to": "ts:lending-web/src/client/api#HttpClient.loans",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 22
+  },
+  {
+   "from": "ts:lending-web/src/web/app#client",
+   "to": "ts:lending-web/src/client/cache#CachingClient.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 11
+  },
+  {
+   "from": "ts:lending-web/src/web/books#GET /books/:id",
+   "to": "ts:lending-web/src/client/cache#CachingClient.getBook",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 11
+  },
+  {
+   "from": "ts:lending-web/src/web/books#borrowBook",
+   "to": "ts:lending-web/src/client/api#HttpClient.borrow",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 17
+  }
+ ],
+ "entryPoints": [
+  {
+   "id": "http:GET /admin/books/:id",
+   "kind": "http",
+   "name": "GET /admin/books/:id",
+   "method": "GET",
+   "path": "/admin/books/:id",
+   "handler": "ts:lending-web/src/admin/handlers#showBook",
+   "registeredAt": {
+    "path": "src/admin/server.ts",
+    "line": 10
+   },
+   "plugin": "express"
+  },
+  {
+   "id": "http:GET /admin/books",
+   "kind": "http",
+   "name": "GET /admin/books",
+   "method": "GET",
+   "path": "/admin/books",
+   "handler": "ts:lending-web/src/admin/handlers#listBooks",
+   "registeredAt": {
+    "path": "src/admin/server.ts",
+    "line": 11
+   },
+   "plugin": "express"
+  },
+  {
+   "id": "http:POST /admin/books",
+   "kind": "http",
+   "name": "POST /admin/books",
+   "method": "POST",
+   "path": "/admin/books",
+   "handler": "ts:lending-web/src/admin/handlers#addBook",
+   "registeredAt": {
+    "path": "src/admin/server.ts",
+    "line": 11
+   },
+   "plugin": "express"
+  },
+  {
+   "id": "http:GET /status",
+   "kind": "http",
+   "name": "GET /status",
+   "method": "GET",
+   "path": "/status",
+   "handler": "ts:lending-web/src/admin/server#server",
+   "registeredAt": {
+    "path": "src/admin/server.ts",
+    "line": 21
+   },
+   "plugin": "express",
+   "inline": true,
+   "registrar": "ts:lending-web/src/admin/server#server"
+  },
+  {
+   "id": "http:GET /reports/loans",
+   "kind": "http",
+   "name": "GET /reports/loans",
+   "method": "GET",
+   "path": "/reports/loans",
+   "handler": "ts:lending-web/src/admin/handlers#loanReport",
+   "registeredAt": {
+    "path": "src/admin/server.ts",
+    "line": 28
+   },
+   "plugin": "express",
+   "registrar": "ts:lending-web/src/admin/server#routes"
+  },
+  {
+   "id": "http:DELETE /reports/cache",
+   "kind": "http",
+   "name": "DELETE /reports/cache",
+   "method": "DELETE",
+   "path": "/reports/cache",
+   "handler": "ts:lending-web/src/admin/handlers#clearCache",
+   "registeredAt": {
+    "path": "src/admin/server.ts",
+    "line": 29
+   },
+   "plugin": "express",
+   "registrar": "ts:lending-web/src/admin/server#routes"
+  },
+  {
+   "id": "http:GET /health",
+   "kind": "http",
+   "name": "GET /health",
+   "method": "GET",
+   "path": "/health",
+   "handler": "ts:lending-web/src/web/app#GET /health",
+   "registeredAt": {
+    "path": "src/web/app.ts",
+    "line": 16
+   },
+   "plugin": "hono"
+  },
+  {
+   "id": "http:GET /version",
+   "kind": "http",
+   "name": "GET /version",
+   "method": "GET",
+   "path": "/version",
+   "handler": "ts:lending-web/src/web/app#version",
+   "registeredAt": {
+    "path": "src/web/app.ts",
+    "line": 17
+   },
+   "plugin": "hono"
+  },
+  {
+   "id": "http:POST /version",
+   "kind": "http",
+   "name": "POST /version",
+   "method": "POST",
+   "path": "/version",
+   "handler": "ts:lending-web/src/web/app#version",
+   "registeredAt": {
+    "path": "src/web/app.ts",
+    "line": 17
+   },
+   "plugin": "hono"
+  },
+  {
+   "id": "http:GET /static/*",
+   "kind": "http",
+   "name": "GET /static/*",
+   "method": "GET",
+   "path": "/static/*",
+   "handler": "ts:lending-web/src/web/app#app",
+   "registeredAt": {
+    "path": "src/web/app.ts",
+    "line": 19
+   },
+   "plugin": "hono",
+   "externalHandler": "serveStatic({root: \"./public\"})"
+  },
+  {
+   "id": "http:GET /api/loans/:member",
+   "kind": "http",
+   "name": "GET /api/loans/:member",
+   "method": "GET",
+   "path": "/api/loans/:member",
+   "handler": "ts:lending-web/src/web/app#GET /api/loans/:member",
+   "registeredAt": {
+    "path": "src/web/app.ts",
+    "line": 22
+   },
+   "plugin": "hono"
+  },
+  {
+   "id": "http:GET /books/:id",
+   "kind": "http",
+   "name": "GET /books/:id",
+   "method": "GET",
+   "path": "/books/:id",
+   "handler": "ts:lending-web/src/web/books#GET /books/:id",
+   "registeredAt": {
+    "path": "src/web/books.ts",
+    "line": 11
+   },
+   "plugin": "hono"
+  },
+  {
+   "id": "http:POST /books/:id/loans",
+   "kind": "http",
+   "name": "POST /books/:id/loans",
+   "method": "POST",
+   "path": "/books/:id/loans",
+   "handler": "ts:lending-web/src/web/books#borrowBook",
+   "registeredAt": {
+    "path": "src/web/books.ts",
+    "line": 12
+   },
+   "plugin": "hono"
+  }
+ ],
+ "tests": {
+  "ts:lending-web/src/client/api#HttpClient": [
+   {
+    "name": "HttpClient > reads a book",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 11
+    }
+   },
+   {
+    "name": "HttpClient > borrow > refuses a member who holds too many books",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 16
+    }
+   }
+  ],
+  "ts:lending-web/src/client/api#HttpClient.borrow": [
+   {
+    "name": "HttpClient > borrow > refuses a member who holds too many books",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 16
+    }
+   }
+  ],
+  "ts:lending-web/src/client/api#HttpClient.getBook": [
+   {
+    "name": "HttpClient > reads a book",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 11
+    }
+   }
+  ],
+  "ts:lending-web/src/client/api#HttpError": [
+   {
+    "name": "HttpClient > borrow > refuses a member who holds too many books",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 16
+    }
+   }
+  ],
+  "ts:lending-web/src/client/cache#CachingClient": [
+   {
+    "name": "the cache answers twice from one request",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 23
+    }
+   }
+  ],
+  "ts:lending-web/src/client/cache#CachingClient.getBook": [
+   {
+    "name": "the cache answers twice from one request",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 23
+    }
+   }
+  ],
+  "ts:lending-web/src/domain/book#Book.id": [
+   {
+    "name": "the cache answers twice from one request",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 23
+    }
+   }
+  ],
+  "ts:lending-web/src/domain/book#Book.title": [
+   {
+    "name": "HttpClient > reads a book",
+    "location": {
+     "path": "test/client.test.ts",
+     "line": 11
+    }
+   }
+  ],
+  "ts:lending-web/src/domain/loan#MAX_LOANS": [
+   {
+    "name": "mayBorrow > stops at ${MAX_LOANS}",
+    "location": {
+     "path": "src/domain/loan.spec.ts",
+     "line": 7
+    }
+   }
+  ],
+  "ts:lending-web/src/domain/loan#mayBorrow": [
+   {
+    "name": "mayBorrow > allows %i loans",
+    "location": {
+     "path": "src/domain/loan.spec.ts",
+     "line": 6
+    }
+   },
+   {
+    "name": "mayBorrow > stops at ${MAX_LOANS}",
+    "location": {
+     "path": "src/domain/loan.spec.ts",
+     "line": 7
+    }
+   }
+  ]
+ }
+}

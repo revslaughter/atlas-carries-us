@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "jsx": "preserve",
+    "noEmit": true,
+    "paths": {
+      "express": ["./types/express/index.d.ts"],
+      "hono": ["./types/hono/index.d.ts"]
+    }
+  },
+  "include": ["src", "types"]
+}
