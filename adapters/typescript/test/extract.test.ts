@@ -318,6 +318,7 @@ test("the sveltekit plugin finds every route, with its handler", () => {
     "http:GET /api/items": "routes/api/items/+server#GET",
     "http:POST /api/items": "routes/api/items/+server#POST",
     "http:ANY /api/items": "routes/api/items/+server#fallback",
+    "http:GET /api/feed": "lib/feed#feedHandler",
     "http:GET /blog/[slug]": "routes/blog/[slug]/+page.server#load",
     "http:POST /blog/[slug]?/like": "routes/blog/[slug]/+page.server#like",
     "http:POST /blog/[slug]?/comment": "routes/blog/[slug]/+page.server#POST /blog/[slug]?/comment",

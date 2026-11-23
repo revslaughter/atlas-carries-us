@@ -102,6 +102,16 @@
    "parent": "ts:pkg:reading-room"
   },
   {
+   "id": "ts:dir:reading-room/src/routes/api/feed",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "src/routes/api/feed",
+   "path": "src/routes/api/feed",
+   "language": "ts",
+   "unit": true,
+   "parent": "ts:pkg:reading-room"
+  },
+  {
    "id": "ts:dir:reading-room/src/routes/api/items",
    "kind": "directory",
    "languageKind": "folder",
@@ -194,6 +204,26 @@
      {
       "type": "paragraph",
       "text": "A counter whose count lives in a rune, so that any component can share it."
+     }
+    ]
+   }
+  },
+  {
+   "id": "ts:file:reading-room/src/lib/feed.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "feed.ts",
+   "path": "src/lib/feed.ts",
+   "parent": "ts:dir:reading-room/src/lib",
+   "language": "ts",
+   "doc": {
+    "raw": "Feeds of the blog's posts, in more than one format.",
+    "format": "jsdoc",
+    "summary": "Feeds of the blog's posts, in more than one format.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Feeds of the blog's posts, in more than one format."
      }
     ]
    }
@@ -331,6 +361,26 @@
    "path": "src/routes/+page.svelte",
    "parent": "ts:dir:reading-room/src/routes",
    "language": "ts"
+  },
+  {
+   "id": "ts:file:reading-room/src/routes/api/feed/+server.ts",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "+server.ts",
+   "path": "src/routes/api/feed/+server.ts",
+   "parent": "ts:dir:reading-room/src/routes/api/feed",
+   "language": "ts",
+   "doc": {
+    "raw": "The blog's feed. A factory builds the handler, so the export holds what it\nreturns rather than a function of its own.",
+    "format": "jsdoc",
+    "summary": "The blog's feed.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The blog's feed. A factory builds the handler, so the export holds what it returns rather than a function of its own."
+     }
+    ]
+   }
   },
   {
    "id": "ts:file:reading-room/src/routes/api/items/+server.ts",
@@ -1194,6 +1244,44 @@
    }
   },
   {
+   "id": "ts:reading-room/src/lib/feed#feedHandler",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "feedHandler",
+   "parent": "ts:file:reading-room/src/lib/feed.ts",
+   "exported": true,
+   "location": {
+    "path": "src/lib/feed.ts",
+    "line": 4,
+    "endLine": 9
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "format",
+      "type": "\"json\" | \"text\""
+     }
+    ],
+    "results": [
+     {
+      "type": "() => Promise<Response>"
+     }
+    ],
+    "text": "function feedHandler(format: \"json\" | \"text\")"
+   },
+   "doc": {
+    "raw": "Makes a request handler that answers with the post list in one format: \"json\" or \"text\".",
+    "format": "jsdoc",
+    "summary": "Makes a request handler that answers with the post list in one format: \"json\" or \"text\".",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Makes a request handler that answers with the post list in one format: \"json\" or \"text\"."
+     }
+    ]
+   }
+  },
+  {
    "id": "ts:reading-room/src/lib/format#plural",
    "kind": "function",
    "languageKind": "function",
@@ -1664,6 +1752,35 @@
    }
   },
   {
+   "id": "ts:reading-room/src/routes/api/feed/+server#GET",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "GET",
+   "parent": "ts:file:reading-room/src/routes/api/feed/+server.ts",
+   "exported": true,
+   "location": {
+    "path": "src/routes/api/feed/+server.ts",
+    "line": 7,
+    "endLine": 7
+   },
+   "group": "+server.ts:7",
+   "type": {
+    "text": "() => Promise<Response>"
+   },
+   "value": "feedHandler(\"json\")",
+   "doc": {
+    "raw": "Answers with the post list as JSON.",
+    "format": "jsdoc",
+    "summary": "Answers with the post list as JSON.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Answers with the post list as JSON."
+     }
+    ]
+   }
+  },
+  {
    "id": "ts:reading-room/src/routes/api/items/+server#GET",
    "kind": "function",
    "languageKind": "function",
@@ -2059,6 +2176,12 @@
    "confidence": "exact"
   },
   {
+   "from": "ts:dir:reading-room/src/routes/api/feed",
+   "to": "ts:dir:reading-room/src/lib",
+   "kind": "imports",
+   "confidence": "exact"
+  },
+  {
    "from": "ts:dir:reading-room/src/routes/api/items",
    "to": "ts:dir:reading-room/src/lib",
    "kind": "imports",
@@ -2213,6 +2336,13 @@
    "line": 12
   },
   {
+   "from": "ts:reading-room/src/routes/api/feed/+server#GET",
+   "to": "ts:reading-room/src/lib/feed#feedHandler",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 7
+  },
+  {
    "from": "ts:reading-room/src/routes/api/items/+server#GET",
    "to": "ts:reading-room/src/lib/format#plural",
    "kind": "calls",
@@ -2320,6 +2450,19 @@
    "registeredAt": {
     "path": "src/routes/+page.svelte",
     "line": 1
+   },
+   "plugin": "sveltekit"
+  },
+  {
+   "id": "http:GET /api/feed",
+   "kind": "http",
+   "name": "GET /api/feed",
+   "method": "GET",
+   "path": "/api/feed",
+   "handler": "ts:reading-room/src/lib/feed#feedHandler",
+   "registeredAt": {
+    "path": "src/routes/api/feed/+server.ts",
+    "line": 7
    },
    "plugin": "sveltekit"
   },

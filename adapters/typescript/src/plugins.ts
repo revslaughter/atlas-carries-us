@@ -385,7 +385,7 @@ function strings(ex: Extractor, e: ts.Expression | undefined): string[] | undefi
 }
 
 /** The ID of the first project function or method that a handler expression names: list in asyncHandler(controller.list). */
-function firstCallable(ex: Extractor, e: ts.Expression): string | undefined {
+export function firstCallable(ex: Extractor, e: ts.Expression): string | undefined {
   let found: string | undefined;
   const visit = (n: ts.Node) => {
     if (found || ts.isArrowFunction(n) || ts.isFunctionExpression(n)) return;

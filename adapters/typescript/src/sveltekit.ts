@@ -20,6 +20,7 @@ import path from "node:path";
 import ts from "typescript";
 
 import { type Extractor, unwrap } from "./extract.js";
+import { firstCallable } from "./plugins.js";
 
 /** The HTTP methods that a +server file may export, each by its own name. */
 const VERBS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
@@ -151,9 +152,9 @@ export class SvelteKit {
   private endpoint(ex: Extractor, sf: ts.SourceFile, url: string) {
     for (const e of exportsOf(ex, sf)) {
       const method = e.name === "fallback" ? "ANY" : VERBS.has(e.name) ? e.name : undefined;
-      const handler = method && ex.idOfSymbol(e);
-      if (!method || !ex.isCallable(handler)) continue;
-      add(ex, method, url, handler!, sf, e.declarations?.[0] ?? sf);
+      const handler = method && handlerOf(ex, e);
+      if (!method || !handler) continue;
+      add(ex, method, url, handler, sf, e.declarations?.[0] ?? sf);
     }
   }
 
@@ -180,6 +181,7 @@ export class SvelteKit {
       else if (ts.isPropertyAssignment(p)) {
         const v = unwrap(p.initializer);
         if (ts.isArrowFunction(v) || ts.isFunctionExpression(v)) h = ex.inlineHandler(v, `POST ${target}`);
+        else if (ts.isCallExpression(v)) h = firstCallable(ex, v);
         else h = ex.idOfSymbol(ex.checker.getSymbolAtLocation(ts.isPropertyAccessExpression(v) ? v.name : v));
       }
       if (ex.isCallable(h)) add(ex, "POST", target, h!, node.server, p.name!);
@@ -243,11 +245,24 @@ function exportsOf(ex: Extractor, sf: ts.SourceFile): ts.Symbol[] {
   return [...list].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
+/**
+ * The function that serves an export: the export itself when it holds a
+ * function, or else the first project function that its initializer names,
+ * as rssHandler in `export const GET = rssHandler(…)`.
+ */
+function handlerOf(ex: Extractor, sym: ts.Symbol): string | undefined {
+  const id = ex.idOfSymbol(sym);
+  if (ex.isCallable(id)) return id;
+  const target = sym.flags & ts.SymbolFlags.Alias ? ex.checker.getAliasedSymbol(sym) : sym;
+  const d = target.valueDeclaration;
+  return d && ts.isVariableDeclaration(d) && d.initializer ? firstCallable(ex, unwrap(d.initializer)) : undefined;
+}
+
 /** The `load` function that a route module exports, and its first call of parent(), if any. */
 function loadOf(ex: Extractor, sf: ts.SourceFile): { id: string; parentCall?: ts.Node } | undefined {
   let sym = exportsOf(ex, sf).find(e => e.name === "load");
-  const id = ex.idOfSymbol(sym);
-  if (!sym || !id || !ex.isCallable(id)) return undefined;
+  const id = sym && handlerOf(ex, sym);
+  if (!sym || !id) return undefined;
   if (sym.flags & ts.SymbolFlags.Alias) sym = ex.checker.getAliasedSymbol(sym);
   const d = sym.valueDeclaration;
   const body = d && ts.isVariableDeclaration(d) ? d.initializer : d;
