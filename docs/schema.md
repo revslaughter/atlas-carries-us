@@ -51,10 +51,14 @@ old links.
    so on.
 2. Container IDs add a kind tag: `<lang>:<kind>:<name or path>`. Examples:
    `go:mod:github.com/go-chi/chi/v5`, `go:pkg:github.com/go-chi/chi/v5/middleware`,
-   `go:file:middleware/logger.go`.
+   `go:file:middleware/logger.go`, `ts:pkg:immer`, `ts:dir:immer/src/core`,
+   `ts:file:immer/src/core/proxy.ts`.
 3. Symbol IDs join the unit's qualified name and the symbol's path inside the
    unit with `#`: `go:github.com/go-chi/chi/v5#Mux.ServeHTTP`. A member's path
-   extends its parent's path with a dot.
+   extends its parent's path with a dot. Where a language lets two files of
+   one unit declare the same name, the qualified name names the file instead:
+   TypeScript writes the package name and the module's path without its
+   extension, as in `ts:immer/src/core/immerClass#Immer.produce`.
 4. Where two declarations share a name (for example two `init` functions in
    Go), the adapter adds `@<file>:<line>` to keep the IDs apart.
 5. Entry point IDs use the plugin's kind and name: `http:GET /posts/{id}`,
@@ -89,7 +93,7 @@ old links.
 ## 6. Containers
 
 Containers form a tree through `parent`. A typical Go tree runs module →
-package → file. A typical TypeScript tree runs directory → file.
+package → file. A typical TypeScript tree runs package → directory → file.
 
 | Field | Required | Holds |
 | --- | --- | --- |

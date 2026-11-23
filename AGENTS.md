@@ -14,6 +14,7 @@ map.
 | --- | --- | --- |
 | `schema/` | JSON Schema | The data format (the contract) and the config format. |
 | `adapters/go/` | Go | Reads Go code with the type checker; writes the data format. |
+| `adapters/typescript/` | TypeScript | Reads TypeScript with the compiler API; writes the data format. |
 | `cli/` | Rust | `acu`: runs adapters, applies `atlas.yaml`, builds and serves the site. |
 | `viewer/` | TypeScript | The static viewer: one canvas and a docs panel. |
 | `examples/`, `corpus/` | YAML, submodules | Configs, and public projects for tests. |
@@ -32,6 +33,8 @@ Read `docs/schema.md` before a change that touches data. Read
 | Pinned versions agree | `scripts/check-pins.sh` |
 | Go adapter tests | `cd adapters/go && go test ./...` |
 | Rewrite the Go golden file | `cd adapters/go && go test ./... -update`, then read the diff |
+| TypeScript adapter type check, tests, build | `npm run check -w adapters/typescript && npm test -w adapters/typescript && npm run build -w adapters/typescript` |
+| Rewrite the TypeScript golden file | `npm run golden -w adapters/typescript`, then read the diff |
 | Viewer type check, tests, build | `npm run check -w viewer && npm test -w viewer && npm run build -w viewer` |
 | Format TypeScript and friends | `npm run format` |
 | acu checks | `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
@@ -40,7 +43,8 @@ Read `docs/schema.md` before a change that touches data. Read
 | Screenshots of every view | `node tests/e2e/smoke.mjs out/site out/shot` (add `--light` for the light theme) |
 
 Build the viewer (`npm run build -w viewer`) before `cargo build`; `acu`
-embeds `viewer/dist` at compile time.
+embeds `viewer/dist` at compile time. Build the TypeScript adapter before an
+`acu` run that maps TypeScript; inside this repository, `acu` runs its build.
 
 ## Rules
 

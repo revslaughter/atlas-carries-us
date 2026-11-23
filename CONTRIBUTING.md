@@ -6,7 +6,8 @@ languages. Coding agents read [`AGENTS.md`](AGENTS.md), which holds the same
 rules in short form.
 
 The project spans several languages: Go (the Go adapter), Rust (the `acu`
-command), TypeScript (the viewer), and more adapters to come. One data format
+command), TypeScript (the viewer and the TypeScript adapter), and more
+adapters to come. One data format
 joins them. Most of the rules below exist so that a reader of any part finds
 the same words, the same shapes and the same checks.
 
@@ -16,8 +17,8 @@ Choose one:
 
 1. **VS Code devcontainer (recommended).** Open the folder and choose
    "Reopen in Container". The container holds the pinned Go, Node, Rust and
-   Chromium, installs the dependencies, fetches the test corpus and installs
-   the Go adapter.
+   Chromium, installs the dependencies, fetches the test corpus, installs the
+   Go adapter and builds the TypeScript adapter.
 2. **Docker on the command line.**
 
    ```sh
@@ -30,7 +31,9 @@ Choose one:
 
    ```sh
    npm ci
-   git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra
+   npm run build -w adapters/typescript
+   git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra \
+     corpus/typescript/immer corpus/typescript/hono
    (cd adapters/go && go install ./cmd/acu-adapter-go)
    ```
 
@@ -60,7 +63,9 @@ Behind a TLS-inspecting proxy, see the comment at the top of the `Dockerfile`.
 | --- | --- |
 | Versions | `scripts/check-pins.sh`: every pinned tool version agrees across its files. |
 | Go adapter | `gofmt`, `go vet`, and the tests: golden file, schema validation, named facts. |
-| Viewer | Prettier, the TypeScript type check, unit tests (including the language-word test), and the build. |
+| Node workspace | `npm ci`, and Prettier on the viewer, the TypeScript adapter and the end-to-end tests. |
+| TypeScript adapter | The type check, the tests (golden file, schema validation, named facts, doc and glob units), and the build. |
+| Viewer | The TypeScript type check, unit tests (including the language-word test), and the build. |
 | `acu` | `cargo fmt`, `cargo clippy` with warnings as errors, the tests, and a release build. |
 | End to end | For each example: `acu extract`, the count snapshot, `acu build`, and the smoke test in both themes. |
 
@@ -74,7 +79,8 @@ request:
 
 1. `schema/atlas.schema.json`
 2. `docs/schema.md`
-3. Each adapter's types (today: `adapters/go/internal/schema/schema.go`)
+3. Each adapter's types (today: `adapters/go/internal/schema/schema.go` and
+   `adapters/typescript/src/schema.ts`)
 4. The viewer's types (`viewer/src/types.ts`)
 
 The config format works the same way: `schema/config.schema.json`,
@@ -152,7 +158,7 @@ give the same bytes. Golden files depend on this.
 | --- | --- | --- |
 | Go | `gofmt` | No unformatted files. |
 | Rust | `rustfmt`, `clippy` | No warnings. |
-| TypeScript, JavaScript, CSS, HTML, JSON in `viewer/` and `tests/e2e/` | Prettier (`npm run format`) | `.prettierrc.json`. |
+| TypeScript, JavaScript, CSS, HTML, JSON in `viewer/`, `adapters/typescript/` and `tests/e2e/` | Prettier (`npm run format`) | `.prettierrc.json`. Golden files stay as the adapter writes them. |
 | Everything else | `.editorconfig` | UTF-8, LF, final newline, two-space indents (tabs for Go, four spaces for Rust and Python). |
 
 ### 4.10 Tests
@@ -166,8 +172,9 @@ give the same bytes. Golden files depend on this.
 3. **The viewer** has unit tests for its pure parts and a smoke test that
    opens every view in both themes and fails on any console error.
 4. **Update a golden file or a snapshot only on purpose.** Run the update
-   (`go test ./... -update`, `node tests/e2e/counts.mjs … --update`), read the
-   diff, and say in the commit message why it changed.
+   (`go test ./... -update`, `npm run golden -w adapters/typescript`,
+   `node tests/e2e/counts.mjs … --update`), read the diff, and say in the
+   commit message why it changed.
 5. **Never skip or delete a test to make CI pass.**
 
 ### 4.11 Versions
@@ -181,6 +188,7 @@ Each tool version lives in two or more files. Change a group together;
 | Node | `NODE_IMAGE` in `Dockerfile`; `.node-version` |
 | Rust | `RUST_IMAGE` in `Dockerfile`; `rust-toolchain.toml` |
 | Playwright | `PLAYWRIGHT_VERSION` in `Dockerfile`; `tests/e2e/package.json`; `package-lock.json` |
+| TypeScript | `viewer/package.json`; `adapters/typescript/package.json`; `package-lock.json` |
 
 1. Pin base images by tag and digest.
 2. Pin npm packages to exact versions.
