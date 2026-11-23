@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import ajvModule from "ajv/dist/2020.js";
 
-import { run } from "../src/extract.js";
+import { run, shorten } from "../src/extract.js";
 import type { Document } from "../src/schema.js";
 
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
@@ -81,6 +81,13 @@ test("the output matches the golden file", () => {
 
 test("two runs write the same bytes", () => {
   assert.equal(runFixture().text, text);
+});
+
+test("a shortened text never ends in half a character", () => {
+  const cut = shorten("a".repeat(76) + "🎉🎉🎉", 80);
+  assert.equal(cut, "a".repeat(76) + "...", "the cut falls before the emoji, not inside it");
+  assert.doesNotThrow(() => encodeURIComponent(cut), "the text holds no lone surrogate");
+  assert.equal(shorten("short"), "short");
 });
 
 test("the output passes schema/atlas.schema.json", () => {

@@ -72,9 +72,13 @@ export function collapse(s: string): string {
     .trim();
 }
 
-/** Cuts a text to at most n characters. */
+/** Cuts a text to at most n characters. The cut never splits a character that takes two UTF-16 units, such as an emoji, so the JSON stays valid. */
 export function shorten(s: string, n = 80): string {
-  return s.length > n ? s.slice(0, n - 3) + "..." : s;
+  if (s.length <= n) return s;
+  let cut = n - 3;
+  const last = s.charCodeAt(cut - 1);
+  if (last >= 0xd800 && last <= 0xdbff) cut--;
+  return s.slice(0, cut) + "...";
 }
 
 /** Removes parentheses, type assertions and non-null marks around an expression. */
