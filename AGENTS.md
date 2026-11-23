@@ -71,7 +71,9 @@ embeds `viewer/dist` at compile time. Build the TypeScript adapter before an
 9. Format with `gofmt`, `rustfmt` and Prettier; follow `.editorconfig` (4.9).
 10. Change a pinned version in every file of its group;
     `scripts/check-pins.sh` lists them. Pin images by digest and npm packages
-    exactly (4.11).
+    exactly. Keep TypeScript on major version 6. `svelte` and `svelte2tsx`
+    sit pinned in `adapters/typescript/package.json` and the lock file
+    (4.11).
 11. Never pair red with green, and never let colour carry meaning alone. Keep
     text at 4.5:1 and lines at 3:1 in both themes. Take colours from
     `theme.ts` and `styles.css` (4.12).
