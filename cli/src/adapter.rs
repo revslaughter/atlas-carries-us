@@ -15,6 +15,7 @@ use crate::config::{EntryPointPlugin, Language};
 pub fn plugin_adapter(plugin: &str) -> Option<&'static str> {
     match plugin {
         "go-chi" | "go-nethttp" | "cobra" => Some("go"),
+        "express" | "hono" => Some("typescript"),
         _ => None,
     }
 }
@@ -95,12 +96,33 @@ fn command_for(lang: &Language) -> Result<Command> {
         c.args(["run", "./cmd/acu-adapter-go"]).current_dir(dev);
         return Ok(c);
     }
+    if lang.adapter == "typescript" && dev.join("package.json").exists() {
+        let main = dev.join("dist").join("src").join("main.js");
+        if !main.is_file() {
+            bail!(
+                "the TypeScript adapter in {} has no build yet; run `npm ci && npm run build -w adapters/typescript`, then run acu again",
+                dev.display()
+            );
+        }
+        let mut c = Command::new("node");
+        c.arg(main);
+        return Ok(c);
+    }
     bail!(
-        "no program runs the {name} adapter. Install it (for Go: go install \
-         github.com/revslaughter/atlas-carries-us/adapters/go/cmd/acu-adapter-go@latest), \
+        "no program runs the {name} adapter. Install {exe} on the PATH ({hint}), \
          set {var}, or give `command` in atlas.yaml",
-        name = lang.adapter
+        name = lang.adapter,
+        hint = install_hint(&lang.adapter),
     )
+}
+
+/// How to install the program of a built-in adapter.
+fn install_hint(adapter: &str) -> &'static str {
+    match adapter {
+        "go" => "go install github.com/revslaughter/atlas-carries-us/adapters/go/cmd/acu-adapter-go@latest",
+        "typescript" => "npm install --global ./adapters/typescript from a checkout, after npm run build -w adapters/typescript",
+        _ => "see the adapter's own docs",
+    }
 }
 
 fn on_path(exe: &str) -> bool {
@@ -147,4 +169,17 @@ pub fn run(lang: &Language, src: &Source, plugins: &[&EntryPointPlugin]) -> Resu
     }
     serde_json::from_slice(&out.stdout)
         .with_context(|| format!("read the {} adapter's output as JSON", lang.adapter))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn built_in_plugins_name_their_adapter() {
+        assert_eq!(plugin_adapter("go-chi"), Some("go"));
+        assert_eq!(plugin_adapter("express"), Some("typescript"));
+        assert_eq!(plugin_adapter("hono"), Some("typescript"));
+        assert_eq!(plugin_adapter("rails"), None);
+    }
 }
