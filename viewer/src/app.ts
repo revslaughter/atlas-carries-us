@@ -1,6 +1,6 @@
 // The running viewer: state and history, the camera, staged transitions,
-// drawing, pointer and keyboard input, and the small bits of chrome (hint,
-// status line, breadcrumbs, legend) that change with the view.
+// drawing, pointer and keyboard input, and the small bits of chrome (status
+// line, breadcrumbs, legend) that change with the view.
 
 import type { Model } from "./model";
 import {
@@ -111,7 +111,7 @@ function sameState(a: State | undefined, b: State): boolean {
 /**
  * Opens a view: the one entry point for every move. It records the move in
  * the history, builds the scene, places the camera, starts the move of the
- * boxes, and updates the panel, breadcrumbs, address, hint, status line and
+ * boxes, and updates the panel, breadcrumbs, address, status line and
  * legend. A member's ID opens its item with the member picked.
  */
 export function go(st: State, opts: { noPush?: boolean } = {}) {
@@ -143,7 +143,6 @@ export function go(st: State, opts: { noPush?: boolean } = {}) {
   renderCrumbs();
   updateNav();
   writeHash(st);
-  hint();
   status(null);
   renderLegend();
   needDraw = true;
@@ -255,8 +254,8 @@ function vw() {
 function vh() {
   return canvas.height / dpr;
 }
-/** Screen pixels at the top of the canvas that the breadcrumbs and the hint cover. */
-const TOP = 84;
+/** Screen pixels at the top of the canvas that the breadcrumbs cover. */
+const TOP = 48;
 
 /** Fits a world rectangle into the view with `pad` pixels around it and `top` pixels free above it. */
 function fitRect(x: number, y: number, w: number, h: number, pad = 40, top = pad) {
@@ -319,7 +318,6 @@ function zoomAt(sx: number, sy: number, f: number) {
   cam = { k, x: sx - (sx - cam.x) * r, y: sy - (sy - cam.y) * r };
   camAnim = null;
   needDraw = true;
-  hint();
 }
 
 /** Moves the camera to a target over ms milliseconds, zooming on a log scale; with reduced motion it jumps. */
@@ -451,18 +449,15 @@ function focusRing(x: number, y: number, w: number, h: number, r: number) {
  */
 function drawOverview(now: number) {
   const showRooms = cam.k >= OV_ROOMS_AT;
+  const badges: Badge[] = [];
   if (!showRooms)
     for (const l of OV.links!) {
       const hot = hover?.region && (l.from === hover.region || l.to === hover.region),
-        fade = hover?.region && !hot;
-      curve(
-        l.from,
-        l.to,
-        edgeColor("calls"),
-        Math.min(8, 1.5 + l.targets.size / 8),
-        fade ? 0.08 : hot ? 0.95 : 0.4,
-        hot ? `uses ${l.targets.size} items` : null,
-      );
+        fade = hover?.region && !hot,
+        w = Math.min(8, 1.5 + l.targets.size / 8);
+      const bez = curve(l.from, l.to, edgeColor("calls"), w, fade ? 0.08 : hot ? 0.95 : 0.4);
+      if (hot)
+        badges.push({ text: `uses ${l.targets.size} items`, col: edgeColor("calls"), alpha: 1, bez, head: px(10 + w) });
     }
   for (const g of OV.regions!) {
     const col = regionColor(g.r.color),
@@ -522,6 +517,8 @@ function drawOverview(now: number) {
       ctx.globalAlpha = 1;
     }
   }
+  // Badges go over the region boxes, so a box never hides one.
+  placeBadges(badges, OV.regions!, px(1));
 }
 
 /** Draws a filled arrowhead with its tip at a point, pointing along an angle. */
@@ -535,8 +532,11 @@ function arrowHead(x: number, y: number, ang: number, col: string, L: number, W:
   ctx.fill();
 }
 
-/** Draws a curved line with an arrowhead from one region's edge to another's, with an optional label at its middle. */
-function curve(a: RegionBox, b: RegionBox, col: string, w: number, alpha: number, label: string | null) {
+/**
+ * Draws a curved line with an arrowhead from one region's edge to another's,
+ * and returns the curve, as a cubic, so a caller can place a badge on it.
+ */
+function curve(a: RegionBox, b: RegionBox, col: string, w: number, alpha: number): Bez {
   const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 },
     bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
   const bp = (r: RegionBox, t: { x: number; y: number }) => {
@@ -561,24 +561,18 @@ function curve(a: RegionBox, b: RegionBox, col: string, w: number, alpha: number
   ctx.lineWidth = px(w);
   ctx.stroke();
   arrowHead(p1.x, p1.y, Math.atan2(p1.y - qy, p1.x - qx), col, px(10 + w), px(5 + w * 0.6));
-  if (label) {
-    const lx = 0.25 * p0.x + 0.5 * qx + 0.25 * p1.x,
-      ly = 0.25 * p0.y + 0.5 * qy + 0.25 * p1.y;
-    ctx.globalAlpha = 1;
-    ctx.font = `600 ${px(12)}px ${SANS()}`;
-    const w2 = ctx.measureText(label).width + px(14);
-    rr(ctx, lx - w2 / 2, ly - px(10), w2, px(20), px(10));
-    ctx.fillStyle = T.surface;
-    ctx.fill();
-    ctx.lineWidth = px(1);
-    ctx.strokeStyle = col;
-    ctx.stroke();
-    ctx.fillStyle = T.fg;
-    ctx.textAlign = "center";
-    ctx.fillText(label, lx, ly + px(4));
-    ctx.textAlign = "left";
-  }
   ctx.globalAlpha = 1;
+  // The same curve as a cubic: each inner point lies two thirds of the way to the quadratic's control point.
+  return [
+    p0.x,
+    p0.y,
+    p0.x + ((qx - p0.x) * 2) / 3,
+    p0.y + ((qy - p0.y) * 2) / 3,
+    p1.x + ((qx - p1.x) * 2) / 3,
+    p1.y + ((qy - p1.y) * 2) / 3,
+    p1.x,
+    p1.y,
+  ];
 }
 
 /** The height in a box where a line ends: its anchor's row, its head, or near its top. */
@@ -602,8 +596,8 @@ function edgeHot(e: SEdge, h: Hit | null) {
 
 /**
  * Draws a focus view or a trace: the lines first (lit when they touch the
- * pointed box or row, faint otherwise), then the boxes over them, then the
- * lines' labels, the hovered row and the focus ring.
+ * pointed box or row, faint otherwise), then the boxes over them with the
+ * hovered row and the focus ring, then the lines' badges.
  */
 function drawFocus(now: number) {
   const sc = scene,
@@ -618,6 +612,7 @@ function drawFocus(now: number) {
     if (extra.length) edges = extra;
   }
   const anyHot = edges.some(e => edgeHot(e, h));
+  const badges: Badge[] = [];
   for (const e of edges) {
     const A = nodePos(e.a, now),
       B = nodePos(e.b, now),
@@ -626,17 +621,26 @@ function drawFocus(now: number) {
     alpha *= Math.min(A.alpha, B.alpha);
     if (e.heuristic) alpha *= 0.6;
     const dash = e.heuristic ? [2, 4] : (EDGE[e.kind]?.dash ?? []);
-    hbez(
+    const w = hot ? 2.6 : e.heuristic ? 1.2 : e.w || 1.6;
+    const bez = hbez(
       A.x + e.a.w,
       A.y + anchorY(e.a, e.aAnchor),
       B.x,
       B.y + anchorY(e.b, e.bAnchor),
       edgeColor(e.kind),
       dash,
-      hot ? 2.6 : e.heuristic ? 1.2 : e.w || 1.6,
+      w,
       alpha,
-      e.label ?? null,
     );
+    // A badge stays opaque, so its text keeps its contrast, unless a hover fades its line.
+    if (e.label)
+      badges.push({
+        text: e.label,
+        col: edgeColor(e.kind),
+        alpha: (anyHot && !hot) || e.faint ? alpha : Math.min(A.alpha, B.alpha),
+        bez,
+        head: 10 + w,
+      });
   }
   for (const n of sc.nodes) {
     const P = nodePos(n, now);
@@ -693,6 +697,10 @@ function drawFocus(now: number) {
     if (kbd?.node === n && !kbd.row) focusRing(P.x, P.y, n.w, n.h, 8);
     ctx.globalAlpha = 1;
   }
+  placeBadges(
+    badges,
+    sc.nodes.filter(n => n.t !== "lane").map(n => ({ ...nodePos(n, now), w: n.w, h: n.h })),
+  );
   if (sc.empty && sc.center) {
     ctx.font = F(400, 14);
     ctx.fillStyle = T.faint;
@@ -704,7 +712,13 @@ function drawFocus(now: number) {
   }
 }
 
-/** Draws a horizontal S-curve between two points, in a relation's style, with an arrowhead and an optional label. */
+/** The four points of a cubic Bézier curve, start to end, as x, y pairs. */
+type Bez = [number, number, number, number, number, number, number, number];
+
+/**
+ * Draws a horizontal S-curve between two points, in a relation's style, with
+ * an arrowhead, and returns the curve so a caller can place a badge on it.
+ */
 function hbez(
   x0: number,
   y0: number,
@@ -714,8 +728,7 @@ function hbez(
   dash: number[],
   w: number,
   alpha: number,
-  label: string | null,
-) {
+): Bez {
   ctx.globalAlpha = alpha;
   ctx.beginPath();
   ctx.moveTo(x0, y0);
@@ -740,22 +753,122 @@ function hbez(
   ctx.stroke();
   ctx.setLineDash([]);
   arrowHead(x1, y1, Math.atan2(y1 - c2y, x1 - c2x), col, 10 + w, 5 + w * 0.6);
-  if (label) {
-    const t = 0.16,
-      mt = 1 - t;
-    const lx = mt * mt * mt * x0 + 3 * mt * mt * t * c1x + 3 * mt * t * t * c2x + t * t * t * x1;
-    const ly = mt * mt * mt * y0 + 3 * mt * mt * t * c1y + 3 * mt * t * t * c2y + t * t * t * y1;
-    ctx.font = F(700, 11);
-    const w2 = ctx.measureText(label).width + 12;
-    rr(ctx, lx - w2 / 2, ly - 9, w2, 18, 9);
+  ctx.globalAlpha = 1;
+  return [x0, y0, c1x, c1y, c2x, c2y, x1, y1];
+}
+
+/** Returns the point at parameter t on a cubic Bézier curve. */
+function bezAt(b: Bez, t: number) {
+  const mt = 1 - t,
+    a = mt * mt * mt,
+    c = 3 * mt * mt * t,
+    d = 3 * mt * t * t,
+    e = t * t * t;
+  return { x: a * b[0] + c * b[2] + d * b[4] + e * b[6], y: a * b[1] + c * b[3] + d * b[5] + e * b[7] };
+}
+
+/** A badge with a line's label, such as a call's order, waiting for a place on its line. */
+interface Badge {
+  /** The text in the badge. */
+  text: string;
+  /** The line's colour, for the badge's outline. */
+  col: string;
+  /** The badge's opacity. */
+  alpha: number;
+  /** The line's curve. */
+  bez: Bez;
+  /** The length of the line's arrowhead. */
+  head: number;
+}
+
+/** A rectangle in world units. */
+interface Rect {
+  /** The left edge. */
+  x: number;
+  /** The top edge. */
+  y: number;
+  /** The width. */
+  w: number;
+  /** The height. */
+  h: number;
+}
+
+/** The height of a line's badge, in world units. */
+const BADGE_H = 18;
+
+/**
+ * Places each badge on its line near the end, just before the arrowhead,
+ * where lines that leave one box have spread apart. When that spot overlaps
+ * an arrowhead, a box in `boxes` or a badge placed before it, the badge
+ * moves back along its own line in steps until it finds free space. When no
+ * free spot exists on the line, it takes the spot with the least overlap;
+ * covering a badge or an arrowhead counts eight times as much as covering a
+ * box. `s` scales the badges' size, for views whose text keeps one size on
+ * screen.
+ */
+function placeBadges(badges: Badge[], boxes: Rect[], s = 1) {
+  const bh = BADGE_H * s;
+  ctx.font = F(700, 11 * s);
+  // Each arrowhead takes a square around its middle, half its length back from the tip along the line.
+  // Covering a badge or an arrowhead costs more than covering the edge of a box.
+  const taken: (Rect & { cost: number })[] = badges.map(b => {
+    const [, , , , cx, cy, x1, y1] = b.bez,
+      a = Math.atan2(y1 - cy, x1 - cx),
+      mx = x1 - (Math.cos(a) * b.head) / 2,
+      my = y1 - (Math.sin(a) * b.head) / 2;
+    return { x: mx - b.head / 2 - 2 * s, y: my - b.head / 2, w: b.head + 4 * s, h: b.head, cost: 8 };
+  });
+  taken.push(...boxes.map(r => ({ ...r, cost: 1 })));
+  // The area of a rectangle that overlaps what the view holds already, weighted by cost.
+  const overlap = (r: Rect) =>
+    taken.reduce(
+      (sum, o) =>
+        sum +
+        o.cost *
+          Math.max(0, Math.min(r.x + r.w, o.x + o.w) - Math.max(r.x, o.x)) *
+          Math.max(0, Math.min(r.y + r.h, o.y + o.h) - Math.max(r.y, o.y)),
+      0,
+    );
+  const placed: { b: Badge; x: number; y: number; w: number }[] = [];
+  for (const b of badges) {
+    const w = ctx.measureText(b.text).width + 12 * s;
+    // Points along the line from its end back to its start, with their distance from the end.
+    const pts: { x: number; y: number; d: number }[] = [];
+    let prev = bezAt(b.bez, 1),
+      d = 0;
+    for (let i = 63; i >= 1; i--) {
+      const p = bezAt(b.bez, i / 64);
+      d += Math.hypot(p.x - prev.x, p.y - prev.y);
+      pts.push({ ...p, d });
+      prev = p;
+    }
+    const first = b.head + 4 * s + w / 2;
+    const spots = pts.filter(
+      (p, i) => p.d >= first && (i === 0 || Math.floor(p.d / (12 * s)) !== Math.floor(pts[i - 1].d / (12 * s))),
+    );
+    const rect = (p: { x: number; y: number }) => ({ x: p.x - w / 2, y: p.y - bh / 2, w, h: bh });
+    // The first free spot, or else the spot with the least overlap; the spot nearer the end wins a tie.
+    let at = spots[0] ?? bezAt(b.bez, 0.5),
+      least = Infinity;
+    for (const p of spots) {
+      const o = overlap(rect(p));
+      if (o < least) [at, least] = [p, o];
+      if (o === 0) break;
+    }
+    taken.push({ ...rect(at), cost: 8 });
+    placed.push({ b, x: at.x, y: at.y, w });
+  }
+  for (const { b, x, y, w } of placed) {
+    ctx.globalAlpha = b.alpha;
+    rr(ctx, x - w / 2, y - bh / 2, w, bh, bh / 2);
     ctx.fillStyle = T.surface;
     ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = col;
+    ctx.lineWidth = s;
+    ctx.strokeStyle = b.col;
     ctx.stroke();
     ctx.fillStyle = T.fg;
     ctx.textAlign = "center";
-    ctx.fillText(label, lx, ly + 4);
+    ctx.fillText(b.text, x, y + 4 * s);
     ctx.textAlign = "left";
   }
   ctx.globalAlpha = 1;
@@ -967,7 +1080,7 @@ function onWheel(e: WheelEvent) {
     if (outAccum > 6) {
       outAccum = 0;
       up();
-    } else hint();
+    }
     return;
   }
   outAccum = 0;
@@ -1256,31 +1369,6 @@ export function status(h: Hit | null) {
     sub = "Click it to see where the code registers it.";
   }
   st.innerHTML = `<b>${esc(name)}</b>${sub ? " — " + esc(sub) : ""}`;
-}
-
-/** Writes the hint under the breadcrumbs: the next thing the reader can do in this view, at this zoom. */
-export function hint() {
-  const el = document.getElementById("hint")!;
-  if (!scene) return;
-  let s: string;
-  if (scene.t === "overview")
-    s =
-      cam.k < OV_ROOMS_AT
-        ? `Zoom in to see the ${M.allUnits()} of each region.`
-        : `Zoom into a ${M.anyUnit()}, or click it, to open its focus view.`;
-  else if (outAccum > 0) {
-    const st = current();
-    const up = st.v === "symbol" ? "the " + M.wordOf(M.items.get(st.id)?.unit ?? "") : "";
-    s = `Keep zooming out to go up to ${st.v === "symbol" ? up : st.v === "unit" ? "the overview" : "the starting item"}.`;
-  } else
-    s =
-      scene.t === "symbol"
-        ? "Left: what uses it.   Right: what it uses.   Arrows point at the thing used."
-        : scene.t === "unit"
-          ? `Hover a ${M.anyUnit()} to see the exact items it uses. Hover a row to see who uses it.`
-          : "Read left to right. Numbers give the call order.";
-  el.textContent = s;
-  el.hidden = false;
 }
 
 /** Writes the breadcrumbs: the view's kind, then region, unit, item and member, each a step back up. */
