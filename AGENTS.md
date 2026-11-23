@@ -15,6 +15,7 @@ map.
 | `schema/` | JSON Schema | The data format (the contract) and the config format. |
 | `adapters/go/` | Go | Reads Go code with the type checker; writes the data format. |
 | `adapters/typescript/` | TypeScript | Reads TypeScript with the compiler API; writes the data format. |
+| `adapters/rust/` | Rust | Reads Rust with rustdoc JSON and rust-analyzer's SCIP index; writes the data format. |
 | `cli/` | Rust | `acu`: runs adapters, applies `atlas.yaml`, builds and serves the site. |
 | `viewer/` | TypeScript | The static viewer: one canvas and a docs panel. |
 | `examples/`, `corpus/` | YAML, submodules | Configs, and public projects for tests. |
@@ -36,8 +37,10 @@ Read `docs/schema.md` before a change that touches data. Read
 | TypeScript adapter type check, tests, build | `npm run check -w adapters/typescript && npm test -w adapters/typescript && npm run build -w adapters/typescript` |
 | Rewrite the TypeScript golden file | `npm run golden -w adapters/typescript`, then read the diff |
 | Viewer type check, tests, build | `npm run check -w viewer && npm test -w viewer && npm run build -w viewer` |
+| Rust adapter tests | `cargo test -p acu-adapter-rust` (needs the pinned nightly; see `adapters/rust/src/toolchain.rs`) |
+| Rewrite the Rust golden file | `UPDATE_GOLDEN=1 cargo test -p acu-adapter-rust`, then read the diff |
 | Format TypeScript and friends | `npm run format` |
-| acu checks | `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
+| acu and Rust adapter checks | `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace` |
 | Map an example | `cargo run -- extract -c examples/chi/atlas.yaml -o out/chi.json` |
 | Look at it | `cargo run -- serve -d out/chi.json`, or `cargo run -- build -d out/chi.json -o out/site` |
 | Map this project | `cargo run -- extract -c atlas.yaml -o out/self.json`, then `cargo run -- serve -d out/self.json` |
@@ -47,6 +50,11 @@ Read `docs/schema.md` before a change that touches data. Read
 Build the viewer (`npm run build -w viewer`) before `cargo build`; `acu`
 embeds `viewer/dist` at compile time. Build the TypeScript adapter before an
 `acu` run that maps TypeScript; inside this repository, `acu` runs its build.
+`cargo build --release --workspace` puts `acu-adapter-rust` beside `acu`,
+which runs it from there. The Rust adapter runs rustdoc and rust-analyzer
+from the nightly that `NIGHTLY` in `adapters/rust/src/toolchain.rs` names.
+Install it with
+`rustup toolchain install nightly-2026-11-01 --profile minimal --component rust-src,rust-analyzer`.
 
 ## Rules
 
@@ -72,8 +80,9 @@ embeds `viewer/dist` at compile time. Build the TypeScript adapter before an
 10. Change a pinned version in every file of its group;
     `scripts/check-pins.sh` lists them. Pin images by digest and npm packages
     exactly. Keep TypeScript on major version 6. `svelte` and `svelte2tsx`
-    sit pinned in `adapters/typescript/package.json` and the lock file
-    (4.11).
+    sit pinned in `adapters/typescript/package.json` and the lock file. The
+    Rust nightly sits in the `Dockerfile` and `toolchain.rs`; `rustdoc-types`
+    must read that nightly's JSON format, so move both together (4.11).
 11. Never pair red with green, and never let colour carry meaning alone. Keep
     text at 4.5:1 and lines at 3:1 in both themes. Take colours from
     `theme.ts` and `styles.css` (4.12).
@@ -116,3 +125,6 @@ Ask the maintainer before you:
    host's loopback.
 3. The Go adapter needs `go` at run time, because it loads packages with
    `go list`.
+4. The Rust adapter needs cargo, rustdoc and rust-analyzer from its pinned
+   nightly at run time. rustdoc builds each crate's dependencies, so cargo
+   fetches them from crates.io on a first run.
