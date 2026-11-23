@@ -66,13 +66,15 @@ jobs:
       # The export stage writes the same programs to a folder on the runner.
       # Its build stage already sits in this builder's cache from the step
       # above. Then acu runs outside any container, with the runner's own Go
-      # and Node, and finds its adapters beside itself.
+      # and Node, and finds its adapters beside itself. Both steps write to
+      # the runner's temp folder: the container steps above leave out/ owned
+      # by root.
       - name: Write acu and its adapters to a folder
         uses: docker/build-push-action@v6
         with:
           context: .
           target: export
-          outputs: type=local,dest=out/docker
+          outputs: type=local,dest=${{ runner.temp }}/acu-export
           cache-from: |
             type=gha,scope=toolchain
             type=gha,scope=runtime
@@ -85,7 +87,7 @@ jobs:
           node-version-file: .node-version
       - name: Map the Go and TypeScript fixtures with the exported folder
         run: |
-          ls -l out/docker
-          out/docker/acu --version
-          out/docker/acu extract -c examples/mixed/atlas.yaml -o out/mixed-export.json
-          out/docker/acu check -d out/mixed-export.json
+          ls -l "$RUNNER_TEMP/acu-export"
+          "$RUNNER_TEMP/acu-export/acu" --version
+          "$RUNNER_TEMP/acu-export/acu" extract -c examples/mixed/atlas.yaml -o "$RUNNER_TEMP/mixed-export.json"
+          "$RUNNER_TEMP/acu-export/acu" check -d "$RUNNER_TEMP/mixed-export.json"
