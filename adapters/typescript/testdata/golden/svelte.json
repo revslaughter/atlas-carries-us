@@ -23,7 +23,7 @@
      "Components come from svelte2tsx 0.7.63 with svelte 5.57.3, not from the project's own Svelte version.",
      "A render of a component that a variable holds, or of a snippet that a prop passes in, does not appear.",
      "3 imports of the route types that svelte-kit sync writes (./$types) did not resolve, so the types they bring count as unknown.",
-     "tsconfig.json extends $app/tsconfig, which does not resolve without an install and svelte-kit sync; the adapter reads the tsconfig without it, with the compiler options that svelte-check forces."
+     "tsconfig.json extends $app/tsconfig, which does not resolve without an install and svelte-kit sync; the adapter reads the config without it, with allowJs and the compiler options that svelte-check forces."
     ]
    }
   ]

@@ -224,15 +224,21 @@ export class Extractor {
 
   private load() {
     const opt = this.req.options ?? {};
-    const configPath = path.resolve(this.root, opt.tsconfig ?? "tsconfig.json");
+    let configPath = path.resolve(this.root, opt.tsconfig ?? "tsconfig.json");
     const all = walk(this.root, r => this.exclude.match(r));
     const components = all.filter(f => f.endsWith(".svelte"));
     if (components.length) this.svelte = new Svelte(components, f => this.rel(f));
+    // A project with components may hold its config in jsconfig.json, as
+    // svelte-check allows.
+    const jsconfig = path.join(this.root, "jsconfig.json");
+    if (this.svelte && !opt.tsconfig && !fs.existsSync(configPath) && fs.existsSync(jsconfig)) configPath = jsconfig;
     let options: ts.CompilerOptions;
     let rootNames: string[];
     if (fs.existsSync(configPath)) {
-      const parsed = parseConfig(configPath);
-      if (this.svelte) this.missingExtends(configPath, parsed);
+      let parsed = parseConfig(configPath);
+      // SvelteKit's generated config, which the project extends, lets
+      // JavaScript in; without it, read the config again with allowJs.
+      if (this.svelte && this.missingExtends(configPath, parsed)) parsed = parseConfig(configPath, { allowJs: true });
       options = parsed.options;
       rootNames = [...parsed.fileNames];
       if (!rootNames.length && parsed.projectReferences?.length) {
@@ -258,7 +264,9 @@ export class Extractor {
         jsx: ts.JsxEmit.Preserve,
         strict: true,
       };
-      rootNames = all.filter(f => /\.[cm]?tsx?$/.test(f) && !/\.d\.[cm]?ts$/.test(f));
+      // A project with components reads its JavaScript too, as svelte-check does.
+      const source = this.svelte ? /\.[cm]?[jt]sx?$/ : /\.[cm]?tsx?$/;
+      rootNames = all.filter(f => source.test(f) && !/\.d\.[cm]?ts$/.test(f));
     }
     options = {
       ...options,
@@ -316,18 +324,19 @@ export class Extractor {
     if (this.svelte) this.moduleNameClashes();
   }
 
-  /** Adds a note when the tsconfig extends a file that does not exist yet, such as the config that `svelte-kit sync` writes. TypeScript then reads the tsconfig without it. */
-  private missingExtends(file: string, parsed: ts.ParsedCommandLine) {
+  /** Adds a note, and returns true, when the tsconfig extends a file that does not exist yet, such as the config that `svelte-kit sync` writes. TypeScript then reads the tsconfig without it. */
+  private missingExtends(file: string, parsed: ts.ParsedCommandLine): boolean {
     const msgs = parsed.errors
       .filter(d => d.code === 6053 || d.code === 5083)
       .map(d => ts.flattenDiagnosticMessageText(d.messageText, " "));
-    if (!msgs.length) return;
+    if (!msgs.length) return false;
     const raw = (parsed.raw as { extends?: unknown } | undefined)?.extends;
     const list = (Array.isArray(raw) ? raw : [raw]).filter((x): x is string => typeof x === "string");
     const missing = list.filter(x => msgs.some(m => m.includes(x) || m.includes(path.resolve(path.dirname(file), x))));
     this.notes.push(
-      `${this.rel(file)} extends ${(missing.length ? missing : list).join(", ")}, which does not resolve without an install and svelte-kit sync; the adapter reads the tsconfig without it, with the compiler options that svelte-check forces.`,
+      `${this.rel(file)} extends ${(missing.length ? missing : list).join(", ")}, which does not resolve without an install and svelte-kit sync; the adapter reads the config without it, with allowJs and the compiler options that svelte-check forces.`,
     );
+    return true;
   }
 
   /** Finds the files whose module name a component already takes (Button.svelte.ts beside Button.svelte), keeps their extension in their IDs, and adds a note for each. */
@@ -1288,6 +1297,9 @@ export class Extractor {
       const text = spec.text;
       if (this.svelte && !target && /(^|\/)\$types(\.[jt]s)?$/.test(text)) this.svelte.unresolvedTypes++;
       if (text.startsWith(".") || text.startsWith("/")) continue;
+      // $lib and #-imports name the project's own files, such as an asset
+      // that only the bundler reads; they never name an outside package.
+      if (this.svelte && /^(\$lib(\/|$)|#)/.test(text)) continue;
       const parts = text.split("/");
       const name = text.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
       if (name.startsWith("node:") || BUILTIN.has(name) || name === this.pkgName) continue;
@@ -1551,15 +1563,15 @@ function calleeName(n: ts.Node): string | undefined {
   return undefined;
 }
 
-/** Reads and parses a tsconfig file, with its extends chain, or throws with a message that names the file. */
-function parseConfig(file: string): ts.ParsedCommandLine {
+/** Reads and parses a tsconfig file, with its extends chain, or throws with a message that names the file. `extra` overrides the file's own options. */
+function parseConfig(file: string, extra?: ts.CompilerOptions): ts.ParsedCommandLine {
   const host: ts.ParseConfigFileHost = {
     ...ts.sys,
     onUnRecoverableConfigFileDiagnostic: d => {
       throw new Error(`read ${file}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
     },
   };
-  const parsed = ts.getParsedCommandLineOfConfigFile(file, undefined, host);
+  const parsed = ts.getParsedCommandLineOfConfigFile(file, extra, host);
   if (!parsed) throw new Error(`read ${file}: the file does not parse`);
   return parsed;
 }
