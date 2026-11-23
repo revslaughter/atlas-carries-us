@@ -18,6 +18,7 @@ use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
 use serde_json::Value;
 
+/// The command line of acu.
 #[derive(Parser)]
 #[command(
     name = "acu",
@@ -29,6 +30,7 @@ struct Cli {
     cmd: Cmd,
 }
 
+/// The four things acu does.
 #[derive(Subcommand)]
 enum Cmd {
     /// Run the adapters and write atlas.json.
@@ -65,6 +67,7 @@ enum Cmd {
     },
 }
 
+/// The config flag of `extract`.
 #[derive(Args)]
 struct ConfigArg {
     /// The project config.
@@ -72,6 +75,8 @@ struct ConfigArg {
     config: PathBuf,
 }
 
+/// Where `build`, `serve` and `check` get the data: a config to extract, or
+/// a finished atlas.json.
 #[derive(Args)]
 struct Input {
     /// The project config. acu runs the adapters to make the data.
@@ -82,6 +87,7 @@ struct Input {
     data: Option<PathBuf>,
 }
 
+/// Parses the command line and runs it; a failure exits with status 1.
 fn main() {
     if let Err(e) = run(Cli::parse()) {
         eprintln!("acu: {e:#}");
@@ -89,6 +95,7 @@ fn main() {
     }
 }
 
+/// Runs the command that the command line names.
 fn run(cli: Cli) -> Result<()> {
     match cli.cmd {
         Cmd::Extract { input, out, pretty } => {
@@ -136,12 +143,15 @@ fn run(cli: Cli) -> Result<()> {
     }
 }
 
+/// Reads a JSON file.
 fn read_json(p: &Path) -> Result<Value> {
     let b = std::fs::read(p).with_context(|| format!("read {}", p.display()))?;
     serde_json::from_slice(&b)
         .with_context(|| format!("{} holds JSON that does not parse", p.display()))
 }
 
+/// Returns the data that `build` and `serve` show: a checked atlas.json, or
+/// the result of `extract` on the config.
 fn load_input(input: &Input) -> Result<Vec<u8>> {
     match (&input.config, &input.data) {
         (_, Some(d)) => {
@@ -203,6 +213,8 @@ fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
     Ok((doc, rep))
 }
 
+/// Runs the adapters, applies the config and checks the result; any error
+/// stops it.
 fn extract(config_path: &Path) -> Result<Value> {
     let (doc, mut rep) = extract_unchecked(config_path)?;
     let check = assemble::check(&doc);
@@ -218,6 +230,7 @@ fn extract(config_path: &Path) -> Result<Value> {
     Ok(doc)
 }
 
+/// Writes one line that counts what a document holds.
 fn summary(doc: &Value, target: &str) {
     let n = |k: &str| doc.get(k).and_then(Value::as_array).map_or(0, Vec::len);
     eprintln!(

@@ -61,12 +61,12 @@ fn main() {
     let cli = Cli::parse();
     match cli.command {
         Command::Serve { addr } => serve(&addr),
-        Command::Import(args) => {
-            println!("importing {}", args.path);
-            import(&args.path);
-        }
+        Command::Import(args) => import(&args.path),
         Command::Report(args) => match args.kind {
-            ReportKind::Overdue => println!("no loans are overdue"),
+            ReportKind::Overdue => {
+                let n = 0;
+                println!("{n} loans are overdue");
+            }
             ReportKind::Count => report_count(),
         },
     }

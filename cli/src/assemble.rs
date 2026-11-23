@@ -10,17 +10,21 @@ use serde_json::{json, Map, Value};
 
 use crate::config::{Config, Links, Open};
 
+/// The JSON Schema of atlas.json, built into acu.
 pub const DATA_SCHEMA: &str = include_str!("../../schema/atlas.schema.json");
 
 /// Problems found while assembling or checking. Errors stop `extract`;
 /// warnings do not.
 #[derive(Default, Debug)]
 pub struct Report {
+    /// The problems that stop `extract`.
     pub errors: Vec<String>,
+    /// The problems that `extract` reports and lets pass.
     pub warnings: Vec<String>,
 }
 
 impl Report {
+    /// Writes every warning, then every error, to standard error.
     pub fn print(&self) {
         for w in &self.warnings {
             eprintln!("acu: warning: {w}");
@@ -31,6 +35,7 @@ impl Report {
     }
 }
 
+/// Returns the array under a key, or an empty slice.
 fn arr<'a>(doc: &'a Value, key: &str) -> &'a [Value] {
     doc.get(key)
         .and_then(Value::as_array)
@@ -38,6 +43,7 @@ fn arr<'a>(doc: &'a Value, key: &str) -> &'a [Value] {
         .unwrap_or(&[])
 }
 
+/// Returns the string under a key, or an empty string.
 fn s<'a>(v: &'a Value, key: &str) -> &'a str {
     v.get(key).and_then(Value::as_str).unwrap_or("")
 }
@@ -93,11 +99,16 @@ pub fn merge(docs: Vec<Value>) -> Result<Value> {
 
 /// What `apply` needs besides the config.
 pub struct Context {
+    /// acu's own version, for `meta.tool`.
     pub tool_version: String,
+    /// The time of the run, RFC 3339.
     pub generated: String,
+    /// The commit that the adapters read, when known.
     pub commit: Option<String>,
 }
 
+/// Turns the config's links into URL templates: its own templates, or the
+/// templates of a preset. A project with a repo and no links takes GitHub's.
 fn link_templates(links: &Option<Links>, repo: &Option<String>) -> Option<Value> {
     let preset = match links {
         Some(Links::Templates(t)) => return Some(Value::Object(t.clone())),
@@ -122,6 +133,7 @@ fn link_templates(links: &Option<Links>, repo: &Option<String>) -> Option<Value>
     }
 }
 
+/// Compiles a path glob in which `*` never crosses a `/`.
 fn glob(pattern: &str) -> Result<GlobMatcher> {
     Ok(globset::GlobBuilder::new(pattern)
         .literal_separator(true)
@@ -131,7 +143,9 @@ fn glob(pattern: &str) -> Result<GlobMatcher> {
 
 /// Lookup tables over a document.
 pub struct Index {
+    /// Every container and symbol ID.
     pub ids: HashSet<String>,
+    /// The unit of each symbol.
     pub unit_of: HashMap<String, String>,
     /// Units as (id, path from the repository root, name, path from the language root).
     pub units: Vec<(String, String, String, String)>,
@@ -141,6 +155,8 @@ pub struct Index {
 }
 
 impl Index {
+    /// Builds the tables: IDs, units, the unit of each symbol, symbols by
+    /// qualified name, and entry points by name.
     pub fn new(doc: &Value) -> Index {
         let mut parent = HashMap::new();
         let mut ids = HashSet::new();
@@ -360,6 +376,8 @@ pub fn apply(doc: &mut Value, cfg: &Config, ctx: &Context) -> Report {
     rep
 }
 
+/// Writes the regions: each unit joins the first region whose paths match
+/// it, else the default region, else "Other code".
 fn regions(doc: &mut Value, cfg: &Config, idx: &Index, rep: &mut Report) {
     let mut members: BTreeMap<usize, Vec<String>> = BTreeMap::new();
     let mut unassigned = Vec::new();
@@ -480,6 +498,8 @@ fn regions(doc: &mut Value, cfg: &Config, idx: &Index, rep: &mut Report) {
     doc["layout"] = json!({ "rows": rows });
 }
 
+/// Writes the tour, and turns each step's target into an ID; a target that
+/// resolves to nothing is an error.
 fn tour(doc: &mut Value, cfg: &Config, idx: &Index, rep: &mut Report) {
     let region_ids: HashSet<String> = arr(doc, "regions")
         .iter()

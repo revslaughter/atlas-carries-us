@@ -3782,7 +3782,7 @@
       "to": "rs:lendd#import",
       "kind": "calls",
       "confidence": "exact",
-      "line": 66
+      "line": 64
     },
     {
       "from": "rs:lendd#main",

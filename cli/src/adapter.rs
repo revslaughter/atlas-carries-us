@@ -23,11 +23,16 @@ pub fn plugin_adapter(plugin: &str) -> Option<&'static str> {
 
 /// Facts about the folder an adapter reads.
 pub struct Source {
+    /// The absolute folder that the adapter reads.
     pub root: PathBuf,
+    /// The repository's root; paths in the output start there.
     pub repo_root: PathBuf,
+    /// The commit that the folder holds, when git knows it.
     pub commit: Option<String>,
 }
 
+/// Runs git in a folder and returns its trimmed output, or `None` when git
+/// fails.
 fn git(dir: &Path, args: &[&str]) -> Option<String> {
     let out = Command::new("git")
         .arg("-C")
@@ -41,6 +46,8 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
     Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+/// Finds the folder that one language entry reads, its repository root and
+/// its commit.
 pub fn source(config_dir: &Path, lang: &Language) -> Result<Source> {
     let root = config_dir.join(lang.root.as_deref().unwrap_or("."));
     let root = root
@@ -150,6 +157,7 @@ fn install_hint(adapter: &str) -> &'static str {
     }
 }
 
+/// Reports whether a program of this name sits in a folder on the `PATH`.
 fn on_path(exe: &str) -> bool {
     let Some(paths) = std::env::var_os("PATH") else {
         return false;

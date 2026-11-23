@@ -1062,9 +1062,10 @@ fn parse_caller(ex: &Extractor, src: &mut Sources, root: &str) -> Option<String>
     None
 }
 
-/// Finds who runs a subcommand: the first function of the map that the
-/// `match` arm (or `if let` block) of the variant calls. Without one, the
-/// function that matches serves the command inline.
+/// Finds who runs a subcommand: the function that the `match` arm (or
+/// `if let` block) of the variant calls, when the arm holds that one call
+/// alone. An arm that does more serves the command inline, in the function
+/// that matches.
 fn dispatch(ex: &Extractor, src: &mut Sources, variant: &str) -> Option<(String, bool)> {
     let sym = src.scip_of.get(variant)?.clone();
     let uses = src.uses.get(&sym)?.clone();
@@ -1089,11 +1090,7 @@ fn dispatch(ex: &Extractor, src: &mut Sources, variant: &str) -> Option<(String,
         let Some((a, b)) = arm_body(&tokens, at) else {
             continue;
         };
-        for i in a..b {
-            let t = &tokens[i];
-            if t.kind != Kind::Ident || !tokens.get(i + 1).is_some_and(|n| n.is("(")) {
-                continue;
-            }
+        if let Some(t) = single_call(&tokens, a, b) {
             if let Some(id) = src.target_at(ex, &file, t) {
                 if ex
                     .syms
@@ -1105,6 +1102,26 @@ fn dispatch(ex: &Extractor, src: &mut Sources, variant: &str) -> Option<(String,
             }
         }
         return Some((f, true));
+    }
+    None
+}
+
+/// Finds the callee when tokens `a..b` hold one call alone, such as
+/// `serve(&addr)`, `lending::import(path)?` or `self.run().await;`.
+fn single_call(tokens: &[Token], a: usize, b: usize) -> Option<&Token> {
+    let mut i = a;
+    if tokens.get(i).is_some_and(|t| t.is_ident("return")) {
+        i += 1;
+    }
+    while i < b && (tokens[i].kind == Kind::Ident || tokens[i].is("::") || tokens[i].is(".")) {
+        if tokens[i].kind == Kind::Ident && tokens.get(i + 1).is_some_and(|t| t.is("(")) {
+            let close = lexer::closing(tokens, i + 1);
+            let rest_ok = tokens[close + 1..b.max(close + 1)]
+                .iter()
+                .all(|t| t.is("?") || t.is(".") || t.is_ident("await") || t.is(";"));
+            return rest_ok.then(|| &tokens[i]);
+        }
+        i += 1;
     }
     None
 }
@@ -1170,6 +1187,22 @@ fn arm_body(tokens: &[Token], at: usize) -> Option<(usize, usize)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn one_call_alone_names_the_handler() {
+        let t = lexer::lex("serve(&addr)?; x");
+        assert_eq!(
+            single_call(&t, 0, t.len() - 1).map(|t| t.text.as_str()),
+            Some("serve")
+        );
+        let t = lexer::lex("let d = load(i)?; build(&d)");
+        assert!(single_call(&t, 0, t.len()).is_none());
+        let t = lexer::lex("self.store.run().await");
+        assert_eq!(
+            single_call(&t, 0, t.len()).map(|t| t.text.as_str()),
+            Some("run")
+        );
+    }
 
     #[test]
     fn kebab_case_follows_clap() {

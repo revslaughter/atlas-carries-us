@@ -12,8 +12,10 @@ use axum::response::Response;
 use axum::Router;
 use include_dir::{include_dir, Dir};
 
+/// The built viewer, embedded in acu at compile time.
 static VIEWER: Dir<'_> = include_dir!("$OUT_DIR/viewer");
 
+/// Where the site keeps the data, relative to its root.
 pub const DATA_PATH: &str = "data/atlas.json";
 
 /// Writes the viewer and the data into `out`.
@@ -45,10 +47,13 @@ pub fn build(out: &Path, data: &[u8]) -> Result<usize> {
 /// Where `serve` gets its data: bytes held in memory, or a file read on each
 /// request (so a fresh `acu extract` shows on reload).
 pub enum DataSource {
+    /// The data, as bytes.
     Memory(Vec<u8>),
+    /// A file to read on each request.
     File(PathBuf),
 }
 
+/// Serves the viewer and the data on an address until Ctrl-C.
 pub async fn serve(addr: SocketAddr, data: DataSource) -> Result<()> {
     let data = Arc::new(data);
     let app = Router::new().fallback(move |uri: Uri| {
@@ -67,6 +72,7 @@ pub async fn serve(addr: SocketAddr, data: DataSource) -> Result<()> {
     Ok(())
 }
 
+/// Answers one request: the data at `DATA_PATH`, else a file of the viewer.
 fn respond(uri: Uri, data: &DataSource) -> Response {
     let path = uri.path().trim_start_matches('/');
     if path == DATA_PATH {
@@ -97,6 +103,7 @@ fn respond(uri: Uri, data: &DataSource) -> Response {
     }
 }
 
+/// Makes a response that no browser caches, so a reload shows fresh data.
 fn reply(status: StatusCode, mime: &str, body: Vec<u8>) -> Response {
     Response::builder()
         .status(status)

@@ -175,9 +175,9 @@ reads each function's source, and SCIP resolves the names in it.
 2. An enum with `#[derive(Subcommand)]`, named by a `#[command(subcommand)]`
    field, makes one command per variant: `#[command(name = "…")]`, else the
    variant's name in kebab case. Names join their parents: `lendd import`.
-3. The handler of a subcommand: the first project function called in the
-   `match` arm (or `if let` block) that names the variant. Without one, the
-   function that matches counts as the handler, inline.
+3. The handler of a subcommand: the project function that the `match` arm
+   (or `if let` block) of the variant calls, when the arm holds that one call
+   alone. An arm that does more serves inline, in the function that matches.
 4. The handler of the root command: the function that calls `parse`,
    `try_parse`, `parse_from` or `try_parse_from` on the struct.
 5. The builder API (`Command::new("x")`) stays out; a note says so.

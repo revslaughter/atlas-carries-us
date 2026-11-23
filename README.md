@@ -76,7 +76,7 @@ pinned nightly: `rustup toolchain install nightly-2026-11-01 --profile minimal
 ## The map of this project
 
 Atlas Carries Us maps itself. [`atlas.yaml`](atlas.yaml) in the repository
-root covers the Go adapter, the TypeScript adapter and the viewer, with
+root covers the three adapters, the `acu` command and the viewer, with
 regions named by job and a tour that follows one run through the code. After
 step 2 above, run this in the repository root:
 

@@ -576,9 +576,10 @@ inside each function, and SCIP resolves the names among them.
    a `Subcommand` enum that a `#[command(subcommand)]` field names makes a
    command: `#[command(name = "…")]`, else the variant's name in kebab case.
    A variant whose arguments hold subcommands adds those instead, so names
-   join: `lendd report count`. A command's handler is the first function of
-   the map that its `match` arm (or `if let` block) calls; without one, the
-   function that matches serves it inline. A `Parser` without subcommands
+   join: `lendd report count`. A command's handler is the function that its
+   `match` arm (or `if let` block) calls, when the arm holds that one call
+   alone; an arm that does more serves the command inline, in the function
+   that matches. A `Parser` without subcommands
    makes one entry, served by the function that calls `parse`.
 
 The fixture holds stand-ins for axum and clap in `testdata/fixture/third_party`,

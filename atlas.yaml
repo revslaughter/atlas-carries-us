@@ -6,22 +6,22 @@
 version: 1
 project:
   name: Atlas Carries Us
-  descriptionDrafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
   repo: revslaughter/atlas-carries-us
   links: github
   description: |
     Atlas Carries Us turns a code base and its doc comments into an
     interactive map. This map shows the project itself.
 
-    Two adapters read code: the Go adapter with the Go type checker, and the
-    TypeScript adapter with the TypeScript compiler. Each writes the same data
-    format, atlas.json. The viewer reads atlas.json and draws the map in the
+    Three adapters read code: the Go adapter with the Go type checker, the
+    TypeScript adapter with the TypeScript compiler, and the Rust adapter
+    with rustdoc and rust-analyzer. Each writes the same data format,
+    atlas.json. The acu command runs the adapters, applies atlas.yaml and
+    builds the site. The viewer reads atlas.json and draws the map in the
     browser.
 
-    The adapters and the viewer share no code: they meet only in atlas.json,
-    so no line joins their regions. The acu command, written in Rust, runs the
-    adapters, applies atlas.yaml and builds the site. It joins this map in
-    phase 4, with the Rust adapter.
+    The parts share no code: they meet only in atlas.json and in the request
+    that acu sends each adapter, so no line joins their regions.
   autolinks:
     - pattern: "(?<![\\w/&])#(\\d+)\\b"
       url: "https://github.com/{repo}/issues/$1"
@@ -34,6 +34,9 @@ languages:
     options: { tsconfig: tsconfig.atlas.json }
     exclude: ["corpus/**", "target/**", "out/**", "examples/**", "**/testdata/**", "**/dist/**", "**/dist-test/**"]
     tests: ["viewer/test/**", "adapters/typescript/test/**"]
+  - adapter: rust
+entryPoints:
+  - plugin: clap
 regions:
   - id: go
     name: Reading Go code
@@ -60,6 +63,27 @@ regions:
       Start with Extractor.run in extract.ts: it runs the passes in order.
       docs.ts holds the doc normaliser, plugins.ts and sveltekit.ts the route
       plugins, and svelte.ts the components.
+  - id: rust
+    name: Reading Rust code
+    drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
+    paths: ["adapters/rust/**"]
+    description: >-
+      The Rust adapter. It reads a Cargo workspace with rustdoc's JSON output
+      and rust-analyzer's SCIP index from one pinned nightly toolchain, finds
+      axum routes and clap commands, and writes the same data format.
+    readingTip: >-
+      Start with run in extract.rs: it runs the passes in order. scip.rs
+      decodes the index, docs.rs normalises the docs, and plugins.rs reads
+      the tokens around each registration.
+  - id: acu
+    name: Running adapters and building the site
+    drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
+    paths: ["cli/**"]
+    description: >-
+      The acu command. It runs each adapter as its own program, merges their
+      documents, applies atlas.yaml, checks the result, and builds or serves
+      the site with the viewer built in.
+    readingTip: Start with run in main.rs; each command starts there.
   - id: viewer
     name: Drawing the map
     drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
@@ -73,17 +97,17 @@ regions:
       every move passes through, then the scene builders in scene.ts.
 layout:
   rows:
-    - [go, ts]
-    - [viewer]
+    - [go, ts, rust]
+    - [acu, viewer]
 tour:
-  - title: Three parts and a file between them
-    drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
+  - title: Five parts and a file between them
+    drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
     open: { view: overview }
     text: >-
-      Two adapters read code, and the viewer draws the map. They share no
-      code: each adapter writes atlas.json, and the viewer reads it. So no
-      line joins the regions. The acu command, which runs the adapters and
-      builds the site, is not on this map yet.
+      Three adapters read code, acu runs them and builds the site, and the
+      viewer draws the map. They share no code: each adapter writes
+      atlas.json, acu completes it, and the viewer reads it. So no line joins
+      the regions.
   - title: The Go adapter in one call
     drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
     open: { view: trace, symbol: Run }
@@ -108,9 +132,27 @@ tour:
       compiler. run loads the program, declares each file, lets the plugins
       find routes, records relations, imports and calls, then resolves the
       docs and indexes the tests.
+  - title: The same plan in Rust
+    drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
+    open: { view: trace, symbol: "rs:acu_adapter_rust::extract#run" }
+    text: >-
+      The Rust adapter has no compiler API to call, so run asks two tools.
+      cargo metadata lists the crates, rustdoc writes each crate's items as
+      JSON, and rust-analyzer writes a SCIP index of every reference. The
+      passes then declare the items, resolve rustdoc's IDs across crates,
+      read the references for calls and tests, and let the plugins find
+      routes and commands.
+  - title: From config to data
+    drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
+    open: { view: trace, symbol: "rs:acu#extract_unchecked" }
+    text: >-
+      acu loads atlas.yaml, then runs each adapter as its own program: one
+      JSON request on standard input, one document on standard output. It
+      merges the documents and applies the regions and the tour. extract
+      then checks that every reference points at something that exists.
   - title: One form for every doc
     drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }
-    open: { view: symbol, name: normalise }
+    open: { view: symbol, id: "ts:atlas-carries-us-workspace/adapters/typescript/src/docs#normalise" }
     text: >-
       normalise turns a JSDoc or TSDoc comment into the normal form: blocks,
       inline text, and a field for each block tag. Its first sentence becomes
