@@ -17,23 +17,24 @@ computer.
 
 ## Status
 
-Phases 1, 2 and 3 of 4 work today:
+All four phases work today:
 
 | Part | State |
 | --- | --- |
 | Data format, version 1 | Done: [`schema/atlas.schema.json`](schema/atlas.schema.json), spec in [`docs/schema.md`](docs/schema.md). |
 | Go adapter | Done: [`adapters/go`](adapters/go). |
-| TypeScript adapter | Done: [`adapters/typescript`](adapters/typescript), with Express and Hono routes. One map may hold Go and TypeScript together. |
+| TypeScript adapter | Done: [`adapters/typescript`](adapters/typescript), with Express and Hono routes. One map may hold several languages together. |
 | `acu` command (Rust) | `extract`, `build`, `serve` and `check` work. |
 | Viewer | Done: [`viewer`](viewer). |
 | Svelte and SvelteKit | Done (phase 3), on the TypeScript adapter: components through `svelte2tsx`, and SvelteKit routes, form actions and layouts with the `sveltekit` plugin. |
-| Rust adapter | Phase 4. |
+| Rust adapter | Done (phase 4): [`adapters/rust`](adapters/rust), from rustdoc's JSON output and rust-analyzer's SCIP index, with axum routes and clap commands. It runs a pinned nightly toolchain. |
 | MCP server in `acu serve` | Planned: lets a language model of your choice read the map, draft regions and tours, and answer questions. |
 
 ## Try it
 
-The quickest way builds the container image. It holds `acu`, both adapters,
-the Go toolchain and Node:
+The quickest way builds the container image. It holds `acu`, the three
+adapters, the Go toolchain, Node and the nightly Rust toolchain that the Rust
+adapter runs:
 
 ```sh
 docker build -t acu .
@@ -42,7 +43,9 @@ docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.
 
 To build from source instead, you need Go 1.24 or later, Node 20 or later,
 and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
-`.node-version` and `rust-toolchain.toml`.
+`.node-version` and `rust-toolchain.toml`. The Rust adapter also needs its
+pinned nightly: `rustup toolchain install nightly-2026-11-01 --profile minimal
+--component rust-src,rust-analyzer`.
 
 1. Build the viewer:
 
@@ -52,16 +55,16 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
    ```
 
 2. Build the command and the adapters. `acu` runs the TypeScript adapter
-   from its build in this checkout:
+   from its build in this checkout, and the Rust adapter from beside itself:
 
    ```sh
-   cargo build --release
+   cargo build --release --workspace
    (cd adapters/go && go install ./cmd/acu-adapter-go)
    npm run build -w adapters/typescript
    ```
 
-3. Fetch a public example (chi, cobra, immer, hono, realworld or
-   svelte-changelog) and look at it:
+3. Fetch a public example (chi, cobra, immer, hono, realworld,
+   svelte-changelog, ripgrep or axum) and look at it:
 
    ```sh
    git submodule update --init --checkout --depth 1 corpus/go/chi
@@ -73,7 +76,7 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
 ## The map of this project
 
 Atlas Carries Us maps itself. [`atlas.yaml`](atlas.yaml) in the repository
-root covers the Go adapter, the TypeScript adapter and the viewer, with
+root covers the three adapters, the `acu` command and the viewer, with
 regions named by job and a tour that follows one run through the code. After
 step 2 above, run this in the repository root:
 

@@ -1,0 +1,162 @@
+# Atlas Carries Us config for tokio-rs/axum v0.8.9 (MIT licence, by the axum
+# contributors). The code sits in the submodule corpus/rust/axum:
+#
+#   git submodule update --init --checkout --depth 1 corpus/rust/axum
+#   acu extract -c examples/axum/atlas.yaml -o examples/axum/atlas.json
+#   acu serve -d examples/axum/atlas.json
+#
+# The Rust adapter needs its pinned nightly toolchain; docs/adapters.md says
+# how to install it. The map holds axum's four library crates and four of
+# its examples, whose routes the axum plugin finds.
+version: 1
+project:
+  name: axum, a web framework on Tokio, Tower and Hyper
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+  repo: tokio-rs/axum
+  links: github
+  description: |
+    axum routes HTTP requests to handlers: async functions whose arguments
+    are extractors and whose result turns into a response. A Router matches
+    the path, a MethodRouter matches the method, and Tower services and
+    layers wrap any of them.
+
+    This map covers axum v0.8.9, by the axum contributors under the MIT
+    licence: the crates axum, axum-core, axum-extra and axum-macros, and four
+    examples (todos, key-value-store, dependency-injection and
+    routes-and-handlers-close-together). Tests appear only under "Tests that
+    use it".
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: rust
+    root: ../../corpus/rust/axum
+    options:
+      packages:
+        - axum
+        - axum-core
+        - axum-extra
+        - axum-macros
+        - example-dependency-injection
+        - example-key-value-store
+        - example-routes-and-handlers-close-together
+        - example-todos
+entryPoints:
+  - plugin: axum
+regions:
+  - id: examples
+    name: Example apps
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["examples/**"]
+    description: >-
+      Four small apps that register routes. Each one builds a Router in main
+      or in a function that main calls.
+    readingTip: Open a route in the list of entry points and follow its trace.
+  - id: routing
+    name: Routing
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["axum/src/routing/**"]
+    description: >-
+      Router matches the path and hands the request to a MethodRouter, which
+      matches the method. nest and merge combine routers.
+    readingTip: Start with Router.route, then MethodRouter.
+  - id: handlers
+    name: Handlers and extractors
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["axum/src/handler/**", "axum/src/extract/**", "axum/src/form.rs", "axum/src/json.rs", "axum/src/extension.rs"]
+    description: >-
+      The Handler trait, which async functions implement, and the extractors
+      that axum offers: Path, Query, State, Json, Form and more.
+  - id: responses
+    name: Responses and middleware
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["axum/src/response/**", "axum/src/middleware/**", "axum/src/error_handling/**"]
+    description: >-
+      Response helpers such as Redirect and server-sent events, middleware
+      made from functions, and the layer that turns errors into responses.
+  - id: serve
+    name: Serving
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["axum/src/serve/**"]
+    description: serve accepts connections from a listener and hands each request to the app.
+  - id: core
+    name: Core traits
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["axum-core/**"]
+    description: >-
+      The traits that other crates build on: FromRequestParts and
+      FromRequest for extractors, IntoResponse for results, and the body type.
+  - id: extra
+    name: Extra extractors and responses
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["axum-extra/**"]
+    description: Extractors and responses that axum keeps out of its main crate, such as Host and Either.
+  - id: macros
+    name: Macros
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    paths: ["axum-macros/**"]
+    description: >-
+      Procedural macros: debug_handler, which explains why a function fails
+      to be a handler, and derives for extractors and typed paths.
+  - id: plumbing
+    name: Shared plumbing
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    default: true
+    description: The crate root, body types, boxed services and small helpers that the rest shares.
+layout:
+  rows:
+    - [examples]
+    - [routing, handlers]
+    - [responses, serve]
+    - [core, extra]
+    - [macros, plumbing]
+tour:
+  - title: An app and its framework
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    open: { view: overview }
+    text: >-
+      The example apps sit at the top. Below them sit axum's parts: routing,
+      handlers and extractors, responses and middleware, and serving. The
+      core traits, the extras and the macros sit at the bottom.
+  - title: One route
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    open: { view: trace, entryPoint: "GET /todos" }
+    text: >-
+      The todos example registers GET /todos in main, with todos_index as its
+      handler. todos_index reads the todos from the shared state, skips and
+      takes as the Query asks, and returns them as Json.
+  - title: Adding a route
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    open: { view: symbol, id: "rs:axum::routing#Router.route" }
+    text: >-
+      route takes a path and a MethodRouter. Router keeps its routes in a
+      PathRouter inside it, and route hands both on to it.
+  - title: Routing by method
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    open: { view: symbol, id: "rs:axum::routing::method_routing#MethodRouter" }
+    text: >-
+      get(handler) makes a MethodRouter that serves GET. Calls such as
+      .post(other) add more methods to the same router.
+  - title: What makes a handler
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    open: { view: symbol, id: "rs:axum::handler#Handler" }
+    text: >-
+      axum implements Handler for async functions of up to sixteen arguments,
+      with a macro. Every argument but the last implements FromRequestParts;
+      the last implements FromRequest; the result implements IntoResponse.
+      An extractor that fails returns its rejection as the response.
+  - title: Extractors
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    open: { view: symbol, id: "rs:axum_core::extract#FromRequestParts" }
+    text: >-
+      An extractor that implements FromRequestParts reads the method, the URI
+      and the headers. It cannot consume the body, so such extractors run in
+      any order. FromRequest may consume the body, so only the last argument
+      uses it.
+  - title: Responses
+    drafted: { by: Claude Code, at: "2026-11-23T15:00:00Z" }
+    open: { view: symbol, id: "rs:axum_core::response::into_response#IntoResponse" }
+    text: >-
+      IntoResponse turns a handler's result into a response. axum-core
+      implements it for strings, status codes, headers, tuples of them and
+      more.

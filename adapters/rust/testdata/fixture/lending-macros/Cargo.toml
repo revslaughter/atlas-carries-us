@@ -1,0 +1,9 @@
+[package]
+name = "lending-macros"
+description = "A derive macro for the fixture library."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+proc-macro = true

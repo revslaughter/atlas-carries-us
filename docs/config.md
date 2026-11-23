@@ -64,10 +64,20 @@ languages:
     tests: ["**/*.test.ts"]      # files that hold tests (default below)
     options:
       tsconfig: tsconfig.build.json # TypeScript: the tsconfig to read
+  - adapter: rust
+    root: ../server              # a Cargo workspace or package
+    exclude: ["examples/**"]     # package folders and files to leave out
+    options:
+      packages: [server, server-core] # Rust: the packages to map (default: every member)
+      features: [postgres]       # Rust: Cargo features to switch on
+      allFeatures: false         # Rust: switch on every feature
+      toolchain: nightly-2026-11-01 # Rust: the toolchain that runs rustdoc (default: the pinned nightly)
+      targetDir: target/acu      # Rust: the folder for build output (default: acu in the target folder)
 ```
 
 1. `include` and `exclude` match folders: a Go package's folder, or a
-   TypeScript folder that holds source files.
+   TypeScript folder that holds source files. For Rust they match a
+   package's folder, and each source file.
 2. `tests` matters to the TypeScript adapter only. Its default,
    `["**/*.test.*", "**/*.spec.*", "**/__tests__/**"]`, covers Vitest and
    Jest. Test files never appear on the map; they fill "Tests that use it".
@@ -79,11 +89,17 @@ languages:
 4. One config may hold several languages. `acu` merges their output into one
    map; [`examples/mixed`](../examples/mixed) holds Go and TypeScript
    together.
+5. The Rust adapter runs rustdoc and rust-analyzer from a pinned nightly
+   toolchain. Install it once:
+   `rustup toolchain install nightly-2026-11-01 --profile minimal --component rust-src,rust-analyzer`.
+   rustdoc builds each crate's dependencies, so cargo may fetch them.
 
 `acu` finds the program for each adapter in this order: `command` (a list:
 program, then arguments), the variable `ACU_ADAPTER_<NAME>`, a program called
 `acu-adapter-<name>` on the `PATH`, and, inside this repository, the adapter's
-source. For TypeScript, the source needs a build first:
+source. A program called `acu-adapter-<name>` beside `acu` itself also
+counts, so `cargo build --release --workspace` gives `acu` its Rust adapter.
+For TypeScript, the source needs a build first:
 `npm run build -w adapters/typescript`. [`adapters.md`](adapters.md) describes
 the protocol.
 
@@ -103,7 +119,8 @@ entryPoints:
   - plugin: cobra
 ```
 
-The Go adapter offers three plugins, and the TypeScript adapter three:
+The Go adapter offers three plugins, the TypeScript adapter three, and the
+Rust adapter two:
 
 1. `go-chi` finds `r.Get("/x", h)`, the other verbs, `Method`, `Handle` and
    `HandleFunc`, and follows `r.Route("/prefix", func(r chi.Router) { … })`.
@@ -120,6 +137,11 @@ The Go adapter offers three plugins, and the TypeScript adapter three:
 6. `sveltekit` reads the file-based routes of a SvelteKit app: pages,
    `+server` methods and form actions. Its option `routes` names the routes
    folder, by default `src/routes`.
+7. `axum` finds `.route("/x", get(h).post(g))` on axum's `Router`, and
+   follows `.nest("/prefix", router)` and `.merge(router)` across functions.
+8. `clap` reads clap's derive API: a `Parser` struct names the program, and
+   each variant of a `Subcommand` enum names a command, as in
+   `lendd import-books`.
 
 Every route plugin except `sveltekit` takes `prefixes` for a mount that
 happens at run time: the routes that the function `inFunc` registers gain

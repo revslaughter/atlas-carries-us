@@ -1,0 +1,9 @@
+[package]
+name = "clap"
+description = "A stand-in for clap with the shapes that the clap plugin reads."
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+clap_derive = { path = "../clap_derive" }

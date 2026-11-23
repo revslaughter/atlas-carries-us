@@ -402,14 +402,205 @@ The output's notes list these limits, and the help text repeats them:
 4. Without an install and `svelte-kit sync`, `./$types`, `$app/*` and
    `$env/*` resolve to nothing, so the types they bring count as unknown.
 
-### Rust (after TypeScript)
+### Rust (done)
 
-Rust has no stable compiler API for this work, so the adapter will combine
-two tools: rustdoc's JSON output (items, docs as Markdown, trait
-implementations; it needs a pinned nightly toolchain, and its format carries a
-version number) and rust-analyzer's SCIP index (references, from which calls
-follow: a reference inside a function's body counts as a call). A Rust
-program will hold the adapter itself.
+The Rust adapter, `adapters/rust`, runs as its own program,
+`acu-adapter-rust`. Rust has no stable compiler API for this work, so the
+adapter combines two tools from one pinned nightly toolchain,
+`nightly-2026-11-01`:
+
+1. rustdoc's JSON output gives the crates, modules, items, docs and trait
+   implementations. The adapter reads it with `rustdoc-types` 0.61.0, which
+   matches that nightly's format 61, and fails with the toolchain to use when
+   a file carries another format.
+2. rust-analyzer's SCIP index gives the references. A reference to a function
+   inside another function's body counts as a call.
+
+The adapter itself builds on the stable toolchain, as part of the Cargo
+workspace; it picks the nightly for each child process through
+`RUSTUP_TOOLCHAIN`. Its only dependency beyond `serde`, `serde_json` and
+`anyhow`, which `acu` already uses, is `rustdoc-types`. A protobuf decoder for
+the SCIP index, the Markdown normaliser and a small lexer for the plugins
+live in the adapter. Install the toolchain once:
+
+```sh
+rustup toolchain install nightly-2026-11-01 --profile minimal --component rust-src,rust-analyzer
+```
+
+#### What it reads
+
+1. `cargo metadata` lists the workspace members. The map holds each member's
+   library, binaries and procedural macros; examples, tests and benches stay
+   out. `include` and `exclude` match a package's folder and each source
+   file. The option `packages` names the packages to keep.
+2. `cargo rustdoc` runs on each target with `--document-private-items`, so
+   the map shows private items too. rustdoc builds each crate's dependencies,
+   so cargo may fetch them, as `go list` does for the Go adapter.
+3. `rust-analyzer scip` indexes the whole workspace once.
+4. Build output goes to `acu` inside the workspace's target folder, so a run
+   never disturbs the project's own build and keeps its cache. The option
+   `targetDir` names another folder; `features` and `allFeatures` pick the
+   Cargo features.
+5. rustdoc never sees code under `#[cfg(test)]`, so such code stays out of
+   the map. SCIP sees it; the tests come from there.
+
+#### Containers and IDs
+
+| Container | ID | `kind`, `languageKind` |
+| --- | --- | --- |
+| A crate: one library, binary or procedural-macro target | `rs:crate:<crate>` | `package`, "crate" |
+| A module: the unit | `rs:mod:<crate>::<path>`, or `rs:mod:<crate>` for the root | `module`, "module" |
+| A file | `rs:file:<path>` | `file`, "file" |
+
+1. A crate takes its target's crate name, such as `grep_searcher`. A binary
+   whose crate name a library of the map already takes gains `@bin`, as in
+   `rs:crate:lending@bin`.
+2. Modules stay flat under their crate, as Go packages sit under their
+   module. A module takes its path as its name, such as
+   `grep_searcher::sink`, and its file as its path.
+3. A file module (`mod sink;`) owns a file container, which shares the
+   module's `//!` doc. An inline module (`mod rules { … }`) has no file of its
+   own; its items name the module as their parent.
+4. A symbol ID joins the module path and the symbol's path:
+   `rs:lending::library#Library.borrow`. Two items of one name in one module,
+   such as a field and a method, gain `@<file>:<line>`. Methods come first,
+   so a getter keeps the plain ID.
+5. A member of a trait implementation adds the trait to its path, so that
+   `Display::fmt` and `Debug::fmt` stay apart:
+   `rs:lending::domain#Book.Display::fmt`. Its `name` stays `fmt`, so the
+   viewer's trace finds it under the trait's method.
+6. One crate's types link to another crate's items through rustdoc's paths,
+   which name each item where the code defines it.
+
+#### Symbols
+
+| Rust | `kind` | `languageKind` |
+| --- | --- | --- |
+| `struct` | `struct` | "struct" |
+| `union` | `struct` | "union" |
+| `enum` | `enum` | "enum" |
+| A variant | `constant`, member | "variant" |
+| `trait` | `trait` | "trait" |
+| A trait alias | `type_alias` | "trait alias" |
+| `fn` | `function` | "function" |
+| A function in an `extern` block | `function` | "foreign function" |
+| A method with `self` | `method`, member | "method" |
+| An associated function without `self` | `method`, member | "associated function" |
+| A field | `field`, member | "field" |
+| An associated type | `type_alias`, member | "associated type" |
+| An associated constant | `constant`, member | "associated constant" |
+| `type X = …` | `type_alias` | "type alias" |
+| `const` | `constant` | "constant" |
+| `static` | `variable` | "static" |
+| `macro_rules!` | `macro` | "macro" |
+| A procedural macro | `macro` | "derive macro", "attribute macro" or "function-like macro" |
+| An `impl` of a local trait for an outside type | `namespace` | "impl" |
+
+1. An `impl` block adds its items to its type, wherever it sits in the
+   crate. An `impl` of a local trait for an outside or generic type has no
+   local type to join, so it becomes an item of its own, named as written:
+   `impl Shelved for Vec<Book>`.
+2. Derived implementations add no members. Their traits go to one
+   `#[derive(…)]` annotation and to `satisfies`. Other annotations come from
+   rustdoc: `#[repr]`, `#[non_exhaustive]`, `#[must_use]`, `#[macro_export]`.
+3. `satisfies` lists the outside traits that a type implements, by name with
+   their arguments: `Debug`, `Display`, `From<String>`. Auto traits and
+   blanket implementations stay out.
+4. `exported` holds `true` for `pub` items. Variants, trait members and
+   members of trait implementations take their owner's value. rustdoc writes
+   `pub(crate)` and a private item at the crate root alike, so neither counts
+   as exported.
+5. Modifiers name `async`, `const`, `unsafe`, `extern "<abi>"` and `mut`.
+6. A variant's fields give its type, as written: `(BookId)` or
+   `{ book: BookId, due: u32 }`. They make no symbols of their own.
+7. Types show each path by its last segment, as rustdoc's pages do:
+   `BTreeMap<BookId, Book>`. `refs` link the rest.
+
+#### Docs
+
+1. The format is `rustdoc`. The text holds Markdown, which turns into blocks
+   and the inline subset, as in the TypeScript adapter.
+2. Intra-doc links (`[Store]`, `` [`Store::find`] ``, `[text](Store)`, and
+   reference links) resolve through rustdoc's own link table, so they become
+   `sym:` links to symbols and to modules.
+3. A code block without a language, or with only rustdoc's test words
+   (`ignore`, `no_run`, `should_panic` and so on), counts as Rust. Its hidden
+   lines (`# use …;`) drop out, as rustdoc hides them.
+4. `#[deprecated]` fills `deprecated`.
+5. A member of a trait implementation without a doc of its own takes the
+   doc of the trait's member, as rustdoc's pages show it. That works for the
+   map's own traits; an outside trait's docs are not in the JSON.
+
+#### Edges
+
+1. `calls`: a reference to a function or method inside the body of another
+   one, from the SCIP index. The innermost function or method whose span
+   holds the reference makes the call. A reference that does not call, such
+   as `map(Self::check)`, counts as well, as issue #6 decided.
+2. A call through a trait object or a generic bound points at the trait's
+   method. The viewer follows `implements` edges to the code that can run.
+3. `implements`: a type, or an `impl` item, to a local trait.
+4. `extends`: a trait to a local supertrait.
+5. `field_type`, `param_type`, `return_type`: from the types in rustdoc's
+   signatures, which name each item by ID. `Self` adds no edge.
+6. `imports`: a module to each other module whose items its code names,
+   from the SCIP references. Outside packages go to `externalImports`; the
+   standard library stays out.
+
+Every edge counts as `exact`: rustdoc or rust-analyzer resolves each one.
+
+#### Tests
+
+A function with an attribute named `test`, such as `#[test]` or
+`#[tokio::test]`, makes a test. SCIP finds it, with the attribute inside the
+function's range. Its name joins its module path and its own name, as
+`cargo test` prints it: `store::memory::tests::finds_a_saved_book`. Each
+reference in its body records the test against the symbol it names.
+
+#### Entry-point plugins
+
+Neither rustdoc nor SCIP writes a syntax tree, so the plugins read tokens
+inside each function, and SCIP resolves the names among them.
+
+1. `axum` finds `.route("/books/{id}", get(show).delete(remove))`: one
+   `http` entry per method. `route` must resolve to axum's `Router`, and each
+   method helper to axum's. `any(h)` and `route_service` give `ANY`. The
+   handler: the first function of the map that the handler expression names;
+   a closure keeps the registering function and counts as inline; anything
+   else fills `externalHandler`. `.nest("/api", api())` puts `/api` in front
+   of the routes that `api` registers; the argument may also name a local
+   variable or hold a router inline. `.merge(other())` adds no prefix. The
+   option `prefixes` covers a mount that the plugin cannot see.
+2. `clap` reads the derive API. A struct that derives `Parser` names the
+   program: `#[command(name = "…")]`, else the binary's name. Each variant of
+   a `Subcommand` enum that a `#[command(subcommand)]` field names makes a
+   command: `#[command(name = "…")]`, else the variant's name in kebab case.
+   A variant whose arguments hold subcommands adds those instead, so names
+   join: `lendd report count`. A command's handler is the function that its
+   `match` arm (or `if let` block) calls, when the arm holds that one call
+   alone; an arm that does more serves the command inline, in the function
+   that matches. A `Parser` without subcommands
+   makes one entry, served by the function that calls `parse`.
+
+The fixture holds stand-ins for axum and clap in `testdata/fixture/third_party`,
+with the shapes of their APIs, so the tests need no network.
+
+#### Limits
+
+The output's notes list these limits, and the help text repeats them:
+
+1. A reference to a function inside another function's body counts as a
+   call, even where the code passes the function on without calling it.
+2. A call through a trait object or a generic bound points at the trait's
+   method.
+3. Calls inside code that a macro writes may count for the wrong function,
+   or not at all.
+4. Items under `#[cfg(test)]`, and code for other platforms or features, do
+   not appear.
+
+The plugins read tokens, so an unusual registration may escape them. clap's
+builder API (`Command::new("x")`) stays out, and so do axum's `fallback` and
+`nest_service`.
 
 ### Other languages
 

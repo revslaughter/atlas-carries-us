@@ -1,0 +1,4746 @@
+{
+  "version": 1,
+  "meta": {
+    "schemaVersion": 1,
+    "tool": {
+      "name": "acu-adapter-rust",
+      "version": "0.1.0"
+    },
+    "generated": "2000-01-01T00:00:00Z",
+    "languages": [
+      "rust"
+    ],
+    "adapters": [
+      {
+        "name": "rust",
+        "version": "0.1.0",
+        "language": "rust",
+        "notes": [
+          "A reference to a function inside another function's body counts as a call, even where the code passes the function on without calling it.",
+          "A call through a trait object or a generic bound points at the trait's method.",
+          "Calls inside code that a macro writes may count for the wrong function, or not at all.",
+          "Items under #[cfg(test)], and code for other platforms or features, do not appear."
+        ]
+      }
+    ]
+  },
+  "containers": [
+    {
+      "id": "rs:crate:lendd",
+      "kind": "package",
+      "languageKind": "crate",
+      "name": "lendd",
+      "path": "lendd",
+      "language": "rust",
+      "doc": {
+        "raw": "The lendd command: serve the library over HTTP, or import and report on\nbooks from the command line.",
+        "format": "rustdoc",
+        "summary": "The lendd command: serve the library over HTTP, or import and report on books from the command line.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The lendd command: serve the library over HTTP, or import and report on books from the command line."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:crate:lending",
+      "kind": "package",
+      "languageKind": "crate",
+      "name": "lending",
+      "path": "lending",
+      "language": "rust",
+      "doc": {
+        "raw": "An invented lending library: books, members and loans, the rules that\ngovern a loan, and the stores that keep them.\n\nStart with [`Library`]: it applies the [rules] and asks a\n[`Store`](store::Store) for the data.",
+        "format": "rustdoc",
+        "summary": "An invented lending library: books, members and loans, the rules that govern a loan, and the stores that keep them.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "An invented lending library: books, members and loans, the rules that govern a loan, and the stores that keep them."
+          },
+          {
+            "type": "paragraph",
+            "text": "Start with [`Library`](sym:rs:lending::library#Library): it applies the [rules](sym:rs:mod:lending::rules) and asks a [`Store`](sym:rs:lending::store#Store) for the data."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:crate:lending@bin",
+      "kind": "package",
+      "languageKind": "crate",
+      "name": "lending@bin",
+      "path": "lending",
+      "language": "rust",
+      "doc": {
+        "raw": "Prints the version of the lending rules.",
+        "format": "rustdoc",
+        "summary": "Prints the version of the lending rules.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints the version of the lending rules."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:crate:lending_macros",
+      "kind": "package",
+      "languageKind": "crate",
+      "name": "lending_macros",
+      "path": "lending-macros",
+      "language": "rust",
+      "doc": {
+        "raw": "Derive macros for the lending library.",
+        "format": "rustdoc",
+        "summary": "Derive macros for the lending library.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Derive macros for the lending library."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lendd/src/http.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "http.rs",
+      "path": "lendd/src/http.rs",
+      "parent": "rs:mod:lendd::http",
+      "language": "rust",
+      "doc": {
+        "raw": "The HTTP API: routes that turn requests into library calls.",
+        "format": "rustdoc",
+        "summary": "The HTTP API: routes that turn requests into library calls.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The HTTP API: routes that turn requests into library calls."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lendd/src/main.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "main.rs",
+      "path": "lendd/src/main.rs",
+      "parent": "rs:mod:lendd",
+      "language": "rust",
+      "doc": {
+        "raw": "The lendd command: serve the library over HTTP, or import and report on\nbooks from the command line.",
+        "format": "rustdoc",
+        "summary": "The lendd command: serve the library over HTTP, or import and report on books from the command line.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The lendd command: serve the library over HTTP, or import and report on books from the command line."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lending-macros/src/lib.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "lib.rs",
+      "path": "lending-macros/src/lib.rs",
+      "parent": "rs:mod:lending_macros",
+      "language": "rust",
+      "doc": {
+        "raw": "Derive macros for the lending library.",
+        "format": "rustdoc",
+        "summary": "Derive macros for the lending library.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Derive macros for the lending library."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lending/src/domain.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "domain.rs",
+      "path": "lending/src/domain.rs",
+      "parent": "rs:mod:lending::domain",
+      "language": "rust",
+      "doc": {
+        "raw": "The shared vocabulary: books, members, loans and the errors that every\npart returns.",
+        "format": "rustdoc",
+        "summary": "The shared vocabulary: books, members, loans and the errors that every part returns.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The shared vocabulary: books, members, loans and the errors that every part returns."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lending/src/lib.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "lib.rs",
+      "path": "lending/src/lib.rs",
+      "parent": "rs:mod:lending",
+      "language": "rust",
+      "doc": {
+        "raw": "An invented lending library: books, members and loans, the rules that\ngovern a loan, and the stores that keep them.\n\nStart with [`Library`]: it applies the [rules] and asks a\n[`Store`](store::Store) for the data.",
+        "format": "rustdoc",
+        "summary": "An invented lending library: books, members and loans, the rules that govern a loan, and the stores that keep them.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "An invented lending library: books, members and loans, the rules that govern a loan, and the stores that keep them."
+          },
+          {
+            "type": "paragraph",
+            "text": "Start with [`Library`](sym:rs:lending::library#Library): it applies the [rules](sym:rs:mod:lending::rules) and asks a [`Store`](sym:rs:lending::store#Store) for the data."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lending/src/library.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "library.rs",
+      "path": "lending/src/library.rs",
+      "parent": "rs:mod:lending::library",
+      "language": "rust",
+      "doc": {
+        "raw": "The library: the lending rules applied to a store.",
+        "format": "rustdoc",
+        "summary": "The library: the lending rules applied to a store.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The library: the lending rules applied to a store."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lending/src/main.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "main.rs",
+      "path": "lending/src/main.rs",
+      "parent": "rs:mod:lending@bin",
+      "language": "rust",
+      "doc": {
+        "raw": "Prints the version of the lending rules.",
+        "format": "rustdoc",
+        "summary": "Prints the version of the lending rules.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints the version of the lending rules."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lending/src/store/memory.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "memory.rs",
+      "path": "lending/src/store/memory.rs",
+      "parent": "rs:mod:lending::store::memory",
+      "language": "rust",
+      "doc": {
+        "raw": "A store that keeps books in memory, for tests and demos.",
+        "format": "rustdoc",
+        "summary": "A store that keeps books in memory, for tests and demos.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A store that keeps books in memory, for tests and demos."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:file:lending/src/store/mod.rs",
+      "kind": "file",
+      "languageKind": "file",
+      "name": "mod.rs",
+      "path": "lending/src/store/mod.rs",
+      "parent": "rs:mod:lending::store",
+      "language": "rust",
+      "doc": {
+        "raw": "Storage: the [`Store`] trait and the stores that implement it.",
+        "format": "rustdoc",
+        "summary": "Storage: the [`Store`](sym:rs:lending::store#Store) trait and the stores that implement it.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Storage: the [`Store`](sym:rs:lending::store#Store) trait and the stores that implement it."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lendd",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lendd",
+      "path": "lendd/src/main.rs",
+      "parent": "rs:crate:lendd",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "The lendd command: serve the library over HTTP, or import and report on\nbooks from the command line.",
+        "format": "rustdoc",
+        "summary": "The lendd command: serve the library over HTTP, or import and report on books from the command line.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The lendd command: serve the library over HTTP, or import and report on books from the command line."
+          }
+        ]
+      },
+      "externalImports": [
+        "clap",
+        "clap_derive"
+      ]
+    },
+    {
+      "id": "rs:mod:lendd::http",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lendd::http",
+      "path": "lendd/src/http.rs",
+      "parent": "rs:crate:lendd",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "The HTTP API: routes that turn requests into library calls.",
+        "format": "rustdoc",
+        "summary": "The HTTP API: routes that turn requests into library calls.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The HTTP API: routes that turn requests into library calls."
+          }
+        ]
+      },
+      "externalImports": [
+        "axum"
+      ]
+    },
+    {
+      "id": "rs:mod:lending",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending",
+      "path": "lending/src/lib.rs",
+      "parent": "rs:crate:lending",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "An invented lending library: books, members and loans, the rules that\ngovern a loan, and the stores that keep them.\n\nStart with [`Library`]: it applies the [rules] and asks a\n[`Store`](store::Store) for the data.",
+        "format": "rustdoc",
+        "summary": "An invented lending library: books, members and loans, the rules that govern a loan, and the stores that keep them.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "An invented lending library: books, members and loans, the rules that govern a loan, and the stores that keep them."
+          },
+          {
+            "type": "paragraph",
+            "text": "Start with [`Library`](sym:rs:lending::library#Library): it applies the [rules](sym:rs:mod:lending::rules) and asks a [`Store`](sym:rs:lending::store#Store) for the data."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lending::domain",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending::domain",
+      "path": "lending/src/domain.rs",
+      "parent": "rs:crate:lending",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "The shared vocabulary: books, members, loans and the errors that every\npart returns.",
+        "format": "rustdoc",
+        "summary": "The shared vocabulary: books, members, loans and the errors that every part returns.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The shared vocabulary: books, members, loans and the errors that every part returns."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lending::library",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending::library",
+      "path": "lending/src/library.rs",
+      "parent": "rs:crate:lending",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "The library: the lending rules applied to a store.",
+        "format": "rustdoc",
+        "summary": "The library: the lending rules applied to a store.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The library: the lending rules applied to a store."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lending::rules",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending::rules",
+      "path": "lending/src/lib.rs",
+      "parent": "rs:crate:lending",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "The rules of a loan, in one place.",
+        "format": "rustdoc",
+        "summary": "The rules of a loan, in one place.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The rules of a loan, in one place."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lending::store",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending::store",
+      "path": "lending/src/store/mod.rs",
+      "parent": "rs:crate:lending",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "Storage: the [`Store`] trait and the stores that implement it.",
+        "format": "rustdoc",
+        "summary": "Storage: the [`Store`](sym:rs:lending::store#Store) trait and the stores that implement it.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Storage: the [`Store`](sym:rs:lending::store#Store) trait and the stores that implement it."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lending::store::memory",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending::store::memory",
+      "path": "lending/src/store/memory.rs",
+      "parent": "rs:crate:lending",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "A store that keeps books in memory, for tests and demos.",
+        "format": "rustdoc",
+        "summary": "A store that keeps books in memory, for tests and demos.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A store that keeps books in memory, for tests and demos."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lending@bin",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending@bin",
+      "path": "lending/src/main.rs",
+      "parent": "rs:crate:lending@bin",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "Prints the version of the lending rules.",
+        "format": "rustdoc",
+        "summary": "Prints the version of the lending rules.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints the version of the lending rules."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:mod:lending_macros",
+      "kind": "module",
+      "languageKind": "module",
+      "name": "lending_macros",
+      "path": "lending-macros/src/lib.rs",
+      "parent": "rs:crate:lending_macros",
+      "language": "rust",
+      "unit": true,
+      "doc": {
+        "raw": "Derive macros for the lending library.",
+        "format": "rustdoc",
+        "summary": "Derive macros for the lending library.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Derive macros for the lending library."
+          }
+        ]
+      }
+    }
+  ],
+  "symbols": [
+    {
+      "id": "rs:lendd#Cli",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "Cli",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 13,
+        "endLine": 17
+      },
+      "doc": {
+        "raw": "The command line of lendd.",
+        "format": "rustdoc",
+        "summary": "The command line of lendd.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The command line of lendd."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Parser)]"
+      ],
+      "satisfies": [
+        "Parser"
+      ]
+    },
+    {
+      "id": "rs:lendd#Cli.command",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "command",
+      "parent": "rs:lendd#Cli",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 16
+      },
+      "doc": {
+        "raw": "What to do.",
+        "format": "rustdoc",
+        "summary": "What to do.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "What to do."
+          }
+        ]
+      },
+      "type": {
+        "text": "Command",
+        "refs": [
+          "rs:lendd#Command"
+        ]
+      }
+    },
+    {
+      "id": "rs:lendd#Command",
+      "kind": "enum",
+      "languageKind": "enum",
+      "name": "Command",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 21,
+        "endLine": 33
+      },
+      "doc": {
+        "raw": "The things lendd can do.",
+        "format": "rustdoc",
+        "summary": "The things lendd can do.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The things lendd can do."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Subcommand)]"
+      ],
+      "satisfies": [
+        "Subcommand"
+      ]
+    },
+    {
+      "id": "rs:lendd#Command.Import",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "Import",
+      "parent": "rs:lendd#Command",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 30
+      },
+      "doc": {
+        "raw": "Reads books from a file.",
+        "format": "rustdoc",
+        "summary": "Reads books from a file.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reads books from a file."
+          }
+        ]
+      },
+      "type": {
+        "text": "(ImportArgs)",
+        "refs": [
+          "rs:lendd#ImportArgs"
+        ]
+      }
+    },
+    {
+      "id": "rs:lendd#Command.Report",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "Report",
+      "parent": "rs:lendd#Command",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 32
+      },
+      "doc": {
+        "raw": "Prints reports.",
+        "format": "rustdoc",
+        "summary": "Prints reports.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints reports."
+          }
+        ]
+      },
+      "type": {
+        "text": "(ReportArgs)",
+        "refs": [
+          "rs:lendd#ReportArgs"
+        ]
+      }
+    },
+    {
+      "id": "rs:lendd#Command.Serve",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "Serve",
+      "parent": "rs:lendd#Command",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 23,
+        "endLine": 27
+      },
+      "doc": {
+        "raw": "Serves the library over HTTP.",
+        "format": "rustdoc",
+        "summary": "Serves the library over HTTP.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Serves the library over HTTP."
+          }
+        ]
+      },
+      "type": {
+        "text": "{ addr: String }"
+      }
+    },
+    {
+      "id": "rs:lendd#ImportArgs",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "ImportArgs",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 37,
+        "endLine": 40
+      },
+      "doc": {
+        "raw": "The arguments of the import command.",
+        "format": "rustdoc",
+        "summary": "The arguments of the import command.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The arguments of the import command."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Args)]"
+      ],
+      "satisfies": [
+        "Args"
+      ]
+    },
+    {
+      "id": "rs:lendd#ImportArgs.path",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "path",
+      "parent": "rs:lendd#ImportArgs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 39
+      },
+      "doc": {
+        "raw": "The file to read.",
+        "format": "rustdoc",
+        "summary": "The file to read.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The file to read."
+          }
+        ]
+      },
+      "type": {
+        "text": "String"
+      }
+    },
+    {
+      "id": "rs:lendd#ReportArgs",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "ReportArgs",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 44,
+        "endLine": 48
+      },
+      "doc": {
+        "raw": "The arguments of the report command.",
+        "format": "rustdoc",
+        "summary": "The arguments of the report command.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The arguments of the report command."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Args)]"
+      ],
+      "satisfies": [
+        "Args"
+      ]
+    },
+    {
+      "id": "rs:lendd#ReportArgs.kind",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "kind",
+      "parent": "rs:lendd#ReportArgs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 47
+      },
+      "doc": {
+        "raw": "Which report.",
+        "format": "rustdoc",
+        "summary": "Which report.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Which report."
+          }
+        ]
+      },
+      "type": {
+        "text": "ReportKind",
+        "refs": [
+          "rs:lendd#ReportKind"
+        ]
+      }
+    },
+    {
+      "id": "rs:lendd#ReportKind",
+      "kind": "enum",
+      "languageKind": "enum",
+      "name": "ReportKind",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 52,
+        "endLine": 57
+      },
+      "doc": {
+        "raw": "The reports lendd can print.",
+        "format": "rustdoc",
+        "summary": "The reports lendd can print.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The reports lendd can print."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Subcommand)]"
+      ],
+      "satisfies": [
+        "Subcommand"
+      ]
+    },
+    {
+      "id": "rs:lendd#ReportKind.Count",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "Count",
+      "parent": "rs:lendd#ReportKind",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 56
+      },
+      "doc": {
+        "raw": "Counts the books.",
+        "format": "rustdoc",
+        "summary": "Counts the books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Counts the books."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:lendd#ReportKind.Overdue",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "Overdue",
+      "parent": "rs:lendd#ReportKind",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 54
+      },
+      "doc": {
+        "raw": "Lists the books on loan.",
+        "format": "rustdoc",
+        "summary": "Lists the books on loan.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lists the books on loan."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:lendd#import",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "import",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 82,
+        "endLine": 85
+      },
+      "doc": {
+        "raw": "Reads books from a file into a new library.",
+        "format": "rustdoc",
+        "summary": "Reads books from a file into a new library.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reads books from a file into a new library."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "path",
+            "type": "&str"
+          }
+        ],
+        "results": [],
+        "text": "fn import(path: &str)"
+      }
+    },
+    {
+      "id": "rs:lendd#main",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "main",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 60,
+        "endLine": 73
+      },
+      "doc": {
+        "raw": "Parses the command line and runs the command it names.",
+        "format": "rustdoc",
+        "summary": "Parses the command line and runs the command it names.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Parses the command line and runs the command it names."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "fn main()"
+      }
+    },
+    {
+      "id": "rs:lendd#report_count",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "report_count",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 88,
+        "endLine": 91
+      },
+      "doc": {
+        "raw": "Prints how many books the store holds.",
+        "format": "rustdoc",
+        "summary": "Prints how many books the store holds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints how many books the store holds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "fn report_count()"
+      }
+    },
+    {
+      "id": "rs:lendd#serve",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "serve",
+      "parent": "rs:file:lendd/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/main.rs",
+        "line": 76,
+        "endLine": 79
+      },
+      "doc": {
+        "raw": "Builds the router and serves it.",
+        "format": "rustdoc",
+        "summary": "Builds the router and serves it.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Builds the router and serves it."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "addr",
+            "type": "&str"
+          }
+        ],
+        "results": [],
+        "text": "fn serve(addr: &str)"
+      }
+    },
+    {
+      "id": "rs:lendd::http#add_book",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "add_book",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 55,
+        "endLine": 57
+      },
+      "doc": {
+        "raw": "Adds a book.",
+        "format": "rustdoc",
+        "summary": "Adds a book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Adds a book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "__arg0",
+            "type": "Json<Book>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Json<Book>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "text": "async fn add_book(_: Json<Book>) -> Json<Book>"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "rs:lendd::http#api",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "api",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 40,
+        "endLine": 42
+      },
+      "doc": {
+        "raw": "The routes under /api.",
+        "format": "rustdoc",
+        "summary": "The routes under /api.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The routes under /api."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Router"
+          }
+        ],
+        "text": "fn api() -> Router"
+      }
+    },
+    {
+      "id": "rs:lendd::http#health",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "health",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 45,
+        "endLine": 47
+      },
+      "doc": {
+        "raw": "The health check.",
+        "format": "rustdoc",
+        "summary": "The health check.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The health check."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Router"
+          }
+        ],
+        "text": "fn health() -> Router"
+      }
+    },
+    {
+      "id": "rs:lendd::http#import_service",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "import_service",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 37
+      },
+      "doc": {
+        "raw": "Makes the service that imports books.",
+        "format": "rustdoc",
+        "summary": "Makes the service that imports books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes the service that imports books."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "fn import_service()"
+      }
+    },
+    {
+      "id": "rs:lendd::http#list_books",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "list_books",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 50,
+        "endLine": 52
+      },
+      "doc": {
+        "raw": "Lists every book.",
+        "format": "rustdoc",
+        "summary": "Lists every book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lists every book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Json<Vec<Book>>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "text": "async fn list_books() -> Json<Vec<Book>>"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "rs:lendd::http#loans",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "loans",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 25,
+        "endLine": 29
+      },
+      "doc": {
+        "raw": "The routes for loans, each beside its handler.",
+        "format": "rustdoc",
+        "summary": "The routes for loans, each beside its handler.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The routes for loans, each beside its handler."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Router"
+          }
+        ],
+        "text": "fn loans() -> Router"
+      }
+    },
+    {
+      "id": "rs:lendd::http#reindex",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "reindex",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 71
+      },
+      "doc": {
+        "raw": "Rebuilds the search index.",
+        "format": "rustdoc",
+        "summary": "Rebuilds the search index.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Rebuilds the search index."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "async fn reindex()"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "rs:lendd::http#remove_book",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "remove_book",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 66,
+        "endLine": 68
+      },
+      "doc": {
+        "raw": "Removes one book.",
+        "format": "rustdoc",
+        "summary": "Removes one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Removes one book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "__arg0",
+            "type": "Path<u32>"
+          }
+        ],
+        "results": [],
+        "text": "async fn remove_book(_: Path<u32>)"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "rs:lendd::http#route",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "route",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 32,
+        "endLine": 34
+      },
+      "doc": {
+        "raw": "Wraps one route in a router of its own.",
+        "format": "rustdoc",
+        "summary": "Wraps one route in a router of its own.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Wraps one route in a router of its own."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "path",
+            "type": "&str"
+          },
+          {
+            "name": "method_router",
+            "type": "MethodRouter"
+          }
+        ],
+        "results": [
+          {
+            "type": "Router"
+          }
+        ],
+        "text": "fn route(path: &str, method_router: MethodRouter) -> Router"
+      }
+    },
+    {
+      "id": "rs:lendd::http#router",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "router",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 9,
+        "endLine": 22
+      },
+      "doc": {
+        "raw": "Builds the router of the whole API.",
+        "format": "rustdoc",
+        "summary": "Builds the router of the whole API.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Builds the router of the whole API."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Router"
+          }
+        ],
+        "text": "fn router() -> Router"
+      }
+    },
+    {
+      "id": "rs:lendd::http#search",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "search",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 74,
+        "endLine": 76
+      },
+      "doc": {
+        "raw": "Searches the books.",
+        "format": "rustdoc",
+        "summary": "Searches the books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Searches the books."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Json<Vec<Book>>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "text": "async fn search() -> Json<Vec<Book>>"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "rs:lendd::http#show_book",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "show_book",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 60,
+        "endLine": 63
+      },
+      "doc": {
+        "raw": "Shows one book.",
+        "format": "rustdoc",
+        "summary": "Shows one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Shows one book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "__arg0",
+            "type": "Path<u32>"
+          }
+        ],
+        "results": [
+          {
+            "type": "Json<Option<Book>>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "text": "async fn show_book(_: Path<u32>) -> Json<Option<Book>>"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "rs:lending#LOANS_MADE",
+      "kind": "variable",
+      "languageKind": "static",
+      "name": "LOANS_MADE",
+      "parent": "rs:file:lending/src/lib.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 18
+      },
+      "doc": {
+        "raw": "How many loans the library has made since it started.",
+        "format": "rustdoc",
+        "summary": "How many loans the library has made since it started.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "How many loans the library has made since it started."
+          }
+        ]
+      },
+      "type": {
+        "text": "u64"
+      },
+      "value": "0",
+      "modifiers": [
+        "mut"
+      ]
+    },
+    {
+      "id": "rs:lending#LoanResult",
+      "kind": "type_alias",
+      "languageKind": "type alias",
+      "name": "LoanResult",
+      "parent": "rs:file:lending/src/lib.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 21
+      },
+      "doc": {
+        "raw": "A result whose error is a [`LoanError`].",
+        "format": "rustdoc",
+        "summary": "A result whose error is a [`LoanError`](sym:rs:lending::domain#LoanError).",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A result whose error is a [`LoanError`](sym:rs:lending::domain#LoanError)."
+          }
+        ]
+      },
+      "typeParams": "<T>",
+      "type": {
+        "text": "Result<T, LoanError>",
+        "refs": [
+          "rs:lending::domain#LoanError"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending#MAX_LOAN_DAYS",
+      "kind": "constant",
+      "languageKind": "constant",
+      "name": "MAX_LOAN_DAYS",
+      "parent": "rs:file:lending/src/lib.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 15
+      },
+      "doc": {
+        "raw": "The longest loan, in days.",
+        "format": "rustdoc",
+        "summary": "The longest loan, in days.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The longest loan, in days."
+          }
+        ]
+      },
+      "type": {
+        "text": "u32"
+      },
+      "value": "21"
+    },
+    {
+      "id": "rs:lending#abs",
+      "kind": "function",
+      "languageKind": "foreign function",
+      "name": "abs",
+      "parent": "rs:file:lending/src/lib.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 59
+      },
+      "doc": {
+        "raw": "Returns the absolute value, from the C library.",
+        "format": "rustdoc",
+        "summary": "Returns the absolute value, from the C library.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns the absolute value, from the C library."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "x",
+            "type": "i32"
+          }
+        ],
+        "results": [
+          {
+            "type": "i32"
+          }
+        ],
+        "text": "unsafe extern \"C\" fn abs(x: i32) -> i32"
+      },
+      "modifiers": [
+        "unsafe",
+        "extern \"C\""
+      ]
+    },
+    {
+      "id": "rs:lending#log_line",
+      "kind": "macro",
+      "languageKind": "macro",
+      "name": "log_line",
+      "parent": "rs:file:lending/src/lib.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 25,
+        "endLine": 29
+      },
+      "doc": {
+        "raw": "Writes a log line with the library's prefix.",
+        "format": "rustdoc",
+        "summary": "Writes a log line with the library's prefix.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Writes a log line with the library's prefix."
+          }
+        ]
+      },
+      "annotations": [
+        "#[macro_export]"
+      ]
+    },
+    {
+      "id": "rs:lending#rules_version",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "rules_version",
+      "parent": "rs:file:lending/src/lib.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 33,
+        "endLine": 35
+      },
+      "doc": {
+        "raw": "Returns the version of the lending rules.",
+        "format": "rustdoc",
+        "summary": "Returns the version of the lending rules.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns the version of the lending rules."
+          }
+        ],
+        "deprecated": "read MAX_LOAN_DAYS instead"
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "u32"
+          }
+        ],
+        "text": "fn rules_version() -> u32"
+      }
+    },
+    {
+      "id": "rs:lending#shelf_distance",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "shelf_distance",
+      "parent": "rs:file:lending/src/lib.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 63,
+        "endLine": 66
+      },
+      "doc": {
+        "raw": "Returns the distance between two shelf positions.",
+        "format": "rustdoc",
+        "summary": "Returns the distance between two shelf positions.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns the distance between two shelf positions."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "a",
+            "type": "i32"
+          },
+          {
+            "name": "b",
+            "type": "i32"
+          }
+        ],
+        "results": [
+          {
+            "type": "i32"
+          }
+        ],
+        "text": "fn shelf_distance(a: i32, b: i32) -> i32"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Book",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "Book",
+      "parent": "rs:file:lending/src/domain.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 22,
+        "endLine": 31
+      },
+      "doc": {
+        "raw": "A book on the shelves.\n\n# Examples\n\n```\n# use lending::{Book, BookId};\nlet book = Book::new(BookId(7), \"Dune\");\nassert!(book.available);\n```",
+        "format": "rustdoc",
+        "summary": "A book on the shelves.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A book on the shelves."
+          },
+          {
+            "type": "heading",
+            "text": "Examples",
+            "level": 1
+          },
+          {
+            "type": "code",
+            "code": "let book = Book::new(BookId(7), \"Dune\");\nassert!(book.available);",
+            "language": "rust"
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Clone, Debug)]"
+      ],
+      "satisfies": [
+        "Clone",
+        "Debug",
+        "Display"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#Book.Display::fmt",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "fmt",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 52,
+        "endLine": 54
+      },
+      "doc": {
+        "raw": "Writes the title and the identity.",
+        "format": "rustdoc",
+        "summary": "Writes the title and the identity.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Writes the title and the identity."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "f",
+            "type": "&mut Formatter<'_>"
+          }
+        ],
+        "results": [
+          {
+            "type": "Result"
+          }
+        ],
+        "text": "fn fmt(&self, f: &mut Formatter<'_>) -> Result"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Book.available",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "available",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 28
+      },
+      "doc": {
+        "raw": "Whether the book sits on a shelf now.",
+        "format": "rustdoc",
+        "summary": "Whether the book sits on a shelf now.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Whether the book sits on a shelf now."
+          }
+        ]
+      },
+      "type": {
+        "text": "bool"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Book.id",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "id",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 24
+      },
+      "doc": {
+        "raw": "The book's identity.",
+        "format": "rustdoc",
+        "summary": "The book's identity.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The book's identity."
+          }
+        ]
+      },
+      "type": {
+        "text": "BookId",
+        "refs": [
+          "rs:lending::domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::domain#Book.locate",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "locate",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 45,
+        "endLine": 47
+      },
+      "doc": {
+        "raw": "Returns the shelf that holds the book.",
+        "format": "rustdoc",
+        "summary": "Returns the shelf that holds the book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns the shelf that holds the book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Option<&Shelf>",
+            "refs": [
+              "rs:lending::domain#Shelf"
+            ]
+          }
+        ],
+        "text": "async fn locate(&self) -> Option<&Shelf>"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#Book.new",
+      "kind": "method",
+      "languageKind": "associated function",
+      "name": "new",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 35,
+        "endLine": 37
+      },
+      "doc": {
+        "raw": "Makes an available book without a shelf.",
+        "format": "rustdoc",
+        "summary": "Makes an available book without a shelf.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes an available book without a shelf."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "BookId",
+            "refs": [
+              "rs:lending::domain#BookId"
+            ]
+          },
+          {
+            "name": "title",
+            "type": "&str"
+          }
+        ],
+        "results": [
+          {
+            "type": "Self"
+          }
+        ],
+        "text": "fn new(id: BookId, title: &str) -> Self"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Book.shelf",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "shelf",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 30
+      },
+      "doc": {
+        "raw": "Where the book sits, if anywhere.",
+        "format": "rustdoc",
+        "summary": "Where the book sits, if anywhere.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Where the book sits, if anywhere."
+          }
+        ]
+      },
+      "type": {
+        "text": "Option<Shelf>",
+        "refs": [
+          "rs:lending::domain#Shelf"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::domain#Book.shelve",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "shelve",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 40,
+        "endLine": 42
+      },
+      "doc": {
+        "raw": "Puts the book on a shelf.",
+        "format": "rustdoc",
+        "summary": "Puts the book on a shelf.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Puts the book on a shelf."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "shelf",
+            "type": "Shelf",
+            "refs": [
+              "rs:lending::domain#Shelf"
+            ]
+          }
+        ],
+        "results": [],
+        "text": "fn shelve(&mut self, shelf: Shelf)"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Book.title",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "title",
+      "parent": "rs:lending::domain#Book",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 26
+      },
+      "doc": {
+        "raw": "The title, as printed.",
+        "format": "rustdoc",
+        "summary": "The title, as printed.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The title, as printed."
+          }
+        ]
+      },
+      "type": {
+        "text": "String"
+      }
+    },
+    {
+      "id": "rs:lending::domain#BookId",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "BookId",
+      "parent": "rs:file:lending/src/domain.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 10
+      },
+      "doc": {
+        "raw": "Identifies a book.",
+        "format": "rustdoc",
+        "summary": "Identifies a book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Identifies a book."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]"
+      ],
+      "satisfies": [
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "Hash",
+        "Ord",
+        "PartialEq",
+        "PartialOrd"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#BookId.0",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "0",
+      "parent": "rs:lending::domain#BookId",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 10
+      },
+      "type": {
+        "text": "u32"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Loan",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "Loan",
+      "parent": "rs:file:lending/src/domain.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 77,
+        "endLine": 82
+      },
+      "doc": {
+        "raw": "A book in a member's hands, with the day it falls due.",
+        "format": "rustdoc",
+        "summary": "A book in a member's hands, with the day it falls due.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A book in a member's hands, with the day it falls due."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Debug)]"
+      ],
+      "satisfies": [
+        "Debug"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#Loan.book",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "book",
+      "parent": "rs:lending::domain#Loan",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 79
+      },
+      "doc": {
+        "raw": "The book on loan.",
+        "format": "rustdoc",
+        "summary": "The book on loan.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The book on loan."
+          }
+        ]
+      },
+      "type": {
+        "text": "BookId",
+        "refs": [
+          "rs:lending::domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::domain#Loan.due",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "due",
+      "parent": "rs:lending::domain#Loan",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 81
+      },
+      "doc": {
+        "raw": "The day the loan falls due, counted from the library's start.",
+        "format": "rustdoc",
+        "summary": "The day the loan falls due, counted from the library's start.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The day the loan falls due, counted from the library's start."
+          }
+        ]
+      },
+      "type": {
+        "text": "u32"
+      }
+    },
+    {
+      "id": "rs:lending::domain#LoanError",
+      "kind": "enum",
+      "languageKind": "enum",
+      "name": "LoanError",
+      "parent": "rs:file:lending/src/domain.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 86,
+        "endLine": 93
+      },
+      "doc": {
+        "raw": "Why a loan failed.",
+        "format": "rustdoc",
+        "summary": "Why a loan failed.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Why a loan failed."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Debug, PartialEq)]"
+      ],
+      "satisfies": [
+        "Debug",
+        "Display",
+        "Error",
+        "From<BookId>",
+        "PartialEq"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#LoanError.Display::fmt",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "fmt",
+      "parent": "rs:lending::domain#LoanError",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 96,
+        "endLine": 102
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "f",
+            "type": "&mut Formatter<'_>"
+          }
+        ],
+        "results": [
+          {
+            "type": "Result"
+          }
+        ],
+        "text": "fn fmt(&self, f: &mut Formatter<'_>) -> Result"
+      }
+    },
+    {
+      "id": "rs:lending::domain#LoanError.From<BookId>::from",
+      "kind": "method",
+      "languageKind": "associated function",
+      "name": "from",
+      "parent": "rs:lending::domain#LoanError",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 108,
+        "endLine": 110
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "BookId",
+            "refs": [
+              "rs:lending::domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Self"
+          }
+        ],
+        "text": "fn from(id: BookId) -> Self"
+      }
+    },
+    {
+      "id": "rs:lending::domain#LoanError.LimitReached",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "LimitReached",
+      "parent": "rs:lending::domain#LoanError",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 92
+      },
+      "doc": {
+        "raw": "The member holds too many books.",
+        "format": "rustdoc",
+        "summary": "The member holds too many books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The member holds too many books."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::domain#LoanError.NotFound",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "NotFound",
+      "parent": "rs:lending::domain#LoanError",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 88
+      },
+      "doc": {
+        "raw": "No book has this identity.",
+        "format": "rustdoc",
+        "summary": "No book has this identity.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "No book has this identity."
+          }
+        ]
+      },
+      "type": {
+        "text": "(BookId)",
+        "refs": [
+          "rs:lending::domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::domain#LoanError.OnLoan",
+      "kind": "constant",
+      "languageKind": "variant",
+      "name": "OnLoan",
+      "parent": "rs:lending::domain#LoanError",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 90
+      },
+      "doc": {
+        "raw": "The book sits in another member's hands.",
+        "format": "rustdoc",
+        "summary": "The book sits in another member's hands.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The book sits in another member's hands."
+          }
+        ]
+      },
+      "type": {
+        "text": "{ book: BookId, due: u32 }",
+        "refs": [
+          "rs:lending::domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::domain#Member",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "Member",
+      "parent": "rs:file:lending/src/domain.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 68,
+        "endLine": 73
+      },
+      "doc": {
+        "raw": "A person who borrows books.",
+        "format": "rustdoc",
+        "summary": "A person who borrows books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A person who borrows books."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Clone, Debug)]"
+      ],
+      "satisfies": [
+        "Clone",
+        "Debug"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#Member.held",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "held",
+      "parent": "rs:lending::domain#Member",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 72
+      },
+      "doc": {
+        "raw": "The books that the member holds, in a [`Vec`].",
+        "format": "rustdoc",
+        "summary": "The books that the member holds, in a [`Vec`](https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html).",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The books that the member holds, in a [`Vec`](https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html)."
+          }
+        ]
+      },
+      "type": {
+        "text": "Vec<BookId>",
+        "refs": [
+          "rs:lending::domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::domain#Member.name",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "name",
+      "parent": "rs:lending::domain#Member",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 70
+      },
+      "doc": {
+        "raw": "The member's name.",
+        "format": "rustdoc",
+        "summary": "The member's name.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The member's name."
+          }
+        ]
+      },
+      "type": {
+        "text": "String"
+      }
+    },
+    {
+      "id": "rs:lending::domain#RawId",
+      "kind": "struct",
+      "languageKind": "union",
+      "name": "RawId",
+      "parent": "rs:file:lending/src/domain.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 115,
+        "endLine": 120
+      },
+      "doc": {
+        "raw": "Raw bytes of a book identity, for the barcode printer.",
+        "format": "rustdoc",
+        "summary": "Raw bytes of a book identity, for the barcode printer.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Raw bytes of a book identity, for the barcode printer."
+          }
+        ]
+      },
+      "annotations": [
+        "#[repr(C)]"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#RawId.bytes",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "bytes",
+      "parent": "rs:lending::domain#RawId",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 119
+      },
+      "doc": {
+        "raw": "The identity as four bytes.",
+        "format": "rustdoc",
+        "summary": "The identity as four bytes.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The identity as four bytes."
+          }
+        ]
+      },
+      "type": {
+        "text": "[u8; 4]"
+      }
+    },
+    {
+      "id": "rs:lending::domain#RawId.number",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "number",
+      "parent": "rs:lending::domain#RawId",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 117
+      },
+      "doc": {
+        "raw": "The identity as a number.",
+        "format": "rustdoc",
+        "summary": "The identity as a number.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The identity as a number."
+          }
+        ]
+      },
+      "type": {
+        "text": "u32"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Shelf",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "Shelf",
+      "parent": "rs:file:lending/src/domain.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 59,
+        "endLine": 64
+      },
+      "doc": {
+        "raw": "A place on a wall of shelves.",
+        "format": "rustdoc",
+        "summary": "A place on a wall of shelves.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A place on a wall of shelves."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Clone, Debug, PartialEq)]"
+      ],
+      "satisfies": [
+        "Clone",
+        "Debug",
+        "PartialEq"
+      ]
+    },
+    {
+      "id": "rs:lending::domain#Shelf.row",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "row",
+      "parent": "rs:lending::domain#Shelf",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 63
+      },
+      "doc": {
+        "raw": "The row, from the floor up.",
+        "format": "rustdoc",
+        "summary": "The row, from the floor up.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The row, from the floor up."
+          }
+        ]
+      },
+      "type": {
+        "text": "u8"
+      }
+    },
+    {
+      "id": "rs:lending::domain#Shelf.wall",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "wall",
+      "parent": "rs:lending::domain#Shelf",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/domain.rs",
+        "line": 61
+      },
+      "doc": {
+        "raw": "The wall's letter.",
+        "format": "rustdoc",
+        "summary": "The wall's letter.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The wall's letter."
+          }
+        ]
+      },
+      "type": {
+        "text": "char"
+      }
+    },
+    {
+      "id": "rs:lending::library#Library",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "Library",
+      "parent": "rs:file:lending/src/library.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/library.rs",
+        "line": 9,
+        "endLine": 12
+      },
+      "doc": {
+        "raw": "Lends books from a store, by the [lending rules](crate::rules).",
+        "format": "rustdoc",
+        "summary": "Lends books from a store, by the [lending rules](sym:rs:mod:lending::rules).",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends books from a store, by the [lending rules](sym:rs:mod:lending::rules)."
+          }
+        ]
+      },
+      "typeParams": "<S: Store>"
+    },
+    {
+      "id": "rs:lending::library#Library.borrow",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "borrow",
+      "parent": "rs:lending::library#Library",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/library.rs",
+        "line": 26,
+        "endLine": 35
+      },
+      "doc": {
+        "raw": "Lends a book to a member.\n\n# Errors\n\n- [`LoanError::NotFound`] when no book has the identity.\n- [`LoanError::LimitReached`] when the member holds too many books.",
+        "format": "rustdoc",
+        "summary": "Lends a book to a member.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends a book to a member."
+          },
+          {
+            "type": "heading",
+            "text": "Errors",
+            "level": 1
+          },
+          {
+            "type": "list",
+            "ordered": false,
+            "items": [
+              "[`LoanError::NotFound`](sym:rs:lending::domain#LoanError.NotFound) when no book has the identity.",
+              "[`LoanError::LimitReached`](sym:rs:lending::domain#LoanError.LimitReached) when the member holds too many books."
+            ]
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "member",
+            "type": "&mut Member",
+            "refs": [
+              "rs:lending::domain#Member"
+            ]
+          },
+          {
+            "name": "id",
+            "type": "BookId",
+            "refs": [
+              "rs:lending::domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "LoanResult<Loan>",
+            "refs": [
+              "rs:lending#LoanResult",
+              "rs:lending::domain#Loan"
+            ]
+          }
+        ],
+        "text": "fn borrow(&mut self, member: &mut Member, id: BookId) -> LoanResult<Loan>"
+      }
+    },
+    {
+      "id": "rs:lending::library#Library.new",
+      "kind": "method",
+      "languageKind": "associated function",
+      "name": "new",
+      "parent": "rs:lending::library#Library",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/library.rs",
+        "line": 16,
+        "endLine": 18
+      },
+      "doc": {
+        "raw": "Makes a library over a store, on day `today`.",
+        "format": "rustdoc",
+        "summary": "Makes a library over a store, on day `today`.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes a library over a store, on day `today`."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "store",
+            "type": "S"
+          },
+          {
+            "name": "today",
+            "type": "u32"
+          }
+        ],
+        "results": [
+          {
+            "type": "Self"
+          }
+        ],
+        "text": "fn new(store: S, today: u32) -> Self"
+      }
+    },
+    {
+      "id": "rs:lending::library#Library.store",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "store",
+      "parent": "rs:lending::library#Library",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/library.rs",
+        "line": 47,
+        "endLine": 49
+      },
+      "doc": {
+        "raw": "Returns the store.",
+        "format": "rustdoc",
+        "summary": "Returns the store.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns the store."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "&S"
+          }
+        ],
+        "text": "fn store(&self) -> &S"
+      }
+    },
+    {
+      "id": "rs:lending::library#Library.store@library.rs:10",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "store",
+      "parent": "rs:lending::library#Library",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/library.rs",
+        "line": 10
+      },
+      "type": {
+        "text": "S"
+      }
+    },
+    {
+      "id": "rs:lending::library#Library.take_back",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "take_back",
+      "parent": "rs:lending::library#Library",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/library.rs",
+        "line": 38,
+        "endLine": 44
+      },
+      "doc": {
+        "raw": "Takes a book back from a member.",
+        "format": "rustdoc",
+        "summary": "Takes a book back from a member.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Takes a book back from a member."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "member",
+            "type": "&mut Member",
+            "refs": [
+              "rs:lending::domain#Member"
+            ]
+          },
+          {
+            "name": "loan",
+            "type": "Loan",
+            "refs": [
+              "rs:lending::domain#Loan"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Result<(), LoanError>",
+            "refs": [
+              "rs:lending::domain#LoanError"
+            ]
+          }
+        ],
+        "text": "fn take_back(&mut self, member: &mut Member, loan: Loan) -> Result<(), LoanError>"
+      }
+    },
+    {
+      "id": "rs:lending::library#Library.today",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "today",
+      "parent": "rs:lending::library#Library",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/library.rs",
+        "line": 11
+      },
+      "type": {
+        "text": "u32"
+      }
+    },
+    {
+      "id": "rs:lending::rules#VERSION",
+      "kind": "constant",
+      "languageKind": "constant",
+      "name": "VERSION",
+      "parent": "rs:mod:lending::rules",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 41
+      },
+      "doc": {
+        "raw": "The version of these rules.",
+        "format": "rustdoc",
+        "summary": "The version of these rules.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The version of these rules."
+          }
+        ]
+      },
+      "type": {
+        "text": "u32"
+      },
+      "value": "2"
+    },
+    {
+      "id": "rs:lending::rules#may_borrow",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "may_borrow",
+      "parent": "rs:mod:lending::rules",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 47,
+        "endLine": 49
+      },
+      "doc": {
+        "raw": "Reports whether a member may borrow one more book.\n\nA member may hold at most `limit` books. See [`crate::MAX_LOAN_DAYS`]\nfor the length of a loan.",
+        "format": "rustdoc",
+        "summary": "Reports whether a member may borrow one more book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reports whether a member may borrow one more book."
+          },
+          {
+            "type": "paragraph",
+            "text": "A member may hold at most `limit` books. See [`crate::MAX_LOAN_DAYS`](sym:rs:lending#MAX_LOAN_DAYS) for the length of a loan."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "held",
+            "type": "usize"
+          },
+          {
+            "name": "limit",
+            "type": "usize"
+          }
+        ],
+        "results": [
+          {
+            "type": "bool"
+          }
+        ],
+        "text": "fn may_borrow(held: usize, limit: usize) -> bool"
+      }
+    },
+    {
+      "id": "rs:lending::rules#within_hours",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "within_hours",
+      "parent": "rs:mod:lending::rules",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/lib.rs",
+        "line": 52,
+        "endLine": 54
+      },
+      "doc": {
+        "raw": "Reports whether the desk is open.",
+        "format": "rustdoc",
+        "summary": "Reports whether the desk is open.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reports whether the desk is open."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "bool"
+          }
+        ],
+        "text": "fn within_hours() -> bool"
+      }
+    },
+    {
+      "id": "rs:lending::store#Counted",
+      "kind": "trait",
+      "languageKind": "trait",
+      "name": "Counted",
+      "parent": "rs:file:lending/src/store/mod.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 8,
+        "endLine": 11
+      },
+      "doc": {
+        "raw": "Something that can be counted.",
+        "format": "rustdoc",
+        "summary": "Something that can be counted.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Something that can be counted."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::store#Counted.count",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "count",
+      "parent": "rs:lending::store#Counted",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 10
+      },
+      "doc": {
+        "raw": "Returns how many things it holds.",
+        "format": "rustdoc",
+        "summary": "Returns how many things it holds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns how many things it holds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "usize"
+          }
+        ],
+        "text": "fn count(&self) -> usize"
+      }
+    },
+    {
+      "id": "rs:lending::store#Shelved",
+      "kind": "trait",
+      "languageKind": "trait",
+      "name": "Shelved",
+      "parent": "rs:file:lending/src/store/mod.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 34,
+        "endLine": 37
+      },
+      "doc": {
+        "raw": "Counts the available books on a list of books.",
+        "format": "rustdoc",
+        "summary": "Counts the available books on a list of books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Counts the available books on a list of books."
+          }
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::store#Shelved.available",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "available",
+      "parent": "rs:lending::store#Shelved",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 36
+      },
+      "doc": {
+        "raw": "Returns how many books on the list are available.",
+        "format": "rustdoc",
+        "summary": "Returns how many books on the list are available.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns how many books on the list are available."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "usize"
+          }
+        ],
+        "text": "fn available(&self) -> usize"
+      }
+    },
+    {
+      "id": "rs:lending::store#Store",
+      "kind": "trait",
+      "languageKind": "trait",
+      "name": "Store",
+      "parent": "rs:file:lending/src/store/mod.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 14,
+        "endLine": 31
+      },
+      "doc": {
+        "raw": "Keeps books. Every store implements it.",
+        "format": "rustdoc",
+        "summary": "Keeps books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Keeps books. Every store implements it."
+          }
+        ]
+      },
+      "type": {
+        "text": "Counted",
+        "refs": [
+          "rs:lending::store#Counted"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::store#Store.CAPACITY",
+      "kind": "constant",
+      "languageKind": "associated constant",
+      "name": "CAPACITY",
+      "parent": "rs:lending::store#Store",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 19
+      },
+      "doc": {
+        "raw": "The most books one store holds.",
+        "format": "rustdoc",
+        "summary": "The most books one store holds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The most books one store holds."
+          }
+        ]
+      },
+      "type": {
+        "text": "usize"
+      }
+    },
+    {
+      "id": "rs:lending::store#Store.Error",
+      "kind": "type_alias",
+      "languageKind": "associated type",
+      "name": "Error",
+      "parent": "rs:lending::store#Store",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 16
+      },
+      "doc": {
+        "raw": "The error that the store returns.",
+        "format": "rustdoc",
+        "summary": "The error that the store returns.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The error that the store returns."
+          }
+        ]
+      },
+      "type": {
+        "text": "Debug"
+      }
+    },
+    {
+      "id": "rs:lending::store#Store.contains",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "contains",
+      "parent": "rs:lending::store#Store",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 28,
+        "endLine": 30
+      },
+      "doc": {
+        "raw": "Reports whether a book exists.",
+        "format": "rustdoc",
+        "summary": "Reports whether a book exists.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reports whether a book exists."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "BookId",
+            "refs": [
+              "rs:lending::domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "bool"
+          }
+        ],
+        "text": "fn contains(&self, id: BookId) -> bool"
+      }
+    },
+    {
+      "id": "rs:lending::store#Store.find",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "find",
+      "parent": "rs:lending::store#Store",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 22
+      },
+      "doc": {
+        "raw": "Finds a book by its identity.",
+        "format": "rustdoc",
+        "summary": "Finds a book by its identity.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Finds a book by its identity."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "BookId",
+            "refs": [
+              "rs:lending::domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Option<Book>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "text": "fn find(&self, id: BookId) -> Option<Book>"
+      }
+    },
+    {
+      "id": "rs:lending::store#Store.save",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "save",
+      "parent": "rs:lending::store#Store",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 25
+      },
+      "doc": {
+        "raw": "Saves a book, replacing any book with its identity.",
+        "format": "rustdoc",
+        "summary": "Saves a book, replacing any book with its identity.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Saves a book, replacing any book with its identity."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book",
+            "type": "Book",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Result<(), Self::Error>"
+          }
+        ],
+        "text": "fn save(&mut self, book: Book) -> Result<(), Self::Error>"
+      }
+    },
+    {
+      "id": "rs:lending::store#impl Shelved for Vec<Book>",
+      "kind": "namespace",
+      "languageKind": "impl",
+      "name": "impl Shelved for Vec<Book>",
+      "parent": "rs:file:lending/src/store/mod.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 39,
+        "endLine": 43
+      }
+    },
+    {
+      "id": "rs:lending::store#impl Shelved for Vec<Book>.available",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "available",
+      "parent": "rs:lending::store#impl Shelved for Vec<Book>",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/mod.rs",
+        "line": 40,
+        "endLine": 42
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "usize"
+          }
+        ],
+        "text": "fn available(&self) -> usize"
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore",
+      "kind": "struct",
+      "languageKind": "struct",
+      "name": "MemoryStore",
+      "parent": "rs:file:lending/src/store/memory.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 10,
+        "endLine": 12
+      },
+      "doc": {
+        "raw": "Keeps books in a map in memory.",
+        "format": "rustdoc",
+        "summary": "Keeps books in a map in memory.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Keeps books in a map in memory."
+          }
+        ]
+      },
+      "annotations": [
+        "#[derive(Debug, Default)]"
+      ],
+      "satisfies": [
+        "Debug",
+        "Default"
+      ]
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.Counted::count",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "count",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 36,
+        "endLine": 38
+      },
+      "doc": {
+        "raw": "Returns how many things it holds.",
+        "format": "rustdoc",
+        "summary": "Returns how many things it holds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns how many things it holds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "usize"
+          }
+        ],
+        "text": "fn count(&self) -> usize"
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.Store::CAPACITY",
+      "kind": "constant",
+      "languageKind": "associated constant",
+      "name": "CAPACITY",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 44
+      },
+      "doc": {
+        "raw": "The most books one store holds.",
+        "format": "rustdoc",
+        "summary": "The most books one store holds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The most books one store holds."
+          }
+        ]
+      },
+      "type": {
+        "text": "usize"
+      },
+      "value": "1000"
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.Store::Error",
+      "kind": "type_alias",
+      "languageKind": "associated type",
+      "name": "Error",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 42
+      },
+      "doc": {
+        "raw": "The error that the store returns.",
+        "format": "rustdoc",
+        "summary": "The error that the store returns.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The error that the store returns."
+          }
+        ]
+      },
+      "type": {
+        "text": "!"
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.Store::find",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "find",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 46,
+        "endLine": 48
+      },
+      "doc": {
+        "raw": "Finds a book by its identity.",
+        "format": "rustdoc",
+        "summary": "Finds a book by its identity.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Finds a book by its identity."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "BookId",
+            "refs": [
+              "rs:lending::domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Option<Book>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "text": "fn find(&self, id: BookId) -> Option<Book>"
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.Store::save",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "save",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 50,
+        "endLine": 53
+      },
+      "doc": {
+        "raw": "Saves a book, replacing any book with its identity.",
+        "format": "rustdoc",
+        "summary": "Saves a book, replacing any book with its identity.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Saves a book, replacing any book with its identity."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book",
+            "type": "Book",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Result<(), Self::Error>"
+          }
+        ],
+        "text": "fn save(&mut self, book: Book) -> Result<(), Self::Error>"
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.books",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "books",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 11
+      },
+      "type": {
+        "text": "BTreeMap<BookId, Book>",
+        "refs": [
+          "rs:lending::domain#BookId",
+          "rs:lending::domain#Book"
+        ]
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.insert",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "insert",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 30,
+        "endLine": 32
+      },
+      "doc": {
+        "raw": "Adds one book.",
+        "format": "rustdoc",
+        "summary": "Adds one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Adds one book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book",
+            "type": "Book",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "results": [],
+        "text": "fn insert(&mut self, book: Book)"
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.new",
+      "kind": "method",
+      "languageKind": "associated function",
+      "name": "new",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 16,
+        "endLine": 18
+      },
+      "doc": {
+        "raw": "Makes an empty store.",
+        "format": "rustdoc",
+        "summary": "Makes an empty store.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes an empty store."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Self"
+          }
+        ],
+        "text": "fn new() -> Self"
+      }
+    },
+    {
+      "id": "rs:lending::store::memory#MemoryStore.with_books",
+      "kind": "method",
+      "languageKind": "associated function",
+      "name": "with_books",
+      "parent": "rs:lending::store::memory#MemoryStore",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending/src/store/memory.rs",
+        "line": 21,
+        "endLine": 27
+      },
+      "doc": {
+        "raw": "Makes a store that holds the given books.",
+        "format": "rustdoc",
+        "summary": "Makes a store that holds the given books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes a store that holds the given books."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "books",
+            "type": "Vec<Book>",
+            "refs": [
+              "rs:lending::domain#Book"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Self"
+          }
+        ],
+        "text": "fn with_books(books: Vec<Book>) -> Self"
+      }
+    },
+    {
+      "id": "rs:lending@bin#main",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "main",
+      "parent": "rs:file:lending/src/main.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lending/src/main.rs",
+        "line": 4,
+        "endLine": 6
+      },
+      "doc": {
+        "raw": "Prints the version and exits.",
+        "format": "rustdoc",
+        "summary": "Prints the version and exits.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints the version and exits."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "fn main()"
+      }
+    },
+    {
+      "id": "rs:lending_macros#Describe",
+      "kind": "macro",
+      "languageKind": "derive macro",
+      "name": "Describe",
+      "parent": "rs:file:lending-macros/src/lib.rs",
+      "language": "rust",
+      "exported": true,
+      "location": {
+        "path": "lending-macros/src/lib.rs",
+        "line": 8,
+        "endLine": 10
+      },
+      "doc": {
+        "raw": "Derives a `describe` function that names the type. The fixture's version\nwrites nothing.",
+        "format": "rustdoc",
+        "summary": "Derives a `describe` function that names the type.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Derives a `describe` function that names the type. The fixture's version writes nothing."
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "rs:lendd#Cli.command",
+      "to": "rs:lendd#Command",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd#Command.Import",
+      "to": "rs:lendd#ImportArgs",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd#Command.Report",
+      "to": "rs:lendd#ReportArgs",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd#ReportArgs.kind",
+      "to": "rs:lendd#ReportKind",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd#import",
+      "to": "rs:lending::library#Library.new",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 83
+    },
+    {
+      "from": "rs:lendd#import",
+      "to": "rs:lending::library#Library.store",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 84
+    },
+    {
+      "from": "rs:lendd#import",
+      "to": "rs:lending::store::memory#MemoryStore.new",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 83
+    },
+    {
+      "from": "rs:lendd#main",
+      "to": "rs:lendd#import",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 64
+    },
+    {
+      "from": "rs:lendd#main",
+      "to": "rs:lendd#report_count",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 70
+    },
+    {
+      "from": "rs:lendd#main",
+      "to": "rs:lendd#serve",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 63
+    },
+    {
+      "from": "rs:lendd#report_count",
+      "to": "rs:lending::store::memory#MemoryStore.Counted::count",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 90
+    },
+    {
+      "from": "rs:lendd#report_count",
+      "to": "rs:lending::store::memory#MemoryStore.new",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 90
+    },
+    {
+      "from": "rs:lendd#serve",
+      "to": "rs:lendd::http#router",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 77
+    },
+    {
+      "from": "rs:lendd::http#add_book",
+      "to": "rs:lending::domain#Book",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd::http#add_book",
+      "to": "rs:lending::domain#Book",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd::http#api",
+      "to": "rs:lendd::http#search",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 41
+    },
+    {
+      "from": "rs:lendd::http#list_books",
+      "to": "rs:lending::domain#Book",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd::http#loans",
+      "to": "rs:lendd::http#route",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 28
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#add_book",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 14
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#api",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 16
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#health",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 18
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#import_service",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 20
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#list_books",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 14,
+      "count": 2
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#loans",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 19
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#reindex",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 11
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#remove_book",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 15
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#show_book",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 15
+    },
+    {
+      "from": "rs:lendd::http#search",
+      "to": "rs:lendd::http#list_books",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 75
+    },
+    {
+      "from": "rs:lendd::http#search",
+      "to": "rs:lending::domain#Book",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd::http#show_book",
+      "to": "rs:lending::domain#Book",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending#shelf_distance",
+      "to": "rs:lending#abs",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 65
+    },
+    {
+      "from": "rs:lending::domain#Book.id",
+      "to": "rs:lending::domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#Book.locate",
+      "to": "rs:lending::domain#Shelf",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#Book.new",
+      "to": "rs:lending::domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#Book.shelf",
+      "to": "rs:lending::domain#Shelf",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#Book.shelve",
+      "to": "rs:lending::domain#Shelf",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#Loan.book",
+      "to": "rs:lending::domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#LoanError.From<BookId>::from",
+      "to": "rs:lending::domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#LoanError.NotFound",
+      "to": "rs:lending::domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#LoanError.OnLoan",
+      "to": "rs:lending::domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::domain#Member.held",
+      "to": "rs:lending::domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.borrow",
+      "to": "rs:lending#LoanResult",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.borrow",
+      "to": "rs:lending::domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.borrow",
+      "to": "rs:lending::domain#Loan",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.borrow",
+      "to": "rs:lending::domain#Member",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.borrow",
+      "to": "rs:lending::rules#may_borrow",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 28
+    },
+    {
+      "from": "rs:lending::library#Library.borrow",
+      "to": "rs:lending::store#Store.find",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 27
+    },
+    {
+      "from": "rs:lending::library#Library.borrow",
+      "to": "rs:lending::store#Store.save",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 32
+    },
+    {
+      "from": "rs:lending::library#Library.take_back",
+      "to": "rs:lending::domain#Loan",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.take_back",
+      "to": "rs:lending::domain#LoanError",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.take_back",
+      "to": "rs:lending::domain#LoanError.From<BookId>::from",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 39
+    },
+    {
+      "from": "rs:lending::library#Library.take_back",
+      "to": "rs:lending::domain#Member",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::library#Library.take_back",
+      "to": "rs:lending::store#Store.find",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 39
+    },
+    {
+      "from": "rs:lending::library#Library.take_back",
+      "to": "rs:lending::store#Store.save",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 42
+    },
+    {
+      "from": "rs:lending::rules#may_borrow",
+      "to": "rs:lending::rules#within_hours",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 48
+    },
+    {
+      "from": "rs:lending::store#Store",
+      "to": "rs:lending::store#Counted",
+      "kind": "extends",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store#Store.contains",
+      "to": "rs:lending::domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store#Store.contains",
+      "to": "rs:lending::store#Store.find",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 29
+    },
+    {
+      "from": "rs:lending::store#Store.find",
+      "to": "rs:lending::domain#Book",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store#Store.find",
+      "to": "rs:lending::domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store#Store.save",
+      "to": "rs:lending::domain#Book",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store#impl Shelved for Vec<Book>",
+      "to": "rs:lending::store#Shelved",
+      "kind": "implements",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore",
+      "to": "rs:lending::store#Counted",
+      "kind": "implements",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore",
+      "to": "rs:lending::store#Store",
+      "kind": "implements",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.Store::find",
+      "to": "rs:lending::domain#Book",
+      "kind": "return_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.Store::find",
+      "to": "rs:lending::domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.Store::save",
+      "to": "rs:lending::domain#Book",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.Store::save",
+      "to": "rs:lending::store::memory#MemoryStore.insert",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 51
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.books",
+      "to": "rs:lending::domain#Book",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.books",
+      "to": "rs:lending::domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.insert",
+      "to": "rs:lending::domain#Book",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.with_books",
+      "to": "rs:lending::domain#Book",
+      "kind": "param_type",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.with_books",
+      "to": "rs:lending::store::memory#MemoryStore.insert",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 24
+    },
+    {
+      "from": "rs:lending::store::memory#MemoryStore.with_books",
+      "to": "rs:lending::store::memory#MemoryStore.new",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 22
+    },
+    {
+      "from": "rs:mod:lendd",
+      "to": "rs:mod:lendd::http",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:mod:lendd",
+      "to": "rs:mod:lending::library",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 4
+    },
+    {
+      "from": "rs:mod:lendd",
+      "to": "rs:mod:lending::store",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:mod:lendd",
+      "to": "rs:mod:lending::store::memory",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 6
+    },
+    {
+      "from": "rs:mod:lendd::http",
+      "to": "rs:mod:lending::domain",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 8
+    },
+    {
+      "from": "rs:mod:lending",
+      "to": "rs:mod:lending::domain",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 4
+    },
+    {
+      "from": "rs:mod:lending",
+      "to": "rs:mod:lending::library",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:mod:lending",
+      "to": "rs:mod:lending::rules",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:mod:lending::domain",
+      "to": "rs:mod:lending_macros",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 2
+    },
+    {
+      "from": "rs:mod:lending::library",
+      "to": "rs:mod:lending",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 4
+    },
+    {
+      "from": "rs:mod:lending::library",
+      "to": "rs:mod:lending::domain",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 27
+    },
+    {
+      "from": "rs:mod:lending::library",
+      "to": "rs:mod:lending::rules",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:mod:lending::library",
+      "to": "rs:mod:lending::store",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 7
+    },
+    {
+      "from": "rs:mod:lending::store",
+      "to": "rs:mod:lending::domain",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 8
+    },
+    {
+      "from": "rs:mod:lending::store::memory",
+      "to": "rs:mod:lending::domain",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 14
+    },
+    {
+      "from": "rs:mod:lending::store::memory",
+      "to": "rs:mod:lending::store",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 5
+    },
+    {
+      "from": "rs:mod:lending@bin",
+      "to": "rs:mod:lending",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "rs:mod:lending@bin",
+      "to": "rs:mod:lending::rules",
+      "kind": "imports",
+      "confidence": "exact"
+    }
+  ],
+  "entryPoints": [
+    {
+      "id": "http:POST /admin/reindex",
+      "kind": "http",
+      "name": "POST /admin/reindex",
+      "method": "POST",
+      "path": "/admin/reindex",
+      "handler": "rs:lendd::http#reindex",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 11
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:GET /admin/ping",
+      "kind": "http",
+      "name": "GET /admin/ping",
+      "method": "GET",
+      "path": "/admin/ping",
+      "handler": "rs:lendd::http#router",
+      "inline": true,
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 12
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:GET /books",
+      "kind": "http",
+      "name": "GET /books",
+      "method": "GET",
+      "path": "/books",
+      "handler": "rs:lendd::http#list_books",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 14
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:POST /books",
+      "kind": "http",
+      "name": "POST /books",
+      "method": "POST",
+      "path": "/books",
+      "handler": "rs:lendd::http#add_book",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 14
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:DELETE /books/{id}",
+      "kind": "http",
+      "name": "DELETE /books/{id}",
+      "method": "DELETE",
+      "path": "/books/{id}",
+      "handler": "rs:lendd::http#remove_book",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 15
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:GET /books/{id}",
+      "kind": "http",
+      "name": "GET /books/{id}",
+      "method": "GET",
+      "path": "/books/{id}",
+      "handler": "rs:lendd::http#show_book",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 15
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:GET /imports",
+      "kind": "http",
+      "name": "GET /imports",
+      "method": "GET",
+      "path": "/imports",
+      "handler": "rs:lendd::http#list_books",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 20
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:POST /imports",
+      "kind": "http",
+      "name": "POST /imports",
+      "method": "POST",
+      "path": "/imports",
+      "handler": "rs:lendd::http#import_service",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 20
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:ANY /static",
+      "kind": "http",
+      "name": "ANY /static",
+      "method": "ANY",
+      "path": "/static",
+      "handler": "rs:lendd::http#router",
+      "externalHandler": "\"files\"",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 21
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:GET /loans",
+      "kind": "http",
+      "name": "GET /loans",
+      "method": "GET",
+      "path": "/loans",
+      "handler": "rs:lendd::http#loans",
+      "inline": true,
+      "registrar": "rs:lendd::http#loans",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 28
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:ANY /api/search",
+      "kind": "http",
+      "name": "ANY /api/search",
+      "method": "ANY",
+      "path": "/api/search",
+      "handler": "rs:lendd::http#search",
+      "registrar": "rs:lendd::http#api",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 41
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:GET /health",
+      "kind": "http",
+      "name": "GET /health",
+      "method": "GET",
+      "path": "/health",
+      "handler": "rs:lendd::http#health",
+      "inline": true,
+      "registrar": "rs:lendd::http#health",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 46
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "cli:lendd serve",
+      "kind": "cli",
+      "name": "lendd serve",
+      "handler": "rs:lendd#serve",
+      "registeredAt": {
+        "path": "lendd/src/main.rs",
+        "line": 23
+      },
+      "plugin": "clap"
+    },
+    {
+      "id": "cli:lendd import-books",
+      "kind": "cli",
+      "name": "lendd import-books",
+      "handler": "rs:lendd#import",
+      "registeredAt": {
+        "path": "lendd/src/main.rs",
+        "line": 30
+      },
+      "plugin": "clap"
+    },
+    {
+      "id": "cli:lendd report overdue",
+      "kind": "cli",
+      "name": "lendd report overdue",
+      "handler": "rs:lendd#main",
+      "inline": true,
+      "registeredAt": {
+        "path": "lendd/src/main.rs",
+        "line": 54
+      },
+      "plugin": "clap"
+    },
+    {
+      "id": "cli:lendd report count",
+      "kind": "cli",
+      "name": "lendd report count",
+      "handler": "rs:lendd#report_count",
+      "registeredAt": {
+        "path": "lendd/src/main.rs",
+        "line": 56
+      },
+      "plugin": "clap"
+    }
+  ],
+  "tests": {
+    "rs:lending#MAX_LOAN_DAYS": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::domain#Book": [
+      {
+        "name": "store::memory::tests::finds_a_saved_book",
+        "location": {
+          "path": "lending/src/store/memory.rs",
+          "line": 61,
+          "endLine": 65
+        }
+      },
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::domain#Book.new": [
+      {
+        "name": "store::memory::tests::finds_a_saved_book",
+        "location": {
+          "path": "lending/src/store/memory.rs",
+          "line": 61,
+          "endLine": 65
+        }
+      },
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::domain#BookId": [
+      {
+        "name": "store::memory::tests::finds_a_saved_book",
+        "location": {
+          "path": "lending/src/store/memory.rs",
+          "line": 61,
+          "endLine": 65
+        }
+      },
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::domain#Loan.due": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::domain#Member": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::domain#Member.held": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::domain#Member.name": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::library#Library": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::library#Library.borrow": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::library#Library.new": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::store::memory#MemoryStore": [
+      {
+        "name": "store::memory::tests::finds_a_saved_book",
+        "location": {
+          "path": "lending/src/store/memory.rs",
+          "line": 61,
+          "endLine": 65
+        }
+      },
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ],
+    "rs:lending::store::memory#MemoryStore.Store::find": [
+      {
+        "name": "store::memory::tests::finds_a_saved_book",
+        "location": {
+          "path": "lending/src/store/memory.rs",
+          "line": 61,
+          "endLine": 65
+        }
+      }
+    ],
+    "rs:lending::store::memory#MemoryStore.Store::save": [
+      {
+        "name": "store::memory::tests::finds_a_saved_book",
+        "location": {
+          "path": "lending/src/store/memory.rs",
+          "line": 61,
+          "endLine": 65
+        }
+      }
+    ],
+    "rs:lending::store::memory#MemoryStore.new": [
+      {
+        "name": "store::memory::tests::finds_a_saved_book",
+        "location": {
+          "path": "lending/src/store/memory.rs",
+          "line": 61,
+          "endLine": 65
+        }
+      }
+    ],
+    "rs:lending::store::memory#MemoryStore.with_books": [
+      {
+        "name": "borrows_an_available_book",
+        "location": {
+          "path": "lending/tests/borrowing.rs",
+          "line": 8,
+          "endLine": 14
+        }
+      }
+    ]
+  }
+}

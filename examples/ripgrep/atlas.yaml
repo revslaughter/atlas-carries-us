@@ -1,0 +1,146 @@
+# Atlas Carries Us config for BurntSushi/ripgrep 15.2.0 (MIT or Unlicense, by
+# Andrew Gallant and the ripgrep contributors). The code sits in the
+# submodule corpus/rust/ripgrep:
+#
+#   git submodule update --init --checkout --depth 1 corpus/rust/ripgrep
+#   acu extract -c examples/ripgrep/atlas.yaml -o examples/ripgrep/atlas.json
+#   acu serve -d examples/ripgrep/atlas.json
+#
+# The Rust adapter needs its pinned nightly toolchain; docs/adapters.md says
+# how to install it. Since version 14, ripgrep parses its flags with its own
+# code, not clap, so no plugin finds an entry point here.
+version: 1
+project:
+  name: ripgrep, a line-oriented search tool
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+  repo: BurntSushi/ripgrep
+  links: github
+  description: |
+    ripgrep searches the files under a folder for lines that match a
+    pattern. It skips the files that .gitignore and its relatives name, and
+    it searches many files at once.
+
+    The rg command sits on a set of library crates: globset and ignore walk
+    the folders, grep-matcher, grep-regex and grep-pcre2 match patterns,
+    grep-searcher reads each file, and grep-printer writes the results.
+
+    This map covers ripgrep 15.2.0, by Andrew Gallant and the ripgrep
+    contributors under the MIT licence or the Unlicense. Tests appear only
+    under "Tests that use it".
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: rust
+    root: ../../corpus/rust/ripgrep
+regions:
+  - id: command
+    name: The rg command
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["crates/core/*.rs"]
+    description: >-
+      main, run and the search loops. A SearchWorker searches one haystack
+      at a time with the matcher, searcher and printer that the flags pick.
+    readingTip: Start with run in the rg module; it picks the mode.
+  - id: flags
+    name: Flags and help
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["crates/core/flags/**"]
+    description: >-
+      Parsing the command line into LowArgs, then turning them into HiArgs,
+      which build the parts of a search. The help text, the man page and the
+      shell completions come from the same flag definitions.
+  - id: walk
+    name: Walking folders
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["crates/ignore/**", "crates/globset/**"]
+    description: >-
+      The ignore crate walks folders on one thread or many, and skips what
+      .gitignore, .ignore and the file type filters exclude. globset matches
+      many globs at once.
+  - id: match
+    name: Matching patterns
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["crates/matcher/**", "crates/regex/**", "crates/pcre2/**"]
+    description: >-
+      The Matcher trait, and its two implementations: one on Rust's regex
+      crate, and one on PCRE2.
+  - id: search
+    name: Searching a haystack
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["crates/searcher/**"]
+    description: >-
+      The Searcher reads a file, a reader or a slice, finds the lines that a
+      Matcher matches, and reports them to a Sink.
+  - id: print
+    name: Printing results
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["crates/printer/**"]
+    description: >-
+      Three printers, each a Sink: the standard grep-like output, a summary
+      of counts and paths, and JSON lines.
+  - id: shared
+    name: Shared command-line helpers
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    paths: ["crates/cli/**", "crates/grep/**"]
+    description: >-
+      Helpers for command-line tools, such as escapes, decompression and
+      reading a process's output, and the grep crate, which re-exports the
+      other crates.
+layout:
+  rows:
+    - [command, flags]
+    - [walk, search]
+    - [match, print]
+    - [shared]
+tour:
+  - title: Seven parts
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: overview }
+    text: >-
+      The rg command and its flags sit at the top. Below them sit the
+      library crates that it joins: the walker, the searcher, the matchers
+      and the printers. Each crate stands alone, and other programs use them
+      too.
+  - title: One run
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: trace, symbol: "rs:rg#run" }
+    text: >-
+      main hands the parsed flags to run. run picks the mode: a search on one
+      thread or on many, a list of files, the list of file types, or generated
+      output such as the man page. The result sets the exit code: 0 after a
+      match, 1 without one, and 2 after an error.
+  - title: The search loop
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: trace, symbol: "rs:rg#search" }
+    text: >-
+      search walks the paths with the ignore crate's walker and turns each
+      entry into a haystack. One SearchWorker, which holds the matcher, the
+      searcher and the printer, searches each haystack in turn.
+  - title: Flags in two steps
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: symbol, id: "rs:rg::flags::hiargs#HiArgs" }
+    text: >-
+      Parsing fills LowArgs, which stay close to the command line. HiArgs
+      then turns them into the objects that a search needs: for example, all
+      the -g globs become one glob matcher.
+  - title: The searcher
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: symbol, id: "rs:grep_searcher::searcher#Searcher" }
+    text: >-
+      A Searcher reads a haystack and finds its matching lines with a
+      Matcher. It reports each match to a Sink and writes nothing itself.
+  - title: The matcher contract
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: symbol, id: "rs:grep_matcher#Matcher" }
+    text: >-
+      Matcher hides the regular expression engine. An implementation needs
+      only find_at and new_captures; the other methods build on them.
+      grep_regex implements it on Rust's regex crate, and grep_pcre2 on PCRE2.
+  - title: Where results go
+    drafted: { by: Claude Code, at: "2026-11-23T14:00:00Z" }
+    open: { view: symbol, id: "rs:grep_searcher::sink#Sink" }
+    text: >-
+      A Sink receives what the searcher finds: matched for each match, and
+      optional calls for context lines and for the start and end of a search.
+      The standard, summary and JSON printers each give a Sink.

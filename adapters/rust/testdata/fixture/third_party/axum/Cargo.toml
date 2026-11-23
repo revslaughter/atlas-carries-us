@@ -1,0 +1,6 @@
+[package]
+name = "axum"
+description = "A stand-in for axum with the shapes that the axum plugin reads."
+version = "0.0.0"
+edition = "2021"
+publish = false
