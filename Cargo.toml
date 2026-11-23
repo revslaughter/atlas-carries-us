@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["cli"]
+members = ["cli", "adapters/rust"]
+# acu stays the default, so `cargo run -- extract` runs it. The checks pass
+# --workspace to cover the Rust adapter too.
+default-members = ["cli"]
+# The Rust adapter's fixture is a workspace of its own.
+exclude = ["adapters/rust/testdata"]
 
 [workspace.package]
 version = "0.1.0"

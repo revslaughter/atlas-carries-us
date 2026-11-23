@@ -1,0 +1,12 @@
+# The Rust adapter's test fixture: an invented lending library in one Cargo
+# workspace. third_party holds small stand-ins for axum and clap, so that the
+# tests need no network.
+[workspace]
+resolver = "2"
+members = ["lending", "lending-macros", "lendd"]
+exclude = ["third_party"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false

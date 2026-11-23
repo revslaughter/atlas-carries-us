@@ -1,0 +1,9 @@
+[package]
+name = "lending"
+description = "The lending rules and the stores of the fixture library."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+lending-macros = { path = "../lending-macros" }

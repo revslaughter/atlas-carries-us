@@ -1,0 +1,11 @@
+[package]
+name = "lendd"
+description = "The fixture library's server and command line."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+axum = { path = "../third_party/axum" }
+clap = { path = "../third_party/clap" }
+lending = { path = "../lending" }
