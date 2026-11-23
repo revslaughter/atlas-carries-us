@@ -6,7 +6,9 @@ import ts from "typescript";
 
 import type { Extractor } from "./extract.js";
 
+/** The calls that group tests; their titles prefix the names of the tests inside. */
 const SUITES = new Set(["describe", "suite", "context", "fdescribe", "xdescribe"]);
+/** The calls that declare one test. */
 const TESTS = new Set(["it", "test", "specify", "fit", "xit", "bench"]);
 
 /** The name a call starts from: "describe" in describe.each([...])("title", fn). */
@@ -19,6 +21,7 @@ function baseName(e: ts.Expression): string | undefined {
   return ts.isIdentifier(e) ? e.text : undefined;
 }
 
+/** The title of a suite or test as written: a string's text, or a template's text without its backticks. */
 function title(e: ts.Expression | undefined, sf: ts.SourceFile): string {
   if (!e) return "";
   if (ts.isStringLiteralLike(e)) return e.text;

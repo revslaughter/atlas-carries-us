@@ -1,17 +1,30 @@
 #!/usr/bin/env node
-// acu-adapter-typescript reads a TypeScript project with the compiler API and
-// writes an Atlas Carries Us document (schema version 1) as JSON.
-//
-// The acu command runs it with a request on standard input (protocol 1, see
-// docs/adapters.md). For a run by hand, pass flags instead:
-//
-//   acu-adapter-typescript --root /path/to/project --exclude '**/generated/**' --plugin hono --out atlas.json
+/**
+ * The TypeScript adapter: acu-adapter-typescript reads a TypeScript project
+ * with the TypeScript compiler API and writes an Atlas Carries Us document
+ * (data format version 1) as JSON.
+ *
+ * The acu command runs it with a request on standard input (protocol 1, see
+ * [docs/adapters.md](https://github.com/revslaughter/atlas-carries-us/blob/main/docs/adapters.md)).
+ * {@link run} reads the project in four passes: declarations, entry points,
+ * relations, then docs and tests. The type checker resolves every edge, so
+ * every edge counts as exact.
+ *
+ * For a run by hand, pass flags instead:
+ *
+ * ```sh
+ * acu-adapter-typescript --root /path/to/project --exclude '**\/generated/**' --plugin hono --out atlas.json
+ * ```
+ *
+ * @packageDocumentation
+ */
 
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 
 import { ADAPTER_VERSION, type Request, run } from "./extract.js";
 
+/** The text that --help prints: every flag and the limits of a run. */
 const HELP = `acu-adapter-typescript ${ADAPTER_VERSION}: reads a TypeScript project and writes Atlas Carries Us data.
 
 Without --root, the request comes as JSON on standard input (protocol 1).
@@ -31,12 +44,18 @@ The map leaves out these limits; the output's meta.adapters[].notes lists them:
 calls through function values and callbacks, and declaration files (.d.ts).
 `;
 
+/** Writes the error to standard error, with the program's name first, and exits with status 1, which acu reports as a failed adapter. */
 function fail(err: unknown): never {
   const msg = err instanceof Error ? err.message : String(err);
   process.stderr.write(`acu-adapter-typescript: ${msg}\n`);
   process.exit(1);
 }
 
+/**
+ * Reads a request (protocol 1 on standard input, or flags for a run by hand),
+ * runs {@link run}, and writes the document as JSON. A summary line goes to
+ * standard error, so standard output carries data only.
+ */
 function main() {
   const { values } = parseArgs({
     options: {

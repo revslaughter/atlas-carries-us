@@ -19,11 +19,19 @@ import (
 	"github.com/revslaughter/atlas-carries-us/adapters/go/internal/extract"
 )
 
+// listFlag collects the values of a flag that may appear more than once,
+// such as -include.
 type listFlag []string
 
-func (l *listFlag) String() string     { return strings.Join(*l, ",") }
+// String joins the values with commas, for the flag package's help text.
+func (l *listFlag) String() string { return strings.Join(*l, ",") }
+
+// Set adds one value; the flag package calls it once per use of the flag.
 func (l *listFlag) Set(s string) error { *l = append(*l, s); return nil }
 
+// main reads a request (protocol 1 on standard input, or flags for a run by
+// hand), runs [extract.Run], and writes the document as JSON. A summary line
+// goes to standard error, so standard output carries data only.
 func main() {
 	var (
 		root     = flag.String("root", "", "folder to read; without it, the request comes as JSON on standard input")
@@ -91,6 +99,8 @@ func main() {
 		len(doc.Containers), len(doc.Symbols), len(doc.Edges), len(doc.EntryPoints))
 }
 
+// fail writes the error to standard error, with the program's name first,
+// and exits with status 1, which acu reports as a failed adapter.
 func fail(err error) {
 	fmt.Fprintln(os.Stderr, "acu-adapter-go:", err)
 	os.Exit(1)

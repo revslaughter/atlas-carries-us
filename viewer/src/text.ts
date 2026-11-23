@@ -2,6 +2,7 @@
 
 import type { Doc, Project } from "./types";
 
+/** Escapes text for HTML. Every text from the data passes through it before it reaches the page. */
 export function esc(s: unknown): string {
   return String(s ?? "").replace(
     /[&<>"']/g,
@@ -9,15 +10,22 @@ export function esc(s: unknown): string {
   );
 }
 
+/** What the text functions need from the map. */
 interface Env {
+  /** The project: its links, its repository and its autolinks. */
   project: Project;
+  /** The commit that source links point at. */
   commit: string;
+  /** Reports whether the map holds an ID, so a sym: link to nothing stays plain text. */
   knows: (id: string) => boolean;
 }
 
+/** The environment of the map on show. */
 let env: Env = { project: { name: "" }, commit: "HEAD", knows: () => false };
+/** The project's autolink rules, compiled. */
 let autolinks: { re: RegExp; url: string }[] = [];
 
+/** Sets the environment once the data has loaded, and compiles the autolinks; a pattern that does not parse is skipped with a warning. */
 export function setTextEnv(e: Env) {
   env = e;
   autolinks = [];
@@ -30,6 +38,7 @@ export function setTextEnv(e: Env) {
   }
 }
 
+/** Fills a template's {placeholders} from vars; an unknown placeholder stays as written. */
 function fill(template: string, vars: Record<string, string | number | undefined>): string {
   return template.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? String(vars[k]) : m));
 }
@@ -44,6 +53,7 @@ export function sourceURL(path: string, line?: number, endLine?: number): string
   return l.file ? fill(l.file, vars) : null;
 }
 
+/** A URL for a folder, from the project's folder template, or null. */
 export function folderURL(path: string): string | null {
   const l = env.project.links;
   if (!l?.folder) return null;
@@ -56,6 +66,7 @@ export function sourceLink(label: string, path: string, line?: number, endLine?:
   return u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(label)}</a>` : `<span>${esc(label)}</span>`;
 }
 
+/** Escapes plain text and turns the matches of the project's autolink rules into links. */
 function autolinkPlain(text: string): string {
   if (!autolinks.length || !text) return esc(text);
   let out = "",
@@ -78,12 +89,17 @@ function autolinkPlain(text: string): string {
   return out + esc(text.slice(pos));
 }
 
+/** A link of the inline subset, found in a text. */
 interface LinkMatch {
+  /** The label between the brackets. */
   label: string;
+  /** The target between the parentheses: a URL or "sym:<id>". */
   target: string;
+  /** The position just after the link. */
   end: number;
 }
 
+/** Finds the link "[label](target)" that starts at position i, with nested brackets in its label, or null. */
 function matchLink(s: string, i: number): LinkMatch | null {
   let depth = 0,
     j = i;
@@ -200,6 +216,7 @@ export function inlinePlain(s: string | undefined): string {
   return out.replace(/\s+/g, " ").trim();
 }
 
+/** Returns a doc's first sentence as plain text: what every box shows under its name. */
 export function summary(doc: Doc | undefined): string {
   return inlinePlain(doc?.summary);
 }
@@ -210,6 +227,7 @@ export function firstPara(doc: Doc | undefined): string {
   return p && p.type === "paragraph" ? inlinePlain(p.text) : summary(doc);
 }
 
+/** Splits text at blank lines and joins each paragraph's lines. */
 export function plainParagraphs(text: string | undefined): string[] {
   return (text ?? "")
     .split(/\n\s*\n/)
@@ -217,6 +235,7 @@ export function plainParagraphs(text: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/** Renders paragraphs of inline text, such as a region's description, as HTML. */
 export function paragraphsHTML(text: string | undefined): string {
   return plainParagraphs(text)
     .map(p => `<p>${inlineHTML(p)}</p>`)
@@ -257,6 +276,7 @@ export function docHTML(doc: Doc | undefined, none = "No doc comment in the sour
   return `<div class="doc">${h}</div>`;
 }
 
+/** Writes the "Machine-drafted" label for text that carries a provenance mark, or "" for text that a person wrote or checked. */
 export function draftedNote(p: { by: string; at: string } | undefined): string {
   if (!p) return "";
   return `<p class="drafted" role="note"><b>Machine-drafted.</b> ${esc(p.by)} wrote this text on ${esc(p.at.slice(0, 10))}. No person has checked it yet.</p>`;

@@ -6,98 +6,185 @@ import { regionColor, MONO, SANS } from "./theme";
 import { firstPara, inlinePlain, summary } from "./text";
 import type { Symbol } from "./types";
 
+/**
+ * Where the reader stands: the overview (perhaps zoomed to a region or a
+ * unit), a unit focus, an item focus (perhaps with a member picked), or a
+ * trace from an entry point or a callable. The address bar and the history
+ * hold states.
+ */
 export type State =
   | { v: "overview"; region?: string; focusUnit?: string }
   | { v: "unit"; id: string }
   | { v: "symbol"; id: string; member?: string }
   | { v: "trace"; entry?: string; sym?: string; member?: string };
 
+/** A band of a node that reacts to hover and click: a member's row, or a unit's line in a neighbour box. */
 export interface Row {
+  /** The band's top, from the node's top. */
   y: number;
+  /** The band's height. */
   h: number;
+  /** The anchor name that lines to this row end at, such as a member's name. */
   anchor: string;
+  /** The text that the status line shows on hover, when it differs from the item's doc. */
   doc?: string;
+  /** The item that the row stands for. */
   item?: string;
+  /** The member that the row stands for. */
   member?: string;
+  /** What a click on the row does. */
   onClick?: () => void;
 }
+
+/** One draw operation: a run of text at a place, in a font and a colour. */
 export interface Op {
+  /** The left edge, from the node's corner. */
   x: number;
+  /** The baseline, from the node's corner. */
   y: number;
+  /** The text. */
   s: string;
+  /** The CSS font. */
   f: string;
+  /** A theme token, such as "fg" or "muted", or a colour. */
   c: string;
 }
+
+/** One box on the canvas, with its text already laid out as draw operations. */
 export interface Node {
+  /** The box's role: a unit in the overview ("room"), the focus ("center"), a neighbour, a "+N more" box, a lane heading, a trace step or a route. */
   t: "room" | "center" | "nbr" | "more" | "lane" | "trace" | "route";
+  /** A stable name for the box, so a box that stays between views moves instead of reappearing. */
   key: string;
+  /** The width. */
   w: number;
+  /** The height, set once the content is laid out. */
   h: number;
+  /** The left edge, in world units. */
   x: number;
+  /** The top edge, in world units. */
   y: number;
+  /** The text to draw. */
   ops: Op[];
+  /** The bands that react to the pointer. */
   rows: Row[];
+  /** The layout cursor: where the next line of text goes while the box is built. */
   cy: number;
+  /** The heights, from the top, where lines end: one per member, and "" for the box itself. */
   anchors: Record<string, number>;
+  /** The item that the box shows. */
   item?: string;
+  /** The member that the box shows, in a trace. */
   member?: string;
+  /** The unit that the box shows. */
   unit?: string;
+  /** The entry point that the box shows. */
   route?: Route;
+  /** The region of the box, which gives its colour. */
   region?: RegionInfo;
+  /** The relation of a lane heading, which gives its line style. */
   edge?: string;
+  /** -1 for the left side (what uses the focus), 1 for the right (what it uses). */
   side?: number;
+  /** The lane that holds the box. */
   lane?: string;
+  /** The call depth of a trace step. */
   depth?: number;
+  /** A room's left edge inside its region. */
   rx?: number;
+  /** A room's top edge inside its region. */
   ry?: number;
+  /** The lines to exact members that a hover on the box reveals, in a unit focus. */
   detail?: SEdge[];
+  /** What a click on the box does. */
   onClick?: () => void;
+  /** The text of a lane heading or a "+N more" box. */
   label?: string;
 }
+
+/** One line on the canvas, from the user to the thing used. */
 export interface SEdge {
+  /** The box that uses. */
   a: Node;
+  /** The box used. */
   b: Node;
+  /** The anchor in `a` where the line starts. */
   aAnchor?: string;
+  /** The anchor in `b` where the line ends. */
   bAnchor?: string;
+  /** The relation, which gives the line's colour, dash and verb. */
   kind: string;
+  /** The line's width; thicker lines carry more uses. */
   w?: number;
+  /** A text on the line, such as a call's number in a trace. */
   label?: string | null;
+  /** Draws the line fainter, as context. */
   faint?: boolean;
+  /** Draws a name-matched relation with a dotted line. */
   heuristic?: boolean;
 }
+
+/** One region in the overview: its box, its rooms and its wrapped description. */
 export interface RegionBox {
+  /** The region. */
   r: RegionInfo;
+  /** The boxes of its units. */
   rooms: Node[];
+  /** The width. */
   w: number;
+  /** The height. */
   h: number;
+  /** The left edge, in world units. */
   x: number;
+  /** The top edge, in world units. */
   y: number;
+  /** The font of the title. */
   titleF: string;
+  /** The font of the description. */
   descF: string;
+  /** The description, wrapped into lines. */
   desc: string[];
 }
+
+/** What the canvas draws for one view: boxes, lines and their bounds. */
 export interface Scene {
+  /** The kind of view. */
   t: "overview" | "unit" | "symbol" | "trace";
+  /** A name for the view, so a rebuild of the same view keeps the camera. */
   key: string;
+  /** The boxes. */
   nodes: Node[];
+  /** The lines. */
   edges: SEdge[];
+  /** The focus box of a focus view. */
   center?: Node;
+  /** The box around every node, in world units, for the camera. */
   bounds: { x: number; y: number; w: number; h: number };
+  /** Marks an item focus with no relations, which the viewer explains. */
   empty?: boolean;
+  /** The overview's regions. */
   regions?: RegionBox[];
+  /** The overview's unit boxes. */
   rooms?: Node[];
+  /** The overview's lines between regions, each with the items it reaches. */
   links?: { from: RegionBox; to: RegionBox; targets: Set<string> }[];
+  /** The state that built the scene. */
   st?: State;
+  /** The ID of the focus. */
   id?: string;
 }
 
 /* Text measurement and node building. */
 
+/** A hidden canvas that measures text. */
 const measure = document.createElement("canvas").getContext("2d")!;
+
+/** Measures the width of a text in a font. */
 export function tw(s: string, f: string): number {
   measure.font = f;
   return measure.measureText(s).width;
 }
+/** Cuts a text with "…" so that it fits a width. */
 export function fit(s: string, f: string, max: number): string {
   if (tw(s, f) <= max) return s;
   let lo = 0,
@@ -109,6 +196,7 @@ export function fit(s: string, f: string, max: number): string {
   }
   return s.slice(0, lo) + "…";
 }
+/** Wraps a text into lines that fit a width, at most maxLines, the last cut with "…" when the text runs on. */
 export function wrap(s: string, f: string, max: number, maxLines = 3): string[] {
   const words = (s || "").split(/\s+/).filter(Boolean),
     lines: string[] = [];
@@ -129,20 +217,32 @@ export function wrap(s: string, f: string, max: number, maxLines = 3): string[] 
   return lines.map(l => fit(l, f, max));
 }
 
+/** The padding inside a box. */
 const PAD = 12;
+
+/** Writes a CSS font: weight, size, and the sans-serif or monospace stack. */
 export function F(w: number, size: number, mono?: boolean): string {
   return `${w} ${size}px ${mono ? MONO() : SANS()}`;
 }
+/** Makes an empty box of a width, with its cursor at the top padding. */
 function newNode(t: Node["t"], key: string, w: number, extra: Partial<Node> = {}): Node {
   return Object.assign({ t, key, w, h: 0, x: 0, y: 0, ops: [], rows: [], cy: PAD, anchors: {} }, extra) as Node;
 }
+/** How {@link text} lays out a line or a paragraph. */
 interface TextOpt {
+  /** The left edge; the default is the padding. */
   x?: number;
+  /** The widest a line may run; the default is the box's width less padding. */
   maxW?: number;
+  /** The line height; the default is 1.45 times the font size. */
   lh?: number;
+  /** Wraps the text over lines instead of cutting it. */
   wrap?: boolean;
+  /** The most lines that a wrapped text may take. */
   maxLines?: number;
 }
+
+/** Adds text to a box at its cursor and moves the cursor down; returns the number of lines. */
 function text(n: Node, s: string, f: string, c: string, opt: TextOpt = {}): number {
   const x = opt.x ?? PAD,
     max = opt.maxW ?? n.w - x - PAD,
@@ -154,6 +254,7 @@ function text(n: Node, s: string, f: string, c: string, opt: TextOpt = {}): numb
   }
   return lines.length;
 }
+/** Adds one line made of runs in different fonts and colours, such as a name then its type. */
 function segs(n: Node, parts: { s: string; f: string; c: string }[], lh: number, x = PAD) {
   let cx = x;
   const max = n.w - PAD;
@@ -166,14 +267,17 @@ function segs(n: Node, parts: { s: string; f: string; c: string }[], lh: number,
   }
   n.cy += lh;
 }
+/** Moves a box's cursor down by g. */
 function gap(n: Node, g: number) {
   n.cy += g;
 }
+/** Closes a box: its height follows its content. */
 function done(n: Node): Node {
   n.h = n.cy + PAD - 4;
   return n;
 }
 
+/** Closes a scene: its bounds take in every node. */
 function finish(sc: Omit<Scene, "bounds"> & { bounds?: Scene["bounds"] }): Scene {
   let x0 = Infinity,
     y0 = Infinity,
@@ -189,10 +293,12 @@ function finish(sc: Omit<Scene, "bounds"> & { bounds?: Scene["bounds"] }): Scene
   return sc as Scene;
 }
 
+/** The text that a box shows for code without a doc comment. */
 const NO_DOC = "No doc comment.";
 
 /* Shared helpers over the model. */
 
+/** Writes a callable's types in short: "(string, number) Book". */
 export function sigTypes(s: Symbol | undefined): string {
   const sig = s?.signature;
   if (!sig) return "";
@@ -205,7 +311,9 @@ export function sigTypes(s: Symbol | undefined): string {
   return "(" + sig.params.map(p => p.type).join(", ") + ")" + res;
 }
 
+/** The kinds that a call can reach; a member of one of them shows its signature. */
 const CALLABLE = new Set(["method", "constructor", "function", "macro"]);
+/** The order of kinds in a list of items: contracts first, then types, then functions, then values. */
 const KIND_ORDER = [
   "interface",
   "trait",
@@ -221,6 +329,7 @@ const KIND_ORDER = [
   "values",
 ];
 
+/** Reports whether a member embeds another type, such as an embedded struct field or interface. */
 export function isEmbedded(m: Symbol): boolean {
   return (m.modifiers ?? []).includes("embedded");
 }
@@ -237,6 +346,7 @@ export function memberSections(it: Item): { title: string; members: Symbol[] }[]
   return out;
 }
 
+/** Writes what follows a member's name on its row: its signature's types, its value, or its type. */
 export function memberRest(m: Symbol): string {
   if (CALLABLE.has(m.kind)) return sigTypes(m);
   if (m.kind === "constant" || m.kind === "variable")
@@ -246,14 +356,26 @@ export function memberRest(m: Symbol): string {
 
 /* Overview: regions, then units. */
 
+/** The width of a unit's box in the overview. */
 const ROOM_W = 440,
+  /** The space between unit boxes. */
   ROOM_GAP = 36,
+  /** The padding inside a region's box. */
   REG_PAD = 40,
+  /** The space between regions in a row. */
   REG_GAPX = 200,
+  /** The space between rows of regions. */
   ROW_GAP = 240;
+/** The zoom at which the overview starts to show the unit boxes inside each region. */
 export const OV_ROOMS_AT = 0.42,
+  /** The zoom at which a zoom into a unit box opens its unit focus. */
   OV_ENTER_AT = 1.5;
 
+/**
+ * Lays out the overview: each region as a box of unit boxes (name, first doc
+ * paragraph, most-used items, entry points), the regions in the layout's
+ * rows, and one line from region to region for each pair that uses the other.
+ */
 export function buildOverview(M: Model): Scene {
   const regions: RegionBox[] = [],
     rooms: Node[] = [];
@@ -345,18 +467,30 @@ export function buildOverview(M: Model): Scene {
 
 /* Symbol focus. */
 
+/** The width of the focus box. */
 const CW = 440,
+  /** The width of a neighbour box. */
   NW = 290,
+  /** The space between the focus box and the lanes on each side. */
   LANE_GAP = 120,
+  /** The space between boxes in a lane. */
   NODE_GAP = 10,
+  /** The height that a lane's heading takes. */
   LANE_HEAD = 30,
+  /** The space between lanes. */
   LANE_SEP = 26;
 
+/** One lane of an item focus: a column of neighbours that share one relation. */
 export interface Lane {
+  /** The lane's ID, also its key in a {@link Bag}. */
   id: string;
+  /** The heading, as a reader says it: "Called by", "Field types". */
   label: string;
+  /** The relation, which gives the line style. */
   edge: string;
 }
+
+/** The lanes on the left of an item focus: what uses the item, by relation. */
 export const LANES_LEFT: Lane[] = [
   { id: "calledBy", label: "Called by", edge: "calls" },
   { id: "implBy", label: "Implemented by", edge: "implements" },
@@ -366,6 +500,7 @@ export const LANES_LEFT: Lane[] = [
   { id: "holdsIt", label: "Have a field of this type", edge: "field" },
   { id: "overriddenBy", label: "Overridden by", edge: "overrides" },
 ];
+/** The lanes on the right of an item focus: what the item uses, by relation. */
 export const LANES_RIGHT: Lane[] = [
   { id: "calls", label: "Calls", edge: "calls" },
   { id: "impl", label: "Implements", edge: "implements" },
@@ -376,15 +511,29 @@ export const LANES_RIGHT: Lane[] = [
   { id: "overrides", label: "Overrides", edge: "overrides" },
 ];
 
+/** One neighbour of an item focus, in one lane. */
 export interface RelItem {
+  /** The neighbour item. */
   id: string;
+  /** The members through which the relation runs, shown as "via …". */
   via: Set<string>;
+  /** The anchors in the focus box where its lines end: members, parameters or the head. */
   anchors: Set<string>;
+  /** Marks a neighbour that only name-matched edges join. */
   heuristic: boolean;
+  /** The rank inside its lane; more members, exported, and contracts rank higher. */
   score?: number;
 }
+
+/** The neighbours of an item focus, lane by lane: lane ID to neighbour ID to neighbour. */
 export type Bag = Record<string, Map<string, RelItem>>;
 
+/**
+ * Sorts every relation of an item into lanes: callers, implementers,
+ * subtypes and users of its type on the left; callees, contracts, base types
+ * and the types it names on the right. Each neighbour keeps the members on
+ * both ends, so that lines end at the exact row.
+ */
 export function symbolRelations(M: Model, id: string): { L: Bag; R: Bag } {
   const it = M.items.get(id)!,
     L: Bag = {},
@@ -433,6 +582,7 @@ export function symbolRelations(M: Model, id: string): { L: Bag; R: Bag } {
   return { L, R };
 }
 
+/** Ranks a lane's neighbours: more members involved first, then exported ones, then contracts, then by name. */
 export function rankItems(M: Model, map: Map<string, RelItem>): RelItem[] {
   return [...map.values()]
     .map(x => {
@@ -442,11 +592,17 @@ export function rankItems(M: Model, map: Map<string, RelItem>): RelItem[] {
     .sort((a, b) => b.score! - a.score! || M.qual(a.id).localeCompare(M.qual(b.id)));
 }
 
+/** The line above an item's name: its word and its unit, such as "STRUCT · internal/store". */
 function kindLabel(M: Model, id: string): string {
   const it = M.items.get(id)!;
   return `${(it.languageKind || it.kind).toUpperCase()}  ·  ${M.units.get(it.unit)?.name ?? ""}`;
 }
 
+/**
+ * Builds the focus box of an item focus: its kind and unit, its name, its
+ * first doc paragraph, then a row per parameter, result and member (up to
+ * 34), each an anchor that lines end at.
+ */
 function centerSymNode(M: Model, id: string): Node {
   const it = M.items.get(id)!,
     r = M.regionOfItem(id),
@@ -515,6 +671,7 @@ function centerSymNode(M: Model, id: string): Node {
   return done(n);
 }
 
+/** Builds a neighbour box: kind and unit, name, the members it goes through, and its first doc sentence. */
 function nbrSymNode(M: Model, id: string, via: Set<string>, edge: string): Node {
   const it = M.items.get(id)!,
     r = M.regionOfItem(id),
@@ -536,6 +693,7 @@ function nbrSymNode(M: Model, id: string, via: Set<string>, edge: string): Node 
   return done(n);
 }
 
+/** Builds a "+N more" box that opens the rest of a lane or a trace step. */
 function moreNode(key: string, count: number, onClick: () => void, label?: string): Node {
   const n = newNode("more", key, NW, { onClick, label: label || `+ ${count} more` });
   n.cy = 8;
@@ -543,6 +701,7 @@ function moreNode(key: string, count: number, onClick: () => void, label?: strin
   return done(n);
 }
 
+/** Builds a lane's heading: its line style, its verb and its count. */
 function laneHead(key: string, lane: Lane, total: number, side: number, w = NW): Node {
   const n = newNode("lane", key, w, { edge: lane.edge, side, label: lane.label });
   n.cy = 2;
@@ -551,12 +710,21 @@ function laneHead(key: string, lane: Lane, total: number, side: number, w = NW):
   return n;
 }
 
+/** What the scene builders need from the app: what the reader opened, and a way to rebuild after a click. */
 export interface Ctx {
+  /** How many boxes each lane shows, and whether a unit shows its unexported items, per view. */
   laneShow: Record<string, Record<string, number | boolean>>;
+  /** The trace steps that the reader expanded, per trace. */
   traceOpen: Record<string, Record<string, boolean>>;
+  /** Rebuilds the scene on show. */
   rebuild: () => void;
 }
 
+/**
+ * Lays out an item focus: the item in the centre, what uses it in lanes on
+ * the left, what it uses in lanes on the right. Each lane shows three to five
+ * boxes at first, to keep the view near twenty boxes.
+ */
 export function buildSymScene(M: Model, id: string, cx: Ctx): Scene {
   const key = "sym:" + id;
   const show = (cx.laneShow[key] ||= {});
@@ -620,6 +788,12 @@ export function buildSymScene(M: Model, id: string, cx: Ctx): Scene {
 
 /* Unit focus. */
 
+/**
+ * Lays out a unit focus: the unit in the centre with a row per exported item,
+ * the units that use it on the left and the units it uses on the right. A
+ * hover on a neighbour shows the exact items involved; a line's width grows
+ * with the items it carries.
+ */
 export function buildUnitScene(M: Model, uid: string, cx: Ctx): Scene {
   const key = "unit:" + uid;
   const show = (cx.laneShow[key] ||= {});
@@ -778,9 +952,12 @@ export function buildUnitScene(M: Model, uid: string, cx: Ctx): Scene {
 
 /* Request trace. */
 
+/** The width of a trace step. */
 const TW = 320,
+  /** The space between the columns of a trace. */
   TCOL = 150;
 
+/** Names each kind of entry point for readers: "HTTP route", "Command" and so on. */
 export const ENTRY_KIND: Record<string, string> = {
   http: "HTTP route",
   cli: "Command",
@@ -789,6 +966,7 @@ export const ENTRY_KIND: Record<string, string> = {
   grpc: "RPC method",
 };
 
+/** Finds where a trace starts: the handler of an entry point (the whole item for an inline handler), or a callable. */
 export function traceRoot(
   M: Model,
   st: Extract<State, { v: "trace" }>,
@@ -802,6 +980,11 @@ export function traceRoot(
   return { item: st.sym, member: st.member || "" };
 }
 
+/**
+ * Lists the next steps of a trace from one callable: its calls in source
+ * order, then, for an interface member, each implementation that has the
+ * member, and each override; those last two draw as "runs as".
+ */
 export function traceChildren(M: Model, item: string, member: string) {
   const out: { item: string; member: string; line: number; kind: string }[] = [];
   for (const c of M.mc.get(item + "\0" + member) ?? [])
@@ -815,12 +998,14 @@ export function traceChildren(M: Model, item: string, member: string) {
   return out;
 }
 
+/** Finds the note from atlas.yaml that applies to an entry point, by kind and path prefix. */
 export function noteFor(M: Model, r: Route): { title?: string; text: string } | undefined {
   return (M.doc.project?.entryPointNotes ?? []).find(
     n => (!n.kind || n.kind === r.kind) && (!n.pathPrefix || (r.path ?? "").startsWith(n.pathPrefix)),
   );
 }
 
+/** Builds one step of a trace: the code's kind, name and first doc sentence. */
 function traceNode(M: Model, key: string, item: string, member: string, depth: number): Node {
   const it = M.items.get(item)!,
     r = M.regionOfItem(item),
@@ -835,6 +1020,12 @@ function traceNode(M: Model, key: string, item: string, member: string, depth: n
   return done(n);
 }
 
+/**
+ * Lays out a trace: the entry point, then each call in order, one column per
+ * call depth, through each interface to the code that can run. It shows six
+ * calls per step and four levels at first, at most 70 boxes; "Expand" opens
+ * the rest. A step that the trace already shows gets a line, not a second box.
+ */
 export function buildTraceScene(M: Model, st: Extract<State, { v: "trace" }>, cx: Ctx): Scene | null {
   const root = traceRoot(M, st);
   if (!root) return null;

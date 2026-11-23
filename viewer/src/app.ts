@@ -28,43 +28,74 @@ import { tour } from "./tour";
 
 /* State. */
 
+/** The model of the map on show. */
 export let M: Model;
+/** The overview's scene, built once at start-up; every return to the overview reuses it. */
 let OV: Scene;
+/** The scene on show. */
 export let scene: Scene;
+/** The camera: zoom k, and the screen position of the world's origin. */
 let cam = { k: 1, x: 0, y: 0 };
+/** The camera animation in progress, if any. */
 let camAnim: ((now: number) => void) | null = null;
+/** The move from the previous view's box positions to the new view's, while it runs. */
 let morph: { prev: Map<string, { x: number; y: number }>; t0: number; ms: number } | null = null;
+
+/** What the pointer or the keyboard points at: a box, a row inside it, or a region. */
 interface Hit {
+  /** The box. */
   node?: Node;
+  /** The row inside the box. */
   row?: Row;
+  /** The region, in the overview. */
   region?: RegionBox;
 }
+/** What the pointer rests on. */
 let hover: Hit | null = null;
+/** What the reader clicked last in a focus view; its lines stay lit. */
 export let picked: Hit | null = null;
+/** What the keyboard has reached, with its focus ring. */
 let kbd: Hit | null = null;
+/** The views the reader opened, in order, for Back and Forward. */
 export let hist: State[] = [];
+/** The place in the history of the view on show. */
 export let hi = -1;
+/** How far the reader has zoomed out past the fit of a focus view; enough of it goes up a level. */
 let outAccum = 0;
+/** Asks the next frame to draw. */
 let needDraw = true;
+/** The device pixel ratio, for sharp text. */
 let dpr = 1;
+/** How much of each lane the reader opened, per view. */
 const laneShow: Record<string, Record<string, number | boolean>> = {};
+/** The trace steps that the reader expanded, per trace. */
 const traceOpen: Record<string, Record<string, boolean>> = {};
+/** The context that the scene builders read. */
 const cx = { laneShow, traceOpen, rebuild: () => rebuild() };
 
+/** The map's canvas. */
 const canvas = document.getElementById("map") as HTMLCanvasElement;
+/** The map canvas's drawing context. */
 const ctx = canvas.getContext("2d")!;
+/** The mini-map's canvas, in the corner. */
 const mini = document.getElementById("minimap") as HTMLCanvasElement;
+/** The mini-map's drawing context. */
 const mctx = mini.getContext("2d")!;
+/** How the mini-map maps the world: its scale and offset, set at each draw. */
 let miniT: { s: number; ox: number; oy: number } | null = null;
+/** Reports whether the reader asked for less motion; then views change without animation. */
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** A live region that announces what the keyboard reaches, for screen readers. */
 const announce = document.getElementById("announce")!;
 
+/** Returns the view on show. */
 export function current(): State {
   return hist[hi] ?? { v: "overview" };
 }
 
 /* Navigation. */
 
+/** Builds the scene for a view state, or returns the overview for a state that names nothing on the map. */
 function buildScene(st: State): Scene {
   if (st.v === "unit" && M.units.has(st.id)) return buildUnitScene(M, st.id, cx);
   if (st.v === "symbol" && M.items.has(st.id)) return buildSymScene(M, st.id, cx);
@@ -72,10 +103,17 @@ function buildScene(st: State): Scene {
   return OV;
 }
 
+/** Reports whether two states name the same view. */
 function sameState(a: State | undefined, b: State): boolean {
   return !!a && JSON.stringify(a) === JSON.stringify(b);
 }
 
+/**
+ * Opens a view: the one entry point for every move. It records the move in
+ * the history, builds the scene, places the camera, starts the move of the
+ * boxes, and updates the panel, breadcrumbs, address, hint, status line and
+ * legend. A member's ID opens its item with the member picked.
+ */
 export function go(st: State, opts: { noPush?: boolean } = {}) {
   if (st.v === "symbol" && !M.items.has(st.id)) {
     const owner = M.owner.get(st.id);
@@ -111,6 +149,7 @@ export function go(st: State, opts: { noPush?: boolean } = {}) {
   needDraw = true;
 }
 
+/** Rebuilds the view on show after a change inside it, such as "+N more", and moves its boxes into place. */
 export function rebuild() {
   const prev = screenRects();
   scene = buildScene(current());
@@ -118,12 +157,14 @@ export function rebuild() {
   needDraw = true;
 }
 
+/** Goes back one view in the history. */
 export function back() {
   if (hi > 0) {
     hi--;
     go(hist[hi], { noPush: true });
   }
 }
+/** Goes forward one view in the history. */
 export function fwd() {
   if (hi < hist.length - 1) {
     hi++;
@@ -131,6 +172,7 @@ export function fwd() {
   }
 }
 
+/** Goes up one level: from an item to its unit, from a unit to the overview, from a trace to its start. */
 export function up() {
   const st = current();
   if (st.v === "symbol") go({ v: "unit", id: M.items.get(st.id)!.unit });
@@ -141,6 +183,7 @@ export function up() {
   } else if (st.v === "overview" && (st.region || st.focusUnit)) go({ v: "overview" });
 }
 
+/** Enables Back and Forward when they can move, and names their targets in their titles. */
 function updateNav() {
   const b = document.getElementById("back") as HTMLButtonElement,
     f = document.getElementById("fwd") as HTMLButtonElement;
@@ -150,6 +193,7 @@ function updateNav() {
   f.title = hi < hist.length - 1 ? "Forward to " + stateName(hist[hi + 1]) : "Forward";
 }
 
+/** Names a view for readers, such as "store.Store.Get" or "the trace of GET /x". */
 export function stateName(st: State): string {
   if (st.v === "overview")
     return st.region ? (M.regions.find(r => r.id === st.region)?.name ?? "the overview") : "the overview";
@@ -161,6 +205,7 @@ export function stateName(st: State): string {
 
 /* Links: every state has a stable address built from IDs. */
 
+/** Writes a view into the address, by ID, so that a link to it keeps working after a rebuild. */
 function writeHash(st: State) {
   let h = "overview";
   if (st.v === "overview" && st.region) h = "region=" + encodeURIComponent(st.region);
@@ -182,6 +227,7 @@ function writeHash(st: State) {
   }
 }
 
+/** Reads the view that the address names; an address that names nothing opens the overview. */
 export function readHash(): State {
   const h = (location.hash || "").slice(1);
   const i = h.indexOf("=");
@@ -201,9 +247,11 @@ export function readHash(): State {
 
 /* Camera. */
 
+/** The canvas's width in CSS pixels. */
 function vw() {
   return canvas.width / dpr;
 }
+/** The canvas's height in CSS pixels. */
 function vh() {
   return canvas.height / dpr;
 }
@@ -215,14 +263,17 @@ function fitRect(x: number, y: number, w: number, h: number, pad = 40, top = pad
   const k = Math.min((vw() - pad * 2) / w, (vh() - pad - top) / h);
   return { k, x: vw() / 2 - (x + w / 2) * k, y: top + (vh() - pad - top) / 2 - (y + h / 2) * k };
 }
+/** Turns a screen point into a world point through the camera. */
 function toWorld(sx: number, sy: number) {
   return { x: (sx - cam.x) / cam.k, y: (sy - cam.y) / cam.k };
 }
+/** The smallest zoom the view allows: far enough out to see all of it, and a little more. */
 function minK() {
   const b = scene.bounds;
   return Math.min(fitRect(b.x, b.y, b.w, b.h, 40).k * 0.7, 0.3);
 }
 
+/** Places the overview's camera: on one unit, on one region, or on the whole map. */
 function setOverviewCam(st: State) {
   const b = OV.bounds;
   if (st.v === "overview" && st.focusUnit) {
@@ -261,6 +312,7 @@ function fitCam(sc: Scene) {
   return { k, x: vw() / 2 - (b.x + b.w / 2) * k, y: TOP + (vh() - 40 - TOP) / 2 - (b.y + b.h / 2) * k };
 }
 
+/** Zooms by a factor about a screen point, which stays still, within the allowed zooms. */
 function zoomAt(sx: number, sy: number, f: number) {
   const k = Math.min(2.5, Math.max(minK(), cam.k * f)),
     r = k / cam.k;
@@ -270,6 +322,7 @@ function zoomAt(sx: number, sy: number, f: number) {
   hint();
 }
 
+/** Moves the camera to a target over ms milliseconds, zooming on a log scale; with reduced motion it jumps. */
 function animateCam(target: typeof cam, ms = 480) {
   if (reduceMotion) {
     cam = target;
@@ -295,6 +348,7 @@ function animateCam(target: typeof cam, ms = 480) {
 
 /* Staged transitions: a box that exists before and after slides; new boxes fade in after. */
 
+/** Records where each box of the view on show sits on screen, so that the next view can move it from there. */
 function screenRects() {
   const m = new Map<string, { x: number; y: number }>();
   if (!scene) return m;
@@ -302,12 +356,15 @@ function screenRects() {
   for (const n of list) m.set(n.key.split("@")[0], { x: n.x * cam.k + cam.x, y: n.y * cam.k + cam.y });
   return m;
 }
+/** Starts the move into a new view from the recorded boxes: 700 ms, or 320 ms for a rebuild; none with reduced motion. */
 function startMorph(prev: Map<string, { x: number; y: number }>, quick = false) {
   morph = reduceMotion || !scene ? null : { prev, t0: performance.now(), ms: quick ? 320 : 700 };
 }
+/** Eases a time from 0 to 1 in and out. */
 function ease(t: number) {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 }
+/** How far a box has moved into place: a box that was on show slides, a new box fades in after the slide. */
 function morphState(n: Node, now: number) {
   if (!morph) return null;
   const t = Math.min(1, (now - morph.t0) / morph.ms);
@@ -319,6 +376,7 @@ function morphState(n: Node, now: number) {
     py0 = (p.y - cam.y) / cam.k;
   return { alpha: 1, dx: (px0 - n.x) * (1 - e), dy: (py0 - n.y) * (1 - e) };
 }
+/** Where to draw a box now, and how opaque, during and after a move. */
 function nodePos(n: Node, now: number) {
   const m = morphState(n, now);
   return { x: n.x + (m?.dx || 0), y: n.y + (m?.dy || 0), alpha: m ? m.alpha : 1 };
@@ -326,12 +384,15 @@ function nodePos(n: Node, now: number) {
 
 /* Drawing. */
 
+/** Starts a rounded rectangle path. */
 function rr(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   c.beginPath();
   c.roundRect(x, y, w, h, r);
 }
+/** Turns screen pixels into world units at the zoom on show, so lines and labels keep their size. */
 const px = (n: number) => n / cam.k;
 
+/** Runs once per animation frame: advances the camera and the move, and draws when something changed. */
 function frame(now: number) {
   if (camAnim) camAnim(now);
   if (morph) {
@@ -346,6 +407,7 @@ function frame(now: number) {
   requestAnimationFrame(frame);
 }
 
+/** Draws the view on show: clears the canvas, applies the camera, and draws the overview or a focus view. */
 function draw(now: number) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = T.bg;
@@ -356,11 +418,13 @@ function draw(now: number) {
   else drawFocus(now);
 }
 
+/** Reports whether a world rectangle shows on screen; boxes off screen skip their drawing. */
 function visRect(x: number, y: number, w: number, h: number) {
   const a = toWorld(0, 0),
     b = toWorld(vw(), vh());
   return x < b.x && x + w > a.x && y < b.y && y + h > a.y;
 }
+/** Draws a box's text at an origin. */
 function drawOps(n: Node, ox: number, oy: number) {
   for (const o of n.ops) {
     ctx.font = o.f;
@@ -369,6 +433,7 @@ function drawOps(n: Node, ox: number, oy: number) {
   }
 }
 
+/** Draws the keyboard focus ring around a rectangle, in the focus colour. */
 function focusRing(x: number, y: number, w: number, h: number, r: number) {
   ctx.save();
   ctx.setLineDash([]);
@@ -379,6 +444,11 @@ function focusRing(x: number, y: number, w: number, h: number, r: number) {
   ctx.restore();
 }
 
+/**
+ * Draws the overview. Zoomed out, it shows each region's name and
+ * description and the lines between regions; a hover lights one region's
+ * lines and names the items they reach. Zoomed in, it shows the unit boxes.
+ */
 function drawOverview(now: number) {
   const showRooms = cam.k >= OV_ROOMS_AT;
   if (!showRooms)
@@ -454,6 +524,7 @@ function drawOverview(now: number) {
   }
 }
 
+/** Draws a filled arrowhead with its tip at a point, pointing along an angle. */
 function arrowHead(x: number, y: number, ang: number, col: string, L: number, W: number) {
   ctx.beginPath();
   ctx.moveTo(x, y);
@@ -464,6 +535,7 @@ function arrowHead(x: number, y: number, ang: number, col: string, L: number, W:
   ctx.fill();
 }
 
+/** Draws a curved line with an arrowhead from one region's edge to another's, with an optional label at its middle. */
 function curve(a: RegionBox, b: RegionBox, col: string, w: number, alpha: number, label: string | null) {
   const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 },
     bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
@@ -509,12 +581,14 @@ function curve(a: RegionBox, b: RegionBox, col: string, w: number, alpha: number
   ctx.globalAlpha = 1;
 }
 
+/** The height in a box where a line ends: its anchor's row, its head, or near its top. */
 function anchorY(n: Node, a?: string) {
   if (a && n.anchors[a] != null) return n.anchors[a];
   if (a === "head" && n.anchors.head != null) return n.anchors.head;
   return n.t === "nbr" || n.t === "trace" || n.t === "more" || n.t === "route" ? Math.min(n.h / 2, 30) : n.h / 2;
 }
 
+/** Reports whether a line touches what the reader points at: the box, or the exact row in the focus box. */
 function edgeHot(e: SEdge, h: Hit | null) {
   const node = h?.node;
   if (!node) return false;
@@ -526,6 +600,11 @@ function edgeHot(e: SEdge, h: Hit | null) {
   return true;
 }
 
+/**
+ * Draws a focus view or a trace: the lines first (lit when they touch the
+ * pointed box or row, faint otherwise), then the boxes over them, then the
+ * lines' labels, the hovered row and the focus ring.
+ */
 function drawFocus(now: number) {
   const sc = scene,
     h = hover ?? kbd;
@@ -625,6 +704,7 @@ function drawFocus(now: number) {
   }
 }
 
+/** Draws a horizontal S-curve between two points, in a relation's style, with an arrowhead and an optional label. */
 function hbez(
   x0: number,
   y0: number,
@@ -681,6 +761,7 @@ function hbez(
   ctx.globalAlpha = 1;
 }
 
+/** Draws the mini-map in the corner: the whole view in small, with a frame around the part on screen. */
 function drawMini() {
   const W = mini.width,
     H = mini.height;
@@ -712,6 +793,7 @@ function drawMini() {
 
 /* Pointer input. */
 
+/** Finds what lies under a screen point: a row, a box or a region. */
 function hit(sx: number, sy: number): Hit | null {
   const p = toWorld(sx, sy);
   if (!scene) return null;
@@ -731,11 +813,16 @@ function hit(sx: number, sy: number): Hit | null {
   return null;
 }
 
+/** The pointers on the canvas, by ID: one drags, two pinch. */
 const pointers = new Map<number, { x: number; y: number }>();
+/** Where a drag started, and the camera then. */
 let drag: { x: number; y: number; cx: number; cy: number } | null = null,
+  /** Reports whether the pointer moved more than 4 pixels, which makes a press a drag rather than a click. */
   moved = false,
+  /** The finger distance and zoom when a pinch started. */
   pinch: { d: number; k: number } | null = null;
 
+/** Starts a drag with one pointer, or a pinch with two. */
 function onPointerDown(e: PointerEvent) {
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
@@ -750,6 +837,7 @@ function onPointerDown(e: PointerEvent) {
   }
   camAnim = null;
 }
+/** Pans, pinches, or updates what the pointer rests on and the status line. */
 function onPointerMove(e: PointerEvent) {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
   if (pinch && pointers.size === 2) {
@@ -780,6 +868,7 @@ function onPointerMove(e: PointerEvent) {
     canvas.classList.toggle("pointer", !!(h && (h.node || h.region)));
   }
 }
+/** Ends a drag or a pinch; a press that did not move counts as a click. */
 function endPointer(e: PointerEvent) {
   pointers.delete(e.pointerId);
   canvas.classList.remove("dragging");
@@ -788,6 +877,11 @@ function endPointer(e: PointerEvent) {
   if (pointers.size === 0) drag = null;
 }
 
+/**
+ * Acts on a click. In the overview, a unit opens and a region comes into
+ * view. In a focus view, the first click on a box shows its docs in the
+ * panel and lights its lines; a second click puts it in the centre.
+ */
 function click(h: Hit | null) {
   if (!h) {
     if (picked) {
@@ -847,11 +941,16 @@ function click(h: Hit | null) {
   else if (n.unit) panel.unit(n.unit, { focusBtn: true });
 }
 
+/** Puts a box's item or unit in the centre. */
 function openNode(n: Node) {
   if (n.item) go({ v: "symbol", id: n.item, member: n.t === "trace" && n.member ? n.member : undefined });
   else if (n.unit) go({ v: "unit", id: n.unit });
 }
 
+/**
+ * Zooms with the wheel or a trackpad. Zooming far into a unit box opens its
+ * unit focus; zooming out past a focus view's fit goes up a level.
+ */
 function onWheel(e: WheelEvent) {
   e.preventDefault();
   const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
@@ -875,6 +974,7 @@ function onWheel(e: WheelEvent) {
   zoomAt(e.offsetX, e.offsetY, f);
 }
 
+/** Centres the camera on the point of the mini-map under the pointer. */
 function moveMini(e: PointerEvent) {
   if (!miniT) return;
   const { s, ox, oy } = miniT,
@@ -888,15 +988,23 @@ function moveMini(e: PointerEvent) {
 
 /* Keyboard path through the map: browse, then commit. */
 
+/** A place that the arrow keys can reach: a box or a region, with its rectangle. */
 interface NavTarget {
+  /** The box. */
   node?: Node;
+  /** The region, in the zoomed-out overview. */
   region?: RegionBox;
+  /** The left edge. */
   x: number;
+  /** The top edge. */
   y: number;
+  /** The width. */
   w: number;
+  /** The height. */
   h: number;
 }
 
+/** Lists the places that the arrow keys can reach in the view on show. */
 function navTargets(): NavTarget[] {
   if (scene.t === "overview") {
     if (cam.k >= OV_ROOMS_AT) return OV.rooms!.map(n => ({ node: n, x: n.x, y: n.y, w: n.w, h: n.h }));
@@ -905,10 +1013,16 @@ function navTargets(): NavTarget[] {
   return scene.nodes.filter(n => n.t !== "lane").map(n => ({ node: n, x: n.x, y: n.y, w: n.w, h: n.h }));
 }
 
+/** Finds the place that a hit stands for. */
 function targetOf(h: Hit | null): NavTarget | undefined {
   return navTargets().find(t => (h?.node && t.node === h.node) || (h?.region && t.region === h.region));
 }
 
+/**
+ * Moves the keyboard focus one step: through the rows of a box for up and
+ * down, else to the nearest place in the arrow's direction, which favours
+ * places in line with the current one.
+ */
 function step(dx: number, dy: number) {
   const all = navTargets();
   if (!all.length) return;
@@ -952,6 +1066,7 @@ function step(dx: number, dy: number) {
   if (best) setKbd(best.node ? { node: best.node } : { region: best.region });
 }
 
+/** Puts the keyboard focus on a place: brings it into view, announces it and names it in the status line. */
 function setKbd(h: Hit) {
   kbd = h;
   const t = targetOf(h);
@@ -974,6 +1089,7 @@ function setKbd(h: Hit) {
   needDraw = true;
 }
 
+/** Describes a place for screen readers: its name, kind, first doc sentence, and what Enter does. */
 function describe(h: Hit): string {
   if (h.region) return `Region ${h.region.r.name}. ${inlinePlain(h.region.r.description)} Press Enter to zoom to it.`;
   const n = h.node!;
@@ -1003,6 +1119,7 @@ function describe(h: Hit): string {
   return "";
 }
 
+/** Acts on the keyboard focus: Enter (open) puts a box in the centre; Space shows its docs. */
 function activate(open: boolean) {
   if (!kbd) return;
   if (kbd.region) {
@@ -1034,6 +1151,7 @@ function activate(open: boolean) {
   else if (n.unit) panel.unit(n.unit, { focusBtn: n.t !== "center" });
 }
 
+/** Handles keys on the focused canvas: the arrows move, Enter opens, Space reads. */
 function onCanvasKey(e: KeyboardEvent) {
   const keys: Record<string, [number, number]> = {
     ArrowLeft: [-1, 0],
@@ -1056,6 +1174,11 @@ function onCanvasKey(e: KeyboardEvent) {
   }
 }
 
+/**
+ * Handles keys anywhere on the page: "/" searches, Backspace goes back,
+ * Escape goes up, "0" opens the overview, "+" and "-" zoom, "T" starts the
+ * tour, and the arrows step through an open tour.
+ */
 function onGlobalKey(e: KeyboardEvent) {
   const t = e.target as HTMLElement;
   if (t.tagName === "INPUT" || t.tagName === "TEXTAREA") return;
@@ -1084,6 +1207,7 @@ function onGlobalKey(e: KeyboardEvent) {
 
 /* Chrome. */
 
+/** Sizes the canvases to their boxes at the device's pixel ratio, at most 2, and redraws. */
 function resize() {
   const r = canvas.getBoundingClientRect();
   dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1095,6 +1219,7 @@ function resize() {
   needDraw = true;
 }
 
+/** Writes the status line: what the pointer or keyboard rests on, or what the view offers. */
 export function status(h: Hit | null) {
   const st = document.getElementById("statustext")!;
   if (!h) {
@@ -1133,6 +1258,7 @@ export function status(h: Hit | null) {
   st.innerHTML = `<b>${esc(name)}</b>${sub ? " — " + esc(sub) : ""}`;
 }
 
+/** Writes the hint under the breadcrumbs: the next thing the reader can do in this view, at this zoom. */
 export function hint() {
   const el = document.getElementById("hint")!;
   if (!scene) return;
@@ -1157,6 +1283,7 @@ export function hint() {
   el.hidden = false;
 }
 
+/** Writes the breadcrumbs: the view's kind, then region, unit, item and member, each a step back up. */
 function renderCrumbs() {
   const el = document.getElementById("crumbs")!;
   el.innerHTML = "";
@@ -1214,11 +1341,13 @@ function renderCrumbs() {
   });
 }
 
+/** One line of the legend: a sample of a relation's line style, and its verb. */
 function legendLine(k: string, label: string, heuristic = false) {
   const dash = heuristic ? "2 4" : EDGE[k].dash.join(" ");
   return `<div class="row"><svg width="36" height="10" aria-hidden="true"><line x1="0" y1="5" x2="28" y2="5" stroke="${edgeColor(k)}" stroke-width="2.2" stroke-dasharray="${dash}" ${heuristic ? 'opacity=".6"' : ""}></line><path d="M28 1 L36 5 L28 9 Z" fill="${edgeColor(k)}"></path></svg><span>${esc(label)}</span></div>`;
 }
 
+/** Writes the legend for the view on show: the line styles it uses and how to read them. */
 export function renderLegend() {
   const el = document.getElementById("legend")!,
     st = current();
@@ -1237,6 +1366,7 @@ export function renderLegend() {
 
 /* Start. */
 
+/** Starts the map: reads the theme, builds the overview, wires the pointer, wheel and keys, opens the view that the address names, and starts drawing. */
 export function start(model: Model) {
   M = model;
   readTheme();

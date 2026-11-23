@@ -79,8 +79,11 @@ export function dedent(s: string): string {
   return lines.map(l => l.slice(ind)).join("\n");
 }
 
+/** One block tag as written, before its own rules apply. */
 interface RawTag {
+  /** The tag's name, without its "@". */
   name: string;
+  /** Everything after the name, up to the next tag, with its lines. */
   text: string;
 }
 
@@ -105,6 +108,7 @@ function splitTags(raw: string): { body: string; tags: RawTag[] } {
   return { body: body.join("\n").trim(), tags };
 }
 
+/** The characters that the inline subset gives a meaning to. */
 const ESCAPE = /[\\`*[\]]/g;
 
 /** Escapes the characters that the inline subset gives meaning to. */
@@ -112,6 +116,7 @@ export function escapeInline(s: string): string {
   return s.replace(ESCAPE, c => "\\" + c);
 }
 
+/** Encodes the characters that would end a link target early in the inline subset: parentheses and spaces. */
 function escapeURL(u: string): string {
   return u.replace(/\(/g, "%28").replace(/\)/g, "%29").replace(/ /g, "%20");
 }
@@ -233,6 +238,7 @@ export function inline(md: string, resolve: LinkResolver): string {
   return out.trim();
 }
 
+/** Abbreviations whose period ends no sentence. */
 const ABBREVIATIONS = /(?:^|\s)(?:e\.g|i\.e|etc|vs|cf|approx|Mr|Ms|Dr|No)\.$/i;
 
 /** Returns the first sentence of a paragraph of Markdown. A sentence ends at ".", "!" or "?" before a space, outside code and links. */

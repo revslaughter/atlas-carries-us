@@ -1,3 +1,6 @@
+// The test index: which test functions use each symbol. The extractor reads
+// the test variants of each package, which go/packages loads beside them.
+
 package extract
 
 import (
@@ -40,6 +43,8 @@ func (ex *extractor) keyOf(obj types.Object) string {
 	return ""
 }
 
+// testPrefixes lists the name prefixes of the functions that go test runs:
+// tests, examples, fuzz targets and benchmarks.
 var testPrefixes = []string{"Test", "Example", "Fuzz", "Benchmark"}
 
 // tests records which test functions use each symbol.
