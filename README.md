@@ -17,7 +17,7 @@ computer.
 
 ## Status
 
-Phases 1 and 2 of 4 work today:
+Phases 1, 2 and 3 of 4 work today:
 
 | Part | State |
 | --- | --- |
@@ -26,7 +26,7 @@ Phases 1 and 2 of 4 work today:
 | TypeScript adapter | Done: [`adapters/typescript`](adapters/typescript), with Express and Hono routes. One map may hold Go and TypeScript together. |
 | `acu` command (Rust) | `extract`, `build`, `serve` and `check` work. |
 | Viewer | Done: [`viewer`](viewer). |
-| Svelte and SvelteKit | Next (phase 3), on the TypeScript adapter. |
+| Svelte and SvelteKit | Done (phase 3), on the TypeScript adapter: components through `svelte2tsx`, and SvelteKit routes, form actions and layouts with the `sveltekit` plugin. |
 | Rust adapter | Phase 4. |
 | MCP server in `acu serve` | Planned: lets a language model of your choice read the map, draft regions and tours, and answer questions. |
 
@@ -60,7 +60,8 @@ and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
    npm run build -w adapters/typescript
    ```
 
-3. Fetch a public example (chi, cobra, immer or hono) and look at it:
+3. Fetch a public example (chi, cobra, immer, hono or realworld) and look at
+   it:
 
    ```sh
    git submodule update --init --checkout --depth 1 corpus/go/chi
@@ -175,4 +176,5 @@ The design follows research on how developers read code
 Atlas Carries Us carries the MIT licence. The viewer ships the Inter, Fraunces
 and JetBrains Mono fonts under the SIL Open Font License 1.1. The Ahro mark
 belongs to Ahro. The projects under `corpus/` keep their own licences: chi
-(MIT), Cobra (Apache 2.0), Immer (MIT) and Hono (MIT).
+(MIT), Cobra (Apache 2.0), Immer (MIT), Hono (MIT) and RealWorld for
+SvelteKit (MIT).

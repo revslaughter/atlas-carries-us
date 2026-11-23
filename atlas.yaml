@@ -53,11 +53,13 @@ regions:
     paths: ["adapters/typescript/**"]
     description: >-
       The TypeScript adapter. It reads a project with the TypeScript compiler
-      API, finds Express and Hono routes, and writes the same data format as
-      the Go adapter.
+      API, reads Svelte components through svelte2tsx, finds Express, Hono
+      and SvelteKit routes, and writes the same data format as the Go
+      adapter.
     readingTip: >-
       Start with Extractor.run in extract.ts: it runs the passes in order.
-      docs.ts holds the doc normaliser; plugins.ts the route plugins.
+      docs.ts holds the doc normaliser, plugins.ts and sveltekit.ts the route
+      plugins, and svelte.ts the components.
   - id: viewer
     name: Drawing the map
     drafted: { by: Claude Code, at: "2026-11-23T01:20:00Z" }

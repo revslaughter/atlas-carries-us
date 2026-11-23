@@ -804,7 +804,8 @@
           "enum": [
             "exact",
             "heuristic"
-          ]
+          ],
+          "description": "'exact' when a type checker resolved the edge. 'heuristic' when the adapter matched names, or when a framework's file convention implies the edge, such as a layout around a page."
         },
         "line": {
           "type": "integer",
