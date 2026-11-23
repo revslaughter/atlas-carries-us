@@ -12,7 +12,9 @@ use std::collections::HashMap;
 use crate::schema::{Block, Doc};
 
 /// Turns a link target as written (`Store`, `` `Store::find` ``) into a link
-/// target of the inline subset (`sym:<id>`), or `None`.
+/// target of the inline subset (`sym:<id>` or a URL). An empty string means
+/// that rustdoc knows the target but no page holds it: the label stays, as
+/// plain text. `None` means that the text names no link.
 pub type Resolver<'a> = &'a dyn Fn(&str) -> Option<String>;
 
 /// The words of a code block's info string that rustdoc reads as test
@@ -169,7 +171,9 @@ impl Context<'_> {
         if is_url(dest) {
             return Some(escape_url(dest));
         }
-        (self.resolve)(dest).map(|t| escape_url(&t))
+        (self.resolve)(dest)
+            .filter(|t| !t.is_empty())
+            .map(|t| escape_url(&t))
     }
 
     /// Writes one link: its label, and its target when one resolves.
@@ -238,11 +242,11 @@ impl Context<'_> {
                         }
                     }
                     let target = match self.refs.get(&label.to_lowercase()) {
-                        Some(d) => self.target(d),
+                        Some(d) => self.target(d).or(Some(String::new())),
                         None => (self.resolve)(&label).map(|t| escape_url(&t)),
                     };
-                    if target.is_some() {
-                        out.push_str(&self.link(&label, target));
+                    if let Some(t) = target {
+                        out.push_str(&self.link(&label, Some(t).filter(|t| !t.is_empty())));
                     } else {
                         out.push_str("\\[");
                         out.push_str(&self.inline(&label));
@@ -620,6 +624,7 @@ mod tests {
         match t {
             "Store" | "crate::store::Store" => Some("sym:rs:lending::store#Store".into()),
             "`Store::find`" => Some("sym:rs:lending::store#Store.find".into()),
+            "`Service`" => Some(String::new()),
             _ => None,
         }
     }
@@ -640,6 +645,12 @@ mod tests {
             d.description[0].text,
             "Keeps books for [Store](sym:rs:lending::store#Store) and [`Store::find`](sym:rs:lending::store#Store.find). See [the trait](sym:rs:lending::store#Store) and \\[x\\]."
         );
+    }
+
+    #[test]
+    fn links_to_pages_outside_the_map_keep_their_label() {
+        let d = doc("A [`Service`] that routes.");
+        assert_eq!(d.summary, "A `Service` that routes.");
     }
 
     #[test]

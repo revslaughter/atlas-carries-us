@@ -251,7 +251,7 @@ pub fn run(req: Request) -> Result<Document> {
         );
         let krate = tools.rustdoc(package, target)?;
         let scip_root = if target.is_bin() {
-            format!("bin/{}", target.name)
+            format!("bin/{}", target.crate_name())
         } else if target.is_proc_macro() {
             "proc-macro".to_string()
         } else {
@@ -1438,7 +1438,12 @@ impl Extractor {
                     let links = &it.links;
                     let resolve = |target: &str| -> Option<String> {
                         let id = links.get(target)?;
-                        self.resolve_id(krate, *id).map(|s| format!("sym:{s}"))
+                        Some(
+                            self.resolve_id(krate, *id)
+                                .map(|s| format!("sym:{s}"))
+                                .or_else(|| self.external_url(krate, *id))
+                                .unwrap_or_default(),
+                        )
                     };
                     let doc =
                         docs::normalise(it.docs.as_deref().unwrap_or(""), &resolve, deprecated);
@@ -1449,6 +1454,49 @@ impl Extractor {
             }
         }
         self.inherit_docs();
+    }
+
+    /// Finds the page of an item of another crate in its published docs,
+    /// such as `https://docs.rs/tower/0.5.2/tower/trait.Service.html`. Members
+    /// of a type get no link, because the path does not say the type's kind.
+    fn external_url(&self, ci: usize, id: Id) -> Option<String> {
+        let k = &self.crates[ci].krate;
+        let sum = k.paths.get(&id)?;
+        let root = k
+            .external_crates
+            .get(&sum.crate_id)?
+            .html_root_url
+            .as_ref()?;
+        let (name, dirs) = sum.path.split_last()?;
+        if dirs
+            .last()
+            .is_some_and(|d| d.starts_with(|c: char| c.is_uppercase()))
+        {
+            return None;
+        }
+        let page = match sum.kind {
+            ItemKind::Module => return Some(format!("{root}{}/index.html", sum.path.join("/"))),
+            ItemKind::Struct => "struct",
+            ItemKind::Enum => "enum",
+            ItemKind::Union => "union",
+            ItemKind::Trait => "trait",
+            ItemKind::TraitAlias => "traitalias",
+            ItemKind::Function => "fn",
+            ItemKind::TypeAlias => "type",
+            ItemKind::Constant => "constant",
+            ItemKind::Static => "static",
+            ItemKind::Macro => "macro",
+            ItemKind::ProcAttribute => "attr",
+            ItemKind::ProcDerive => "derive",
+            ItemKind::Primitive => "primitive",
+            _ => return None,
+        };
+        let root = if root.ends_with('/') {
+            root.clone()
+        } else {
+            format!("{root}/")
+        };
+        Some(format!("{root}{}/{page}.{name}.html", dirs.join("/")))
     }
 
     /// Gives each member of a trait implementation that has no doc of its

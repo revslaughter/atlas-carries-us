@@ -79,6 +79,13 @@ pub mod routing {
         state: PhantomData<S>,
     }
 
+    impl<S> MethodRouter<S> {
+        /// Adds a service for POST.
+        pub fn post_service<T>(self, _service: T) -> Self {
+            self
+        }
+    }
+
     macro_rules! verbs {
         ($($name:ident),*) => {
             impl<S> MethodRouter<S> {

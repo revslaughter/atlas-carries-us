@@ -1,7 +1,7 @@
 //! The HTTP API: routes that turn requests into library calls.
 
 use axum::extract::{Json, Path};
-use axum::routing::{any, get, post};
+use axum::routing::{any, get, post, MethodRouter};
 use axum::Router;
 use lending::domain::{Book, BookId};
 
@@ -16,8 +16,25 @@ pub fn router() -> Router {
         .nest("/api", api())
         .nest("/admin", admin)
         .merge(health())
+        .merge(loans())
+        .route("/imports", get(list_books).post_service(import_service()))
         .route_service("/static", "files")
 }
+
+/// The routes for loans, each beside its handler.
+fn loans() -> Router {
+    async fn list() {}
+
+    route("/loans", get(list))
+}
+
+/// Wraps one route in a router of its own.
+fn route(path: &str, method_router: MethodRouter) -> Router {
+    Router::new().route(path, method_router)
+}
+
+/// Makes the service that imports books.
+fn import_service() {}
 
 /// The routes under /api.
 fn api() -> Router {

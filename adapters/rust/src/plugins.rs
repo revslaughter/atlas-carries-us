@@ -119,6 +119,9 @@ struct Sources {
     scip_of: HashMap<String, String>,
     /// Every reference to each SCIP symbol: file, line and column.
     uses: HashMap<String, Vec<(String, u32, u32)>>,
+    /// Every definition of each SCIP symbol: file, line and column. Nested
+    /// functions of one name share a symbol, so one symbol may have several.
+    defs: HashMap<String, Vec<(String, u32, u32)>>,
 }
 
 impl Sources {
@@ -126,11 +129,17 @@ impl Sources {
     fn new(ex: &Extractor) -> Self {
         let mut refs: HashMap<String, HashMap<(u32, u32), String>> = HashMap::new();
         let mut uses: HashMap<String, Vec<(String, u32, u32)>> = HashMap::new();
+        let mut defs: HashMap<String, Vec<(String, u32, u32)>> = HashMap::new();
         for d in &ex.index.documents {
             let file = ex.rel(std::path::Path::new(&d.relative_path));
             let m = refs.entry(file.clone()).or_default();
             for o in &d.occurrences {
                 if o.is_definition() {
+                    defs.entry(o.symbol.clone()).or_default().push((
+                        file.clone(),
+                        o.range.start_line,
+                        o.range.start_col,
+                    ));
                     continue;
                 }
                 m.insert((o.range.start_line, o.range.start_col), o.symbol.clone());
@@ -154,6 +163,7 @@ impl Sources {
             refs,
             scip_of,
             uses,
+            defs,
         }
     }
 
@@ -227,6 +237,18 @@ fn join_path(a: &str, b: &str) -> String {
     format!("{}{b}", a.trim_end_matches('/'))
 }
 
+/// Reports whether a SCIP symbol names a method of axum's `Router` by name,
+/// and not one of the routers inside it, such as `PathRouter`.
+fn is_router_method(sym: Option<&str>, name: &str) -> bool {
+    sym.and_then(scip::parse_symbol).is_some_and(|s| {
+        s.package == "axum"
+            && s.name() == name
+            && s.descriptors
+                .iter()
+                .any(|d| d.name == "Router" || d.name.starts_with("Router<"))
+    })
+}
+
 /// Reports whether a SCIP symbol names a method or function of axum by name.
 fn is_axum(sym: Option<&str>, name: &str) -> bool {
     sym.and_then(scip::parse_symbol)
@@ -280,6 +302,16 @@ fn handler(
                 };
             }
         }
+        // A function nested in another one stays out of rustdoc's output,
+        // so the function around it serves inline: the registrar's own
+        // nested function first, else the first one of that name.
+        if let Some(owner) = nested_owner(ex, src, file, t, registrar) {
+            return Handler {
+                id: owner,
+                inline: true,
+                external: String::new(),
+            };
+        }
     }
     let text: String = tokens[a..b]
         .iter()
@@ -297,6 +329,67 @@ fn handler(
         inline: false,
         external: text,
     }
+}
+
+/// Finds the function of the map that holds the definition of a nested
+/// function that a token names. Prefers the registrar's own nested function.
+fn nested_owner(
+    ex: &Extractor,
+    src: &Sources,
+    file: &str,
+    t: &Token,
+    registrar: &str,
+) -> Option<String> {
+    let sym = src.symbol_at(file, t)?;
+    if !sym.ends_with(").") || ex.by_scip.contains_key(sym) {
+        return None;
+    }
+    let owners: Vec<&str> = src
+        .defs
+        .get(sym)?
+        .iter()
+        .filter_map(|(f, l, c)| ex.callable_at(f, *l, *c))
+        .collect();
+    owners
+        .iter()
+        .find(|o| **o == registrar)
+        .or(owners.first())
+        .map(|o| o.to_string())
+}
+
+/// Reads a string literal that fills a range of tokens alone.
+fn literal(tokens: &[Token], (a, b): (usize, usize)) -> Option<String> {
+    (b == a + 1 && tokens[a].kind == Kind::Str).then(|| tokens[a].text.clone())
+}
+
+/// Finds which parameter of a function a range of tokens names, when the
+/// range holds that parameter's name alone.
+fn param_index(
+    ex: &Extractor,
+    func: &str,
+    tokens: &[Token],
+    (a, b): (usize, usize),
+) -> Option<usize> {
+    if b != a + 1 || tokens[a].kind != Kind::Ident {
+        return None;
+    }
+    let sig = ex.syms.get(func)?.signature.as_ref()?;
+    sig.params.iter().position(|p| p.name == tokens[a].text)
+}
+
+/// A function of the project that wraps `.route(path, router)` and takes the
+/// path, and perhaps the method router, as parameters. Its callers register
+/// the routes.
+struct Helper {
+    /// The wrapping function.
+    func: String,
+    /// The function's file.
+    file: String,
+    /// The parameter that takes the path.
+    path_param: usize,
+    /// The parameter that takes the method router, or the tokens of the
+    /// method router inside the helper.
+    router: Result<usize, (usize, usize)>,
 }
 
 /// One route as the scan finds it, before the mounts that set its full path.
@@ -343,6 +436,7 @@ type FileFunctions = BTreeMap<String, Vec<(String, (u32, u32), (u32, u32))>>;
 fn axum(ex: &Extractor, src: &mut Sources, opts: &RouteOptions) -> Vec<EntryPoint> {
     let mut routes = Vec::new();
     let mut mounts = Vec::new();
+    let mut helpers = Vec::new();
     let mut files: FileFunctions = BTreeMap::new();
     for (id, sp) in &ex.spans {
         if ex
@@ -377,7 +471,7 @@ fn axum(ex: &Extractor, src: &mut Sources, opts: &RouteOptions) -> Vec<EntryPoin
                 let sym = src.symbol_at(file, t);
                 let name = t.text.as_str();
                 if !matches!(name, "route" | "route_service" | "nest" | "merge")
-                    || !is_axum(sym, name)
+                    || !is_router_method(sym, name)
                 {
                     continue;
                 }
@@ -388,13 +482,20 @@ fn axum(ex: &Extractor, src: &mut Sources, opts: &RouteOptions) -> Vec<EntryPoin
                     line: t.line + 1,
                     end_line: 0,
                 };
-                let literal = |r: (usize, usize)| {
-                    (r.1 == r.0 + 1 && tokens[r.0].kind == Kind::Str)
-                        .then(|| tokens[r.0].text.clone())
-                };
+                let literal = |r: (usize, usize)| literal(&tokens, r);
                 match (name, args.as_slice()) {
                     ("route", [p, mr]) => {
-                        let Some(path) = literal(*p) else { continue };
+                        let Some(path) = literal(*p) else {
+                            if let Some(pi) = param_index(ex, id, &tokens, *p) {
+                                helpers.push(Helper {
+                                    func: id.clone(),
+                                    file: file.clone(),
+                                    path_param: pi,
+                                    router: param_index(ex, id, &tokens, *mr).ok_or(*mr),
+                                });
+                            }
+                            continue;
+                        };
                         for (method, h) in method_router(ex, src, file, &tokens, *mr, id) {
                             routes.push(Route {
                                 method,
@@ -437,6 +538,7 @@ fn axum(ex: &Extractor, src: &mut Sources, opts: &RouteOptions) -> Vec<EntryPoin
             }
         }
     }
+    routes.extend(helper_routes(ex, src, &helpers));
     let mut out = Vec::new();
     for r in routes {
         let rule = opts
@@ -473,6 +575,57 @@ fn axum(ex: &Extractor, src: &mut Sources, opts: &RouteOptions) -> Vec<EntryPoin
     out
 }
 
+/// Turns each call of a route helper into routes, registered by the caller.
+fn helper_routes(ex: &Extractor, src: &mut Sources, helpers: &[Helper]) -> Vec<Route> {
+    let mut out = Vec::new();
+    for h in helpers {
+        let Some(sym) = src.scip_of.get(&h.func).cloned() else {
+            continue;
+        };
+        let uses = src.uses.get(&sym).cloned().unwrap_or_default();
+        for (file, line, col) in uses {
+            let Some(caller) = ex.callable_at(&file, line, col).map(str::to_string) else {
+                continue;
+            };
+            let tokens = src.tokens(ex, &file).to_vec();
+            let u = token_index(&tokens, line, col);
+            // A plain call only: `route("/x", get(h))`, not `.route(…)`.
+            if !tokens.get(u + 1).is_some_and(|t| t.is("(")) || (u > 0 && tokens[u - 1].is(".")) {
+                continue;
+            }
+            let args = arguments(&tokens, u + 1, lexer::closing(&tokens, u + 1));
+            let Some(path) = args.get(h.path_param).and_then(|r| literal(&tokens, *r)) else {
+                continue;
+            };
+            let found = match h.router {
+                Ok(mi) => match args.get(mi) {
+                    Some(r) => method_router(ex, src, &file, &tokens, *r, &caller),
+                    None => continue,
+                },
+                Err(r) => {
+                    let own = src.tokens(ex, &h.file).to_vec();
+                    method_router(ex, src, &h.file, &own, r, &caller)
+                }
+            };
+            for (method, handler) in found {
+                out.push(Route {
+                    method,
+                    path: path.clone(),
+                    handler,
+                    registrar: caller.clone(),
+                    at: u,
+                    location: Location {
+                        path: file.clone(),
+                        line: line + 1,
+                        end_line: 0,
+                    },
+                });
+            }
+        }
+    }
+    out
+}
+
 /// Reads the method router of a route: `get(h)`, `get(h).post(g)`,
 /// `routing::any(h)`. Returns each method with its handler.
 fn method_router(
@@ -498,9 +651,11 @@ fn method_router(
             continue;
         }
         if depth == 0 && t.kind == Kind::Ident && tokens.get(i + 1).is_some_and(|n| n.is("(")) {
-            let verb = VERBS.iter().find(|(v, _)| *v == t.text);
-            if let Some((v, method)) = verb {
-                if is_axum(src.symbol_at(file, t), v) {
+            // `post_service(svc)` serves POST with a service.
+            let base = t.text.strip_suffix("_service").unwrap_or(&t.text);
+            let verb = VERBS.iter().find(|(v, _)| *v == base);
+            if let Some((_, method)) = verb {
+                if is_axum(src.symbol_at(file, t), &t.text) {
                     let close = lexer::closing(tokens, i + 1);
                     if let Some(arg) = arguments(tokens, i + 1, close).into_iter().next() {
                         out.push((

@@ -68,7 +68,7 @@ pub struct Shelf {
 pub struct Member {
     /// The member's name.
     pub name: String,
-    /// The books that the member holds.
+    /// The books that the member holds, in a [`Vec`].
     pub held: Vec<BookId>,
 }
 

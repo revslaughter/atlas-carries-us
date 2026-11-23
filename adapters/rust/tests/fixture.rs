@@ -274,6 +274,8 @@ fn named_facts_hold() {
         ("http:POST /admin/reindex", "rs:lendd::http#reindex"),
         ("http:GET /admin/ping", "rs:lendd::http#router"),
         ("http:GET /health", "rs:lendd::http#health"),
+        ("http:GET /loans", "rs:lendd::http#loans"),
+        ("http:POST /imports", "rs:lendd::http#import_service"),
         ("cli:lendd serve", "rs:lendd#serve"),
         ("cli:lendd import-books", "rs:lendd#import"),
         ("cli:lendd report count", "rs:lendd#report_count"),

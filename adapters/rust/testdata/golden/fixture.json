@@ -1030,8 +1030,8 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 38,
-        "endLine": 40
+        "line": 55,
+        "endLine": 57
       },
       "doc": {
         "raw": "Adds a book.",
@@ -1078,8 +1078,8 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 23,
-        "endLine": 25
+        "line": 40,
+        "endLine": 42
       },
       "doc": {
         "raw": "The routes under /api.",
@@ -1112,8 +1112,8 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 28,
-        "endLine": 30
+        "line": 45,
+        "endLine": 47
       },
       "doc": {
         "raw": "The health check.",
@@ -1137,6 +1137,35 @@
       }
     },
     {
+      "id": "rs:lendd::http#import_service",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "import_service",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 37
+      },
+      "doc": {
+        "raw": "Makes the service that imports books.",
+        "format": "rustdoc",
+        "summary": "Makes the service that imports books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes the service that imports books."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "fn import_service()"
+      }
+    },
+    {
       "id": "rs:lendd::http#list_books",
       "kind": "function",
       "languageKind": "function",
@@ -1146,8 +1175,8 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 33,
-        "endLine": 35
+        "line": 50,
+        "endLine": 52
       },
       "doc": {
         "raw": "Lists every book.",
@@ -1177,6 +1206,40 @@
       ]
     },
     {
+      "id": "rs:lendd::http#loans",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "loans",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 25,
+        "endLine": 29
+      },
+      "doc": {
+        "raw": "The routes for loans, each beside its handler.",
+        "format": "rustdoc",
+        "summary": "The routes for loans, each beside its handler.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The routes for loans, each beside its handler."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Router"
+          }
+        ],
+        "text": "fn loans() -> Router"
+      }
+    },
+    {
       "id": "rs:lendd::http#reindex",
       "kind": "function",
       "languageKind": "function",
@@ -1186,7 +1249,7 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 54
+        "line": 71
       },
       "doc": {
         "raw": "Rebuilds the search index.",
@@ -1218,8 +1281,8 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 49,
-        "endLine": 51
+        "line": 66,
+        "endLine": 68
       },
       "doc": {
         "raw": "Removes one book.",
@@ -1247,6 +1310,49 @@
       ]
     },
     {
+      "id": "rs:lendd::http#route",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "route",
+      "parent": "rs:file:lendd/src/http.rs",
+      "language": "rust",
+      "exported": false,
+      "location": {
+        "path": "lendd/src/http.rs",
+        "line": 32,
+        "endLine": 34
+      },
+      "doc": {
+        "raw": "Wraps one route in a router of its own.",
+        "format": "rustdoc",
+        "summary": "Wraps one route in a router of its own.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Wraps one route in a router of its own."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "path",
+            "type": "&str"
+          },
+          {
+            "name": "method_router",
+            "type": "MethodRouter"
+          }
+        ],
+        "results": [
+          {
+            "type": "Router"
+          }
+        ],
+        "text": "fn route(path: &str, method_router: MethodRouter) -> Router"
+      }
+    },
+    {
       "id": "rs:lendd::http#router",
       "kind": "function",
       "languageKind": "function",
@@ -1257,7 +1363,7 @@
       "location": {
         "path": "lendd/src/http.rs",
         "line": 9,
-        "endLine": 20
+        "endLine": 22
       },
       "doc": {
         "raw": "Builds the router of the whole API.",
@@ -1290,8 +1396,8 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 57,
-        "endLine": 59
+        "line": 74,
+        "endLine": 76
       },
       "doc": {
         "raw": "Searches the books.",
@@ -1330,8 +1436,8 @@
       "exported": false,
       "location": {
         "path": "lendd/src/http.rs",
-        "line": 43,
-        "endLine": 46
+        "line": 60,
+        "endLine": 63
       },
       "doc": {
         "raw": "Shows one book.",
@@ -2287,13 +2393,13 @@
         "line": 72
       },
       "doc": {
-        "raw": "The books that the member holds.",
+        "raw": "The books that the member holds, in a [`Vec`].",
         "format": "rustdoc",
-        "summary": "The books that the member holds.",
+        "summary": "The books that the member holds, in a [`Vec`](https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html).",
         "description": [
           {
             "type": "paragraph",
-            "text": "The books that the member holds."
+            "text": "The books that the member holds, in a [`Vec`](https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html)."
           }
         ]
       },
@@ -3730,13 +3836,20 @@
       "to": "rs:lendd::http#search",
       "kind": "calls",
       "confidence": "exact",
-      "line": 24
+      "line": 41
     },
     {
       "from": "rs:lendd::http#list_books",
       "to": "rs:lending::domain#Book",
       "kind": "return_type",
       "confidence": "exact"
+    },
+    {
+      "from": "rs:lendd::http#loans",
+      "to": "rs:lendd::http#route",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 28
     },
     {
       "from": "rs:lendd::http#router",
@@ -3761,10 +3874,25 @@
     },
     {
       "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#import_service",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 20
+    },
+    {
+      "from": "rs:lendd::http#router",
       "to": "rs:lendd::http#list_books",
       "kind": "calls",
       "confidence": "exact",
-      "line": 14
+      "line": 14,
+      "count": 2
+    },
+    {
+      "from": "rs:lendd::http#router",
+      "to": "rs:lendd::http#loans",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 19
     },
     {
       "from": "rs:lendd::http#router",
@@ -3792,7 +3920,7 @@
       "to": "rs:lendd::http#list_books",
       "kind": "calls",
       "confidence": "exact",
-      "line": 58
+      "line": 75
     },
     {
       "from": "rs:lendd::http#search",
@@ -4289,6 +4417,34 @@
       "plugin": "axum"
     },
     {
+      "id": "http:GET /imports",
+      "kind": "http",
+      "name": "GET /imports",
+      "method": "GET",
+      "path": "/imports",
+      "handler": "rs:lendd::http#list_books",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 20
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:POST /imports",
+      "kind": "http",
+      "name": "POST /imports",
+      "method": "POST",
+      "path": "/imports",
+      "handler": "rs:lendd::http#import_service",
+      "registrar": "rs:lendd::http#router",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 20
+      },
+      "plugin": "axum"
+    },
+    {
       "id": "http:ANY /static",
       "kind": "http",
       "name": "ANY /static",
@@ -4299,7 +4455,22 @@
       "registrar": "rs:lendd::http#router",
       "registeredAt": {
         "path": "lendd/src/http.rs",
-        "line": 19
+        "line": 21
+      },
+      "plugin": "axum"
+    },
+    {
+      "id": "http:GET /loans",
+      "kind": "http",
+      "name": "GET /loans",
+      "method": "GET",
+      "path": "/loans",
+      "handler": "rs:lendd::http#loans",
+      "inline": true,
+      "registrar": "rs:lendd::http#loans",
+      "registeredAt": {
+        "path": "lendd/src/http.rs",
+        "line": 28
       },
       "plugin": "axum"
     },
@@ -4313,7 +4484,7 @@
       "registrar": "rs:lendd::http#api",
       "registeredAt": {
         "path": "lendd/src/http.rs",
-        "line": 24
+        "line": 41
       },
       "plugin": "axum"
     },
@@ -4328,7 +4499,7 @@
       "registrar": "rs:lendd::http#health",
       "registeredAt": {
         "path": "lendd/src/http.rs",
-        "line": 29
+        "line": 46
       },
       "plugin": "axum"
     },
