@@ -6,8 +6,8 @@ languages. Coding agents read [`AGENTS.md`](AGENTS.md), which holds the same
 rules in short form.
 
 The project spans several languages: Go (the Go adapter), Rust (the `acu`
-command), TypeScript (the viewer and the TypeScript adapter), and more
-adapters to come. One data format
+command and the Rust adapter), TypeScript (the viewer and the TypeScript
+adapter), and more adapters to come. One data format
 joins them. Most of the rules below exist so that a reader of any part finds
 the same words, the same shapes and the same checks.
 
@@ -16,8 +16,8 @@ the same words, the same shapes and the same checks.
 Choose one:
 
 1. **VS Code devcontainer (recommended).** Open the folder and choose
-   "Reopen in Container". The container holds the pinned Go, Node, Rust and
-   Chromium, installs the dependencies, fetches the test corpus, installs the
+   "Reopen in Container". The container holds the pinned Go, Node, Rust (with
+   the nightly that the Rust adapter runs) and Chromium, installs the dependencies, fetches the test corpus, installs the
    Go adapter and builds the TypeScript adapter.
 2. **Docker on the command line.**
 
@@ -27,14 +27,16 @@ Choose one:
    ```
 
 3. **Your own tools.** Install the versions that `rust-toolchain.toml`,
-   `.node-version` and the `toolchain` line in `adapters/go/go.mod` name. Then:
+   `.node-version` and the `toolchain` line in `adapters/go/go.mod` name, and
+   the nightly that `NIGHTLY` in `adapters/rust/src/toolchain.rs` names. Then:
 
    ```sh
+   rustup toolchain install nightly-2026-11-01 --profile minimal --component rust-src,rust-analyzer
    npm ci
    npm run build -w adapters/typescript
    git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra \
      corpus/typescript/immer corpus/typescript/hono corpus/svelte/realworld \
-     corpus/svelte/svelte-changelog
+     corpus/svelte/svelte-changelog corpus/rust/ripgrep corpus/rust/axum
    (cd adapters/go && go install ./cmd/acu-adapter-go)
    ```
 
@@ -67,7 +69,7 @@ Behind a TLS-inspecting proxy, see the comment at the top of the `Dockerfile`.
 | Node workspace | `npm ci`, and Prettier on the viewer, the TypeScript adapter and the end-to-end tests. |
 | TypeScript adapter | The type check, the tests (golden file, schema validation, named facts, doc and glob units), and the build. |
 | Viewer | The TypeScript type check, unit tests (including the language-word test), and the build. |
-| `acu` | `cargo fmt`, `cargo clippy` with warnings as errors, the tests, and a release build. |
+| `acu` and the Rust adapter | `cargo fmt`, `cargo clippy` with warnings as errors, the tests (for the Rust adapter: golden file, schema validation, named facts), and a release build of the workspace. |
 | End to end | For each example: `acu extract`, the count snapshot, `acu build`, and the smoke test in both themes. |
 | This project's map | `acu extract -c atlas.yaml`, the doc check (`tests/e2e/docs.mjs`), `acu build`, and the smoke test in both themes. |
 
@@ -81,8 +83,8 @@ request:
 
 1. `schema/atlas.schema.json`
 2. `docs/schema.md`
-3. Each adapter's types (today: `adapters/go/internal/schema/schema.go` and
-   `adapters/typescript/src/schema.ts`)
+3. Each adapter's types (today: `adapters/go/internal/schema/schema.go`,
+   `adapters/typescript/src/schema.ts` and `adapters/rust/src/schema.rs`)
 4. The viewer's types (`viewer/src/types.ts`)
 
 The config format works the same way: `schema/config.schema.json`,
@@ -173,7 +175,7 @@ give the same bytes. Golden files depend on this.
 | Language | Tool | Rule |
 | --- | --- | --- |
 | Go | `gofmt` | No unformatted files. |
-| Rust | `rustfmt`, `clippy` | No warnings. |
+| Rust | `rustfmt`, `clippy` | No warnings. Golden files stay as the adapter writes them. |
 | TypeScript, JavaScript, CSS, HTML, JSON in `viewer/`, `adapters/typescript/` and `tests/e2e/` | Prettier (`npm run format`) | `.prettierrc.json`. Golden files stay as the adapter writes them. |
 | Everything else | `.editorconfig` | UTF-8, LF, final newline, two-space indents (tabs for Go, four spaces for Rust and Python). |
 
@@ -189,6 +191,7 @@ give the same bytes. Golden files depend on this.
    opens every view in both themes and fails on any console error.
 4. **Update a golden file or a snapshot only on purpose.** Run the update
    (`go test ./... -update`, `npm run golden -w adapters/typescript`,
+   `UPDATE_GOLDEN=1 cargo test -p acu-adapter-rust`,
    `node tests/e2e/counts.mjs … --update`), read the diff, and say in the
    commit message why it changed.
 5. **Never skip or delete a test to make CI pass.**
@@ -206,6 +209,8 @@ Each tool version lives in two or more files. Change a group together;
 | Playwright | `PLAYWRIGHT_VERSION` in `Dockerfile`; `tests/e2e/package.json`; `package-lock.json` |
 | TypeScript | `viewer/package.json`; `adapters/typescript/package.json`; `package-lock.json` |
 | `svelte`, `svelte2tsx` | `adapters/typescript/package.json`; `package-lock.json` |
+| Rust nightly | `RUST_NIGHTLY` in `Dockerfile`; `NIGHTLY` in `adapters/rust/src/toolchain.rs` |
+| `rustdoc-types` | `adapters/rust/Cargo.toml` (exact); `Cargo.lock`. It must read the nightly's JSON format; move both together. |
 
 1. Pin base images by tag and digest.
 2. Pin npm packages to exact versions.

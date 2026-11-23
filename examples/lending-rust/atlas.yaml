@@ -1,0 +1,73 @@
+# Config for the Rust adapter's test fixture: an invented lending library in
+# a Cargo workspace. The end-to-end tests build the viewer from it, and the
+# container image job maps it, so both plugins run in every check.
+version: 1
+project:
+  name: Lending library in Rust (fixture)
+  descriptionDrafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+  repo: revslaughter/atlas-carries-us
+  links: github
+  description: |
+    An invented lending library that exercises every feature of the Rust
+    adapter. The lendd command serves the library over HTTP with axum and
+    takes commands with clap. The lending crate holds the rules and the
+    stores.
+
+    third_party holds small stand-ins for axum and clap, so the map needs no
+    network.
+languages:
+  - adapter: rust
+    root: ../../adapters/rust/testdata/fixture
+entryPoints:
+  - plugin: axum
+  - plugin: clap
+regions:
+  - id: server
+    name: Server and command line
+    drafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+    paths: ["lendd/**"]
+    description: The lendd command, its subcommands and its HTTP routes.
+    readingTip: Open the entry points to see each route and command.
+  - id: rules
+    name: Lending rules
+    drafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+    paths: ["lending/src/library.rs", "lending/src/lib.rs"]
+    description: The Library applies the rules to a store.
+  - id: domain
+    name: Shared vocabulary
+    drafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+    paths: ["lending/src/domain.rs", "lending-macros/**"]
+    description: Books, members, loans and the errors that every part returns.
+  - id: storage
+    name: Storage
+    drafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+    paths: ["lending/src/store/**"]
+    description: One storage contract and a store in memory that implements it.
+  - id: other
+    name: Other code
+    default: true
+layout:
+  rows:
+    - [server]
+    - [rules, storage]
+    - [domain, other]
+tour:
+  - title: Four parts
+    drafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+    open: { view: overview }
+    text: >-
+      The lendd command sits on top. It uses the lending rules, which use the
+      storage contract, and every part speaks the shared vocabulary.
+  - title: A loan
+    drafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+    open: { view: trace, symbol: "rs:lending::library#Library.borrow" }
+    text: >-
+      borrow finds the book through the Store trait, checks the rules, saves
+      the book and records the loan. The call to find goes through the trait;
+      the trace shows MemoryStore's find as the code that runs.
+  - title: A command
+    drafted: { by: Claude Code, at: "2026-11-23T15:30:00Z" }
+    open: { view: trace, entryPoint: "lendd report count" }
+    text: >-
+      The clap plugin reads the subcommand enums. main matches each command
+      and calls the function that serves it: here, report_count.

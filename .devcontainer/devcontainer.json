@@ -9,7 +9,7 @@
   },
   "remoteUser": "dev",
   "updateRemoteUserUID": true,
-  "postCreateCommand": "npm ci --no-audit --no-fund && npm run build -w adapters/typescript && git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra corpus/typescript/immer corpus/typescript/hono corpus/svelte/realworld corpus/svelte/svelte-changelog && (cd adapters/go && go install ./cmd/acu-adapter-go)",
+  "postCreateCommand": "npm ci --no-audit --no-fund && npm run build -w adapters/typescript && git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra corpus/typescript/immer corpus/typescript/hono corpus/svelte/realworld corpus/svelte/svelte-changelog corpus/rust/ripgrep corpus/rust/axum && (cd adapters/go && go install ./cmd/acu-adapter-go)",
   "forwardPorts": [4321],
   "portsAttributes": {
     "4321": { "label": "acu serve", "onAutoForward": "notify" }

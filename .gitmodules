@@ -31,6 +31,10 @@
 [submodule "corpus/rust/ripgrep"]
 	path = corpus/rust/ripgrep
 	url = https://github.com/BurntSushi/ripgrep
+	shallow = true
+	update = none
 [submodule "corpus/rust/axum"]
 	path = corpus/rust/axum
 	url = https://github.com/tokio-rs/axum
+	shallow = true
+	update = none

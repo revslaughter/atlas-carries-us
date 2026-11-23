@@ -76,11 +76,12 @@ fi
 
 step "End to end: each example"
 git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra corpus/typescript/immer corpus/typescript/hono \
-  corpus/svelte/realworld corpus/svelte/svelte-changelog
+  corpus/svelte/realworld corpus/svelte/svelte-changelog corpus/rust/ripgrep corpus/rust/axum
 (cd adapters/go && go install ./cmd/acu-adapter-go)
-# acu runs the TypeScript adapter from its build in this checkout.
+# acu runs the TypeScript adapter from its build in this checkout, and the
+# Rust adapter from beside itself in target/release.
 mkdir -p out
-for ex in lending chi cobra immer hono realworld svelte-changelog mixed; do
+for ex in lending chi cobra immer hono realworld svelte-changelog mixed lending-rust ripgrep axum; do
   echo "-- $ex"
   ./target/release/acu extract -c "examples/$ex/atlas.yaml" -o "out/$ex.json"
   node tests/e2e/counts.mjs "out/$ex.json" "examples/$ex/counts.json"
