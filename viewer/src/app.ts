@@ -207,9 +207,13 @@ function vw() {
 function vh() {
   return canvas.height / dpr;
 }
-function fitRect(x: number, y: number, w: number, h: number, pad = 40) {
-  const k = Math.min((vw() - pad * 2) / w, (vh() - pad * 2) / h);
-  return { k, x: vw() / 2 - (x + w / 2) * k, y: vh() / 2 - (y + h / 2) * k };
+/** Screen pixels at the top of the canvas that the breadcrumbs and the hint cover. */
+const TOP = 84;
+
+/** Fits a world rectangle into the view with `pad` pixels around it and `top` pixels free above it. */
+function fitRect(x: number, y: number, w: number, h: number, pad = 40, top = pad) {
+  const k = Math.min((vw() - pad * 2) / w, (vh() - pad - top) / h);
+  return { k, x: vw() / 2 - (x + w / 2) * k, y: top + (vh() - pad - top) / 2 - (y + h / 2) * k };
 }
 function toWorld(sx: number, sy: number) {
   return { x: (sx - cam.x) / cam.k, y: (sy - cam.y) / cam.k };
@@ -232,29 +236,29 @@ function setOverviewCam(st: State) {
   if (st.v === "overview" && st.region) {
     const g = OV.regions!.find(g => g.r.id === st.region);
     if (g) {
-      cam = fitRect(g.x, g.y - 60, g.w, g.h + 60, 30);
+      cam = fitRect(g.x, g.y, g.w, g.h, 30, TOP);
       return;
     }
   }
-  cam = fitRect(b.x, b.y - 60, b.w, b.h + 60, 30);
+  cam = fitRect(b.x, b.y, b.w, b.h, 30, TOP);
 }
 
 /** Focus views start readable: at least 0.8 scale, fitted by width, at the top. */
 function fitCam(sc: Scene) {
   const b = sc.bounds,
-    f = fitRect(b.x, b.y, b.w, b.h, 40);
+    f = fitRect(b.x, b.y, b.w, b.h, 40, TOP);
   let k = Math.min(1.1, f.k);
   if (k < 0.88) {
     const c = sc.center!;
     if (sc.t === "trace") {
       k = 0.88;
-      return { k, x: 24 - b.x * k, y: 64 - b.y * k };
+      return { k, x: 24 - b.x * k, y: TOP - b.y * k };
     }
     k = Math.max(0.8, Math.min(1.1, (vw() - 32) / b.w));
     const cxw = b.w * k <= vw() ? b.x + b.w / 2 : c.x + c.w / 2;
-    return { k, x: vw() / 2 - cxw * k, y: 64 - Math.min(b.y, c.y - 40) * k };
+    return { k, x: vw() / 2 - cxw * k, y: TOP - Math.min(b.y, c.y - 40) * k };
   }
-  return { k, x: vw() / 2 - (b.x + b.w / 2) * k, y: vh() / 2 - (b.y + b.h / 2) * k };
+  return { k, x: vw() / 2 - (b.x + b.w / 2) * k, y: TOP + (vh() - 40 - TOP) / 2 - (b.y + b.h / 2) * k };
 }
 
 function zoomAt(sx: number, sy: number, f: number) {
@@ -796,7 +800,7 @@ function click(h: Hit | null) {
   if (scene.t === "overview") {
     if (h.node) go({ v: "unit", id: h.node.unit! });
     else if (h.region) {
-      animateCam(fitRect(h.region.x, h.region.y, h.region.w, h.region.h, 30));
+      animateCam(fitRect(h.region.x, h.region.y, h.region.w, h.region.h, 30, TOP));
       panel.region(h.region.r.id);
     }
     return;
@@ -1002,7 +1006,7 @@ function describe(h: Hit): string {
 function activate(open: boolean) {
   if (!kbd) return;
   if (kbd.region) {
-    animateCam(fitRect(kbd.region.x, kbd.region.y, kbd.region.w, kbd.region.h, 30));
+    animateCam(fitRect(kbd.region.x, kbd.region.y, kbd.region.w, kbd.region.h, 30, TOP));
     panel.region(kbd.region.r.id);
     return;
   }
