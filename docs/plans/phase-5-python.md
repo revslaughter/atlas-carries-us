@@ -74,7 +74,7 @@ where the proposal falls short, and answers its open questions.
    (read with `tomllib`), else `[metadata] name` in `setup.cfg`, else the
    root folder's name.
 4. **Test files** match the request's `tests` globs, by default
-   `**/test_*.py`, `**/*_test.py`, `**/tests/**`, `**/testing/**` and
+   `**/test_*.py`, `**/*_test.py`, `**/tests/**`, `**/test/**` and
    `**/conftest.py`. The adapter reads them for the tests, but never maps
    them.
 5. **Type stubs.** A `.pyi` file beside a `.py` file stays out of the map;
@@ -88,7 +88,7 @@ where the proposal falls short, and answers its open questions.
 | --- | --- | --- |
 | The distribution | `py:dist:<name>` | `package`, "distribution" |
 | A package: a folder with `__init__.py`, or a folder of modules without one | `py:pkg:<dotted name>` | `package`, "package" or "namespace package"; the unit |
-| The modules at the top of a source root | `py:pkg:<source root path>/` | `directory`, "folder"; the unit |
+| The modules at the top of a source root | `py:dir:<path>` | `directory`, "folder"; the unit |
 | A module | `py:file:<path>` | `file`, "module" |
 
 1. Units stay flat under the distribution, as Go packages sit under their
@@ -307,4 +307,4 @@ The output's notes list these limits, and the help text repeats them:
 1. The resolver misses calls in untyped code. The notes report the share of
    resolved calls, so a reader sees the gap.
 2. A plugin may miss an unusual registration, such as a route added in a
-   loop. The `prefixes` option covers a mount that the plugin cannot see.
+   loop. The limits in `docs/adapters.md` say so.

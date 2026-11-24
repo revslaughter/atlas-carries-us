@@ -192,6 +192,7 @@ give the same bytes. Golden files depend on this.
 4. **Update a golden file or a snapshot only on purpose.** Run the update
    (`go test ./... -update`, `npm run golden -w adapters/typescript`,
    `UPDATE_GOLDEN=1 cargo test -p acu-adapter-rust`,
+   `UPDATE_GOLDEN=1 python3 -m unittest discover -s adapters/python/tests`,
    `node tests/e2e/counts.mjs … --update`), read the diff, and say in the
    commit message why it changed.
 5. **Never skip or delete a test to make CI pass.**
@@ -209,6 +210,7 @@ Each tool version lives in two or more files. Change a group together;
 | Playwright | `PLAYWRIGHT_VERSION` in `Dockerfile`; `tests/e2e/package.json`; `package-lock.json` |
 | TypeScript | `viewer/package.json`; `adapters/typescript/package.json`; `package-lock.json` |
 | `svelte`, `svelte2tsx` | `adapters/typescript/package.json`; `package-lock.json` |
+| Python | `PYTHON_IMAGE` in `Dockerfile`; `.python-version` |
 | Rust nightly | `RUST_NIGHTLY` in `Dockerfile`; `NIGHTLY` in `adapters/rust/src/toolchain.rs` |
 | `rustdoc-types` | `adapters/rust/Cargo.toml` (exact); `Cargo.lock`. It must read the nightly's JSON format; move both together. |
 

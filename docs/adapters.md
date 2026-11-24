@@ -61,6 +61,41 @@ Each adapter also accepts flags for a run by hand; see its `-help`.
 4. A public project from `corpus/`, with a count snapshot in
    `examples/<name>/counts.json` that CI compares on every run.
 
+## Which languages to cover
+
+The goal "cover the top 66% of code" takes its meaning from one published
+ranking: the PYPL PopularitY of Programming Language index. PYPL measures
+how often people search for tutorials of each language, worldwide, as a
+share of all such searches.
+
+1. Source: the data file `PYPL/All.js` in the repository
+   `pypl/pypl.github.io`, commit `b1d786d` of 1 November 2026 ("Nov 26").
+   The row for November 2026 gives the shares below.
+2. "The top 66%" means the smallest set of the highest-ranked languages
+   whose shares add up to at least 66%.
+
+| Rank | Language | Share | Running total |
+| --- | --- | --- | --- |
+| 1 | Python | 52.04% | 52.04% |
+| 2 | Java | 12.56% | 64.60% |
+| 3 | C/C++ | 8.49% | 73.09% |
+| 4 | R | 4.35% | 77.44% |
+| 5 | Objective-C | 3.36% | 80.80% |
+| 6 | JavaScript | 2.87% | 83.67% |
+| 7 | Ada | 2.07% | 85.74% |
+| 8 | PHP | 1.74% | 87.48% |
+| 9 | Rust | 1.74% | 89.22% |
+| 10 | Swift | 1.63% | 90.85% |
+| 11 | C# | 1.54% | 92.39% |
+| 12 | TypeScript | 1.44% | 93.83% |
+
+By this ranking, Python, Java and C/C++ make up the top 66%. To repeat the
+count, read the last row of `graphData` in that file; JavaScript's `Date`
+counts months from zero, so `new Date(2026,10,1)` names November 2026.
+GitHub's Octoverse 2026 report ranks by monthly contributors instead, with
+TypeScript, Python and JavaScript first; its full table sat on hosts that
+the build environment could not reach, so this note does not use it.
+
 ## Decisions per language
 
 ### Go (done)
@@ -734,6 +769,188 @@ The output's notes list these limits, and the help text repeats them:
 The plugins read tokens, so an unusual registration may escape them. clap's
 builder API (`Command::new("x")`) stays out, and so do axum's `fallback` and
 `nest_service`.
+
+### Python (done)
+
+The Python adapter, `adapters/python`, runs on CPython 3.13 and reads code
+with the standard library's `ast` module. It never imports or runs the code
+under analysis, and it needs no package from PyPI. A resolver of its own
+follows Python's scope rules and knows a value's type from an annotation, a
+constructor call, a return annotation, `self`, `cls` and `super()`. Pyright
+and Jedi each needed a runtime dependency, and Jedi's inferred types do not
+meet the rule for `exact`; `docs/plans/phase-5-python.md` records the
+comparison. On Flask 3.1.3 the counts sit in `examples/flask/counts.json`.
+
+#### What it reads
+
+1. Every `.py` file under the root that `include` and `exclude` allow. It
+   skips folders whose names start with a dot, `__pycache__`,
+   `node_modules`, `site-packages`, `build`, `dist`, and virtual
+   environments.
+2. A module's dotted name starts at a source root: the root itself, and
+   `src` when it exists. The option `sourceRoots` names others, such as
+   `examples/tutorial`. A file takes the deepest source root above it.
+3. The distribution's name comes from `[project] name` in `pyproject.toml`,
+   else `[metadata] name` in `setup.cfg`, else the root folder's name.
+4. Test files match the request's `tests` globs, by default
+   `**/test_*.py`, `**/*_test.py`, `**/tests/**`, `**/test/**` and
+   `**/conftest.py`. The adapter reads them for the tests, but never maps
+   them.
+5. A file that does not parse stays out, and a note names it.
+
+#### Containers and IDs
+
+| Container | ID | `kind`, `languageKind` |
+| --- | --- | --- |
+| The distribution | `py:dist:<name>` | `package`, "distribution" |
+| A package: the unit | `py:pkg:<dotted name>` | `package`, "package" or "namespace package" |
+| The modules at the top of a source root: the unit | `py:dir:<path>` | `directory`, "folder" |
+| A module | `py:file:<path>` | `file`, "module" |
+
+Units stay flat under the distribution. A package takes the doc of its
+`__init__.py`. A symbol ID joins the module's dotted name and the symbol's
+path: `py:lending.library#Library.borrow`; `__init__` takes its package's
+name. A second `def` of one name in one scope gains `@<file>:<line>`. A
+property's getter, setter and deleter make one symbol, and so do a
+function's `@overload` stubs and its implementation.
+
+#### Symbols
+
+| Python | `kind` | `languageKind` |
+| --- | --- | --- |
+| `class` | `class` | "class", "dataclass" or "exception" |
+| A subclass of `Enum` and its members | `enum`, `constant` | "enum", "enum member" |
+| A subclass of `Protocol` | `interface` | "protocol" |
+| A subclass of `TypedDict` or `NamedTuple` | `struct` | "typed dict", "named tuple" |
+| `def` at module level | `function` | "function" |
+| `def` in a class | `method` | "method", "static method" or "class method" |
+| `__init__` | `constructor` | "constructor" |
+| `@property`, `@cached_property` | `property` | "property", "cached property" |
+| A name in a class body | `field` | "class attribute", or "field" in a dataclass, typed dict or named tuple |
+| `self.x = …` in a method | `field` | "instance attribute" |
+| A module-level name in capitals, or annotated `Final` | `constant` | "constant" |
+| Another module-level name | `variable` | "variable", or "type variable" for `TypeVar` |
+| `type X = …`, or `X: TypeAlias = …` | `type_alias` | "type alias" |
+| `X = NewType("X", …)` | `type` | "new type" |
+| The body of `if __name__ == "__main__":` | `function` | "main guard" |
+
+1. A function or class nested inside a function makes no symbol; its calls
+   count for the function around it.
+2. A module-level name counts as exported when `__all__` names it, or,
+   without `__all__`, when it does not start with `_`. A member counts as
+   exported unless its name starts with `_` and does not end with `__`.
+3. Modifiers name `async`, `staticmethod`, `classmethod`, `abstract`,
+   `generator`, `overload` and `final`. Decorators go to `annotations`, as
+   written.
+4. Signatures leave out `self` and `cls`; `signature.text` shows the `def`
+   line as written. A parameter without an annotation has an empty type.
+5. A field's `type` comes from its annotation. `self.store = store` takes
+   the annotation of the parameter `store`; `self.store = Store()` names
+   the class it builds.
+6. `satisfies` lists a class's outside bases, such as `Exception` or `ABC`.
+
+#### Docs
+
+1. The adapter reads the docstring of each module, class and function, and
+   an attribute's doc: a string right after the assignment, or `#:`
+   comments right above it.
+2. Sphinx fields give `docstring-sphinx`; NumPy sections give
+   `docstring-numpy`; Google sections give `docstring-google`; anything
+   else gives `plain`. Each style fills `params`, `returns`, `throws`,
+   `examples` and `seeAlso`.
+3. The body holds reStructuredText. Paragraphs, lists, `::` literal blocks,
+   `code-block`, doctests, titles and directives become blocks.
+   `deprecated`, `versionadded` and `versionchanged` fill `deprecated`,
+   `since` and `tags`; an admonition becomes a quote.
+4. Sphinx roles and single-backtick names resolve through the module's
+   names, the class's members and the project's dotted names, so they
+   become `sym:` links. A name that resolves to nothing becomes code.
+
+#### Edges
+
+1. `calls`: each call inside a function, typed by the resolver, counts as
+   `exact`. A call of a class points at its `__init__`. A decorator of the
+   project counts as a call from the function it decorates. A call on a
+   receiver of unknown type counts only when one method of the project
+   alone carries the name, and no built-in type does; such an edge counts
+   as `heuristic`.
+2. A call through a base class or a protocol points at that class's
+   method. The viewer follows `overrides` and `implements`.
+3. `extends`: a class to each base class of the project. `implements`: a
+   class to each protocol of the project that it names as a base.
+4. `overrides`: a method to the method of the same name in the nearest base
+   class, along the C3 method resolution order.
+5. `field_type`, `param_type`, `return_type`: from annotations only,
+   string annotations included.
+6. `imports`: a unit to each other unit whose modules it imports, relative
+   imports, `from x import *`, `__init__` re-exports and conditional imports
+   included. Outside packages go to `externalImports`; the standard library
+   stays out. A note counts the outside packages.
+7. A note reports how many call sites resolved to the map, to outside code,
+   by a unique name, and to nothing.
+
+#### Tests
+
+A test file's `test*` functions, the `test*` methods of its `Test*` classes,
+and the `test*` methods of `unittest.TestCase` subclasses make tests, named
+as pytest names them: `tests/test_library.py::TestStore::test_find`. Each
+project name that a test's body uses records the test against that symbol.
+
+#### Entry-point plugins
+
+A receiver counts only when the resolver traces it to the framework: an
+outside import, or the framework's own class when the project holds the
+framework itself.
+
+1. `flask`: `Flask(…)` and `Blueprint(…, url_prefix=…)` objects, at module
+   level or inside a factory; `@app.route(path, methods=…)`, `@app.get` and
+   the other verbs; `add_url_rule(path, view_func=…)`; and
+   `register_blueprint(bp, url_prefix=…)` across modules. A route inside a
+   factory serves inline in it.
+2. `fastapi`: `FastAPI()` and `APIRouter(prefix=…)`; `@app.get` and the
+   other verbs, `@app.api_route(path, methods=…)`, `add_api_route`, and
+   `include_router(router, prefix=…)`.
+3. `django`: `urlpatterns` of `path` and `re_path`, from the module that
+   `ROOT_URLCONF` names, else from every `urlpatterns` module that no other
+   includes; `include("app.urls")` adds its prefix. A function view makes
+   `ANY <path>`. A class view (`View.as_view()`) makes one entry per HTTP
+   method that it or its project bases define.
+4. `click`: `@click.command()`, `@click.group()`, `@<group>.command()`,
+   `@<group>.group()`, `add_command`, and instances of `click.Group`
+   subclasses, including commands that a subclass's `__init__` adds. A
+   command's name: its argument, else the function's name in kebab case
+   without `_command`, `_cmd`, `_group` or `_grp`. A root takes the name of
+   the `[project.scripts]` entry that names it. Names join:
+   `lendd report count`.
+5. `typer`: `typer.Typer()` objects, `@app.command()`, `@app.callback()`
+   and `add_typer(sub, name=…)`. A root app with one command and no callback
+   runs that command under the app's own name.
+6. `python-main`: `if __name__ == "__main__":`, as `python -m <module>`; a
+   package's `__main__.py`, as `python -m <package>`; and each
+   `[project.scripts]` entry whose function no other plugin serves. A guard
+   whose body makes one call names that function as its handler; any other
+   guard serves itself.
+
+#### Limits
+
+The output's notes list these limits, and the help text repeats them:
+
+1. Calls through values whose type the adapter cannot tell do not appear,
+   unless one method of the project alone carries the name.
+2. A call through a base class or a protocol points at that class's
+   method.
+3. Monkey-patching, `setattr`, `getattr` with a computed name and
+   `__getattr__` hide what code runs.
+4. A decorator that changes a signature leaves the signature as the `def`
+   writes it. Metaclasses, `__init_subclass__` and class decorators add no
+   members; a dataclass's generated `__init__` does not appear.
+5. Code at module level makes no calls on the map, except inside a main
+   guard.
+6. Type stubs (`.pyi`) do not appear: they describe code that lives
+   elsewhere. The adapter reads one distribution per root.
+
+The plugins read the syntax tree. A route that a loop or a computed string
+registers escapes them, and so does a Flask app's `app.cli` group.
 
 ### Other languages
 
