@@ -64,6 +64,8 @@ Install it with
 
 1. Run `scripts/check.sh` before you call a change done. Report failures
    with their output; never skip, delete or weaken a test to pass (4.10).
+   CI skips a draft pull request, so run the checks yourself on a draft, and
+   mark the pull request ready for review when CI should run (2).
 2. Change the data format in four places at once: the schema, `docs/schema.md`,
    the adapter types, and `viewer/src/types.ts`. Add fields; do not remove or
    rename them without the maintainer's agreement (4.1).

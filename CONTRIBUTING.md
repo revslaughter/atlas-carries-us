@@ -119,7 +119,12 @@ cargo zigbuild --release --locked --target aarch64-apple-darwin -p atlas-carries
    characters ("Add the Express plugin"), a blank line, and a body that says
    what changed and why. Name the issue: "Closes #4" or "Part of #4".
 5. **Open the pull request** with a summary, how you tested it, and what it
-   leaves out. CI must pass before a merge.
+   leaves out. CI must pass before a merge. CI skips a draft pull request;
+   mark it ready for review to run CI. CI also skips a change that touches
+   only `docs/` or the Markdown files at the root, apart from this file. The
+   runtime image and the macOS and Windows programs build only when a pull
+   request changes their inputs (see `.github/workflows/image.yml`), and on
+   every push to `main`.
 
 ## 3. Checks
 
