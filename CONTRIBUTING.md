@@ -74,7 +74,9 @@ folder.
 finds its adapters beside itself, the `acu-adapter-typescript/` folder
 included, which it runs with Node; they need no `PATH` setup. The adapters
 still need Go, Node and the pinned nightly on the machine that runs them,
-whatever its system.
+whatever its system. The folder leaves out the Python adapter; to map Python
+with it, set `PYTHONPATH` to `adapters/python` in a checkout, and
+`ACU_ADAPTER_PYTHON` to `python3 -m acu_adapter_python`.
 
 - Linux: the programs need glibc 2.28 or later. `acu-adapter-go` builds with
   `CGO_ENABLED=0` and runs on any Linux.

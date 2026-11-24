@@ -101,7 +101,8 @@ fn command_for(lang: &Language) -> Result<Command> {
         return Ok(Command::new(exe));
     }
     // `cargo build --workspace` puts the Rust adapter beside acu. The Docker
-    // `export` stage puts every adapter there, the TypeScript one as a folder.
+    // `export` stage puts the Go, Rust and TypeScript adapters there, the
+    // TypeScript one as a folder.
     if let Some(dir) = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(Path::to_path_buf))
