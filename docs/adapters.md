@@ -837,8 +837,9 @@ function's `@overload` stubs and its implementation.
 1. A function or class nested inside a function makes no symbol; its calls
    count for the function around it.
 2. A module-level name counts as exported when `__all__` names it, or,
-   without `__all__`, when it does not start with `_`. A member counts as
-   exported unless its name starts with `_` and does not end with `__`.
+   without `__all__`, when it does not start with `_`. A member follows
+   its owner: it counts as exported when its class counts as exported and
+   its own name does not start with `_`, or starts and ends with `__`.
 3. Modifiers name `async`, `staticmethod`, `classmethod`, `abstract`,
    `generator`, `overload` and `final`. Decorators go to `annotations`, as
    written.
@@ -846,8 +847,15 @@ function's `@overload` stubs and its implementation.
    line as written. A parameter without an annotation has an empty type.
 5. A field's `type` comes from its annotation. `self.store = store` takes
    the annotation of the parameter `store`; `self.store = Store()` names
-   the class it builds.
-6. `satisfies` lists a class's outside bases, such as `Exception` or `ABC`.
+   the class it builds. Both hold only when that write forms the field's
+   one write.
+6. The resolver types a field or a module-level variable from its
+   annotation. Without one, it reads every write: each `self.x = …` in any
+   method, each assignment at module level, and each write through
+   `global` inside a function. It infers a type only when all the writes
+   agree, as for a local name. A write that hides its value, such as a
+   tuple target, leaves the type unknown.
+7. `satisfies` lists a class's outside bases, such as `Exception` or `ABC`.
 
 #### Docs
 

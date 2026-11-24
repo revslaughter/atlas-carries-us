@@ -117,11 +117,11 @@ layout:
     - [acu, viewer]
     - [python]
 tour:
-  - title: Five parts and a file between them
-    drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
+  - title: Six parts and a file between them
+    drafted: { by: Claude Code, at: "2026-11-24T11:00:00Z" }
     open: { view: overview }
     text: >-
-      Three adapters read code, acu runs them and builds the site, and the
+      Four adapters read code, acu runs them and builds the site, and the
       viewer draws the map. They share no code: each adapter writes
       atlas.json, acu completes it, and the viewer reads it. So no line joins
       the regions.

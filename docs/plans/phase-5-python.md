@@ -131,8 +131,9 @@ where the proposal falls short, and answers its open questions.
 1. A nested function or class inside a function makes no symbol. Its calls
    count for the function around it, as in Go.
 2. `exported`: a module-level name in `__all__`, when the module has
-   `__all__`; else a name that does not start with `_`. A member counts as
-   exported unless its name starts with `_` and does not end with `__`.
+   `__all__`; else a name that does not start with `_`. A member follows
+   its class: it counts as exported when its class does and its own name
+   does not start with `_` (dunder names excepted).
 3. Modifiers name `async`, `staticmethod`, `classmethod`, `abstract` (from
    `@abstractmethod`, or a class with an abstract method), `generator` (a
    `yield` in the function's own body), `overload` and `final`.
