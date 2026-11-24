@@ -1,0 +1,28 @@
+{
+  "containers": {
+    "directory": 2,
+    "file": 11,
+    "package": 1
+  },
+  "symbols": {
+    "class": 7,
+    "constant": 5,
+    "constructor": 7,
+    "function": 11,
+    "method": 161,
+    "property": 81,
+    "variable": 2
+  },
+  "edges": {
+    "calls": 282,
+    "extends": 1,
+    "field_type": 6,
+    "imports": 1,
+    "param_type": 48,
+    "return_type": 75
+  },
+  "entryPoints": 0,
+  "symbolsWithTests": 17,
+  "regions": 2,
+  "tourSteps": 8
+}

@@ -1,0 +1,122 @@
+# Atlas Carries Us config for tj/commander.js v14.0.3 (MIT licence, by TJ
+# Holowaychuk and the Commander contributors). The code sits in the submodule
+# corpus/javascript/commander:
+#
+#   git submodule update --init --checkout --depth 1 corpus/javascript/commander
+#   acu extract -c examples/commander/atlas.yaml -o examples/commander/atlas.json
+#   acu serve -d examples/commander/atlas.json
+#
+# Commander holds no TypeScript of its own, so the adapter reads it in the
+# JavaScript mode. tsconfig.js.json, the project's own config for its
+# JavaScript, keeps the .ts type tests out.
+version: 1
+project:
+  name: Commander, command-line programs for Node.js
+  descriptionDrafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+  repo: tj/commander.js
+  links: github
+  description: |
+    Commander parses the command line of a Node.js program. A program
+    declares its commands, options and arguments on a Command object, then
+    calls parse, which reads process.argv, fills the option values, and runs
+    the action handler of the command that the user named.
+
+    This map covers Commander v14.0.3, the last release in CommonJS, by TJ
+    Holowaychuk and the Commander contributors under the MIT licence. Its
+    types come from the JSDoc in the source. The Jest tests in tests/ do
+    not appear, except under "Tests that use it".
+  autolinks:
+    - pattern: "(?<![\\w/&])#(\\d+)\\b"
+      url: "https://github.com/{repo}/issues/$1"
+languages:
+  - adapter: typescript
+    root: ../../corpus/javascript/commander
+    options:
+      tsconfig: tsconfig.js.json
+regions:
+  - id: entry
+    name: Entry points
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    paths: ["."]
+    description: >-
+      index.js exports one shared Command as program, factory functions for
+      commands, options and arguments, and the classes themselves. esm.mjs
+      gives the same exports to ES modules. The other files here configure
+      the project's tools.
+    readingTip: Start with program in index.js.
+  - id: lib
+    name: The library
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    paths: ["lib"]
+    description: >-
+      Command holds a command's options, arguments and subcommands, and
+      parses the command line. Option and Argument describe what a command
+      accepts. Help formats the help text. CommanderError carries an exit
+      code, and suggestSimilar proposes a near name for a typing mistake.
+    readingTip: Read Command.parse first, then Command._parseCommand.
+layout:
+  rows:
+    - [entry]
+    - [lib]
+tour:
+  - title: Two parts
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: overview }
+    text: >-
+      Commander keeps its code in lib, and index.js at the root exports it.
+      Every file is a CommonJS module: it imports with require and exports
+      with exports.name.
+  - title: The object that programs use
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: symbol, id: "js:commander/index#program" }
+    text: >-
+      exports.program holds one Command, which index.js makes when it loads.
+      Most programs declare their options on it and then call parse.
+  - title: Declaring an option
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: trace, symbol: Command.option }
+    text: >-
+      option hands its flags to _optionEx. _optionEx makes an Option with
+      createOption, sets its default value and its argument parser, and
+      passes it to addOption, which registers the option and stores its
+      default value as the option's value.
+  - title: Parsing the command line
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: trace, symbol: Command.parse }
+    text: >-
+      parse calls _prepareForParse, turns argv into the user's arguments with
+      _prepareUserArgs, and hands them to _parseCommand.
+  - title: One command at a time
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: trace, symbol: Command._parseCommand }
+    text: >-
+      _parseCommand splits the arguments into options and operands with
+      parseOptions. When the first operand names a subcommand,
+      _dispatchSubcommand passes the rest to that subcommand's own
+      _parseCommand. Otherwise, it checks the options, collects the
+      arguments with _processArguments, and runs the preAction hooks, the
+      action handler and the postAction hooks. The map cannot follow the
+      call to the action handler, because the handler arrives as a function
+      value.
+  - title: The action handler
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: symbol, id: "js:commander/lib/command#Command.action" }
+    text: >-
+      action wraps the program's function in a listener and keeps it in
+      _actionHandler. The listener passes the command's arguments, then the
+      option values from opts, then the command itself.
+  - title: Help
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: trace, symbol: Help.formatHelp }
+    text: >-
+      outputHelp writes the text that helpInformation builds.
+      helpInformation makes a Help with createHelp, and Help.formatHelp
+      joins the usage, the description, and the lists of arguments, options
+      and commands.
+  - title: A typing mistake
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
+    open: { view: symbol, id: "js:commander/lib/suggestSimilar#suggestSimilar" }
+    text: >-
+      When the user names an unknown command or option, unknownCommand and
+      unknownOption ask suggestSimilar for a near name, which it finds by
+      edit distance.
