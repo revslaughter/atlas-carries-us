@@ -9,11 +9,11 @@
 #   build      Builds the viewer, acu and the Go, TypeScript and Rust
 #              adapters.
 #   rust-nightly  The pinned nightly alone, for the runtime image.
-#   runtime    acu and the three adapters, plus the Go toolchain that the Go
+#   runtime    acu and the four adapters, plus the Go toolchain that the Go
 #              adapter needs to load packages, the Node runtime that runs the
 #              TypeScript adapter, and the nightly Rust toolchain whose
-#              rustdoc and rust-analyzer the Rust adapter runs. The default
-#              target.
+#              rustdoc and rust-analyzer the Rust adapter runs, and the
+#              CPython that runs the Python adapter. The default target.
 #
 #   docker build --target toolchain -t acu-toolchain .
 #   docker run --rm -v "$PWD:/workspace" acu-toolchain scripts/check.sh
@@ -40,9 +40,13 @@ ARG RUST_IMAGE=${REGISTRY}/library/rust:1.97.1-slim-bookworm@sha256:2775a09d208f
 # The nightly whose rustdoc writes the JSON format that the Rust adapter
 # reads. Keep it in step with NIGHTLY in adapters/rust/src/toolchain.rs.
 ARG RUST_NIGHTLY=nightly-2026-11-01
+# CPython for the Python adapter, which needs only the standard library.
+# Keep the tag in step with .python-version.
+ARG PYTHON_IMAGE=${REGISTRY}/library/python:3.13.18-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72
 
 FROM ${GO_IMAGE} AS go
 FROM ${NODE_IMAGE} AS node
+FROM ${PYTHON_IMAGE} AS python
 
 # ---------------------------------------------------------------------------
 FROM ${RUST_IMAGE} AS toolchain
@@ -72,8 +76,13 @@ RUN --mount=type=secret,id=extra_ca,required=false \
 COPY --from=go /usr/local/go /usr/local/go
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+COPY --from=python /usr/local/bin/python3.13 /usr/local/bin/python3.13
+COPY --from=python /usr/local/lib/python3.13 /usr/local/lib/python3.13
+COPY --from=python /usr/local/lib/libpython3.13.so.1.0 /usr/local/lib/
 
-RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+RUN ln -s python3.13 /usr/local/bin/python3 \
+ && ldconfig \
+ && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
  && rustup component add rustfmt clippy \
  && rustup toolchain install "${RUST_NIGHTLY}" --profile minimal --component rust-src,rust-analyzer \
@@ -131,7 +140,7 @@ RUN rustup default "${RUST_NIGHTLY}" \
 FROM ${GO_IMAGE} AS runtime
 
 LABEL org.opencontainers.image.title="Atlas Carries Us" \
-      org.opencontainers.image.description="acu and its Go, TypeScript and Rust adapters: turn a code base and its doc comments into an interactive map." \
+      org.opencontainers.image.description="acu and its Go, TypeScript, Rust and Python adapters: turn a code base and its doc comments into an interactive map." \
       org.opencontainers.image.source="https://github.com/revslaughter/atlas-carries-us" \
       org.opencontainers.image.licenses="MIT"
 
@@ -144,6 +153,15 @@ COPY --from=build /out/acu /out/acu-adapter-go /out/acu-adapter-rust /usr/local/
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=build /out/acu-adapter-typescript /usr/local/lib/acu-adapter-typescript
 RUN ln -s /usr/local/lib/acu-adapter-typescript/dist/src/main.js /usr/local/bin/acu-adapter-typescript
+# The Python adapter: CPython, the adapter's package and a launcher.
+COPY --from=python /usr/local/bin/python3.13 /usr/local/bin/python3.13
+COPY --from=python /usr/local/lib/python3.13 /usr/local/lib/python3.13
+COPY --from=python /usr/local/lib/libpython3.13.so.1.0 /usr/local/lib/
+COPY --from=build /src/adapters/python/acu_adapter_python /usr/local/lib/acu-adapter-python/acu_adapter_python
+RUN ln -s python3.13 /usr/local/bin/python3 \
+ && ldconfig \
+ && printf '#!/bin/sh\nPYTHONPATH=/usr/local/lib/acu-adapter-python exec python3 -m acu_adapter_python "$@"\n' > /usr/local/bin/acu-adapter-python \
+ && chmod +x /usr/local/bin/acu-adapter-python
 # The image exists to read a repository that you mount into it, which
 # belongs to your user, not the container's. Let git read it, so acu can name
 # the commit in source links.

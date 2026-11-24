@@ -18,6 +18,7 @@ pub fn plugin_adapter(plugin: &str) -> Option<&'static str> {
         // The TypeScript adapter reads JavaScript too, so these serve both.
         "express" | "hono" | "sveltekit" => Some("typescript"),
         "axum" | "clap" => Some("rust"),
+        "flask" | "fastapi" | "django" | "click" | "typer" | "python-main" => Some("python"),
         _ => None,
     }
 }
@@ -140,6 +141,11 @@ fn command_for(lang: &Language) -> Result<Command> {
         .arg("--");
         return Ok(c);
     }
+    if lang.adapter == "python" && dev.join("acu_adapter_python").is_dir() {
+        let mut c = Command::new("python3");
+        c.args(["-m", "acu_adapter_python"]).env("PYTHONPATH", &dev);
+        return Ok(c);
+    }
     bail!(
         "no program runs the {name} adapter. Install {exe} on the PATH ({hint}), \
          set {var}, or give `command` in atlas.yaml",
@@ -154,6 +160,7 @@ fn install_hint(adapter: &str) -> &'static str {
         "go" => "go install github.com/revslaughter/atlas-carries-us/adapters/go/cmd/acu-adapter-go@latest",
         "typescript" => "npm install --global ./adapters/typescript from a checkout, after npm run build -w adapters/typescript",
         "rust" => "cargo install --path adapters/rust from a checkout",
+        "python" => "a launcher that runs python3 -m acu_adapter_python with adapters/python on PYTHONPATH",
         _ => "see the adapter's own docs",
     }
 }
@@ -217,6 +224,8 @@ mod tests {
         assert_eq!(plugin_adapter("sveltekit"), Some("typescript"));
         assert_eq!(plugin_adapter("axum"), Some("rust"));
         assert_eq!(plugin_adapter("clap"), Some("rust"));
+        assert_eq!(plugin_adapter("flask"), Some("python"));
+        assert_eq!(plugin_adapter("python-main"), Some("python"));
         assert_eq!(plugin_adapter("rails"), None);
     }
 }
