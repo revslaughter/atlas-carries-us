@@ -849,16 +849,20 @@ function's `@overload` stubs and its implementation.
    the annotation of the parameter `store`; `self.store = Store()` names
    the class it builds. Both hold only when that write forms the field's
    one write.
-6. The resolver types a field or a module-level variable from its
-   annotation. Without one, it reads every write and infers a type only
-   when all the writes agree, as for a local name:
+6. The resolver types a local name, a field or a module-level variable
+   from its annotation. Without one, it reads every write and infers a type
+   only when all the writes agree:
+   - for a local name: each binding in the function, a `:=` inside a
+     comprehension included, and each binding in a nested function or
+     class that declares the name `nonlocal`;
    - for a field: each binding of `self.x` in the methods of the class, of
      its bases and of its subclasses, nested functions included;
    - for a module variable: each binding at module level, main guard
      included, and each binding inside a function that declares the name
      `global`.
 
-   A plain `x = …` gives its value. Every other binding form counts as a
+   A plain `x = …` gives its value, and so does a `:=` that binds a local
+   name outside a comprehension. Every other binding form counts as a
    write whose value the adapter cannot see, so it leaves the type unknown:
    a tuple target, `+=` and the other augmented assignments, a `for` or
    `with … as` target, `:=`, `import … as`, `except … as`, a `match`

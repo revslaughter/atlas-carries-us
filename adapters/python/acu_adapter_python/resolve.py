@@ -88,13 +88,22 @@ class Ctx:
                 self.locals.setdefault(a.arg, []).append(("other",))
         if isinstance(fn, ast.Lambda):
             return
+        # The names that a nested scope declares nonlocal, and so may rebind.
+        rebound: set[str] = set()
         stack = list(fn.body)  # type: ignore[union-attr]
         while stack:
             node = stack.pop()
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 self.locals.setdefault(node.name, []).append(("other",))
+                rebound.update(n for sub in ast.walk(node) if isinstance(sub, ast.Nonlocal) for n in sub.names)
                 continue
-            if isinstance(node, (ast.Lambda, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            if isinstance(node, ast.Lambda):
+                continue
+            if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                # A comprehension keeps its loop names to itself, but := inside it binds a name of this scope.
+                for sub in ast.walk(node):
+                    if isinstance(sub, ast.NamedExpr):
+                        self._target(sub.target, None)
                 continue
             if isinstance(node, (ast.Global, ast.Nonlocal)):
                 self.outer.update(node.names)
@@ -103,6 +112,11 @@ class Ctx:
                     self._target(t, node.value)
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 self.locals.setdefault(node.target.id, []).append(("annot", node.annotation))
+            elif isinstance(node, ast.AugAssign):
+                self._target(node.target, None)
+            elif isinstance(node, ast.Delete):
+                for t in node.targets:
+                    self._target(t, None)
             elif isinstance(node, ast.NamedExpr):
                 self._target(node.target, node.value)
             elif isinstance(node, (ast.For, ast.AsyncFor)):
@@ -123,9 +137,15 @@ class Ctx:
                         self.locals.setdefault(alias.asname or alias.name, []).append(("import", node.module, alias.name, node.level))
             elif isinstance(node, (ast.MatchAs, ast.MatchStar)) and node.name:
                 self.locals.setdefault(node.name, []).append(("other",))
+            elif isinstance(node, ast.MatchMapping) and node.rest:
+                self.locals.setdefault(node.rest, []).append(("other",))
             stack.extend(ast.iter_child_nodes(node))
         for name in self.outer:
             self.locals.pop(name, None)
+        # A nested write through nonlocal hides its value from this scope.
+        for name in rebound:
+            if name in self.locals:
+                self.locals[name].append(("other",))
 
     def _target(self, target: ast.expr, value: Optional[ast.expr]) -> None:
         """Records one assignment target; only a plain name keeps its value."""

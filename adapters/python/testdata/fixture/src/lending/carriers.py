@@ -174,3 +174,36 @@ class AirFleet(Fleet):
     def fly(self) -> None:
         """Swaps to a drone."""
         self.carrier = Drone()
+
+
+def bump_local() -> None:
+    """Sends books with a local carrier that += rebinds."""
+    van = Courier()
+    van += 1
+    van.run()
+
+
+def relay() -> None:
+    """Sends books with a local carrier that a nested function rebinds through nonlocal."""
+    van = Courier()
+
+    def take_off() -> None:
+        """Swaps the local carrier for a drone."""
+        nonlocal van
+        van = Drone()
+
+    take_off()
+    van.run()
+
+
+def pick_last() -> None:
+    """Sends books with a local carrier that := inside a comprehension rebinds."""
+    van = Courier()
+    _ = [van := Drone() for _ in range(1)]
+    van.run()
+
+
+def send_local() -> None:
+    """Sends books with a local carrier that nothing rebinds."""
+    van = Courier()
+    van.run()

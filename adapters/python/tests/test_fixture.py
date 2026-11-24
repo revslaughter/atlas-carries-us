@@ -182,6 +182,16 @@ class Facts(unittest.TestCase):
         """send_fixed calls Courier.run through fixed, which nothing rebinds."""
         self.assertTrue(has_edge("calls", L + "carriers#send_fixed", L + "carriers#Courier.run"))
 
+    def test_a_local_that_another_form_rebinds_gives_no_exact_call(self) -> None:
+        """A local +=, a nested nonlocal write and a := inside a comprehension each leave no exact edge to Courier.run."""
+        for user in ["bump_local", "relay", "pick_last"]:
+            with self.subTest(user=user):
+                self.assertFalse(has_edge("calls", L + "carriers#" + user, L + "carriers#Courier.run"), user + " still calls Courier.run")
+
+    def test_a_local_with_one_write_keeps_its_exact_call(self) -> None:
+        """send_local calls Courier.run through a local that nothing rebinds."""
+        self.assertTrue(has_edge("calls", L + "carriers#send_local", L + "carriers#Courier.run"))
+
     def test_kinds_follow_the_bases(self) -> None:
         """Status is an enum, Readable a protocol, Loan a named tuple, NotAvailable an exception."""
         self.assertEqual(symbol(L + "domain#Status")["kind"], "enum")

@@ -25,7 +25,7 @@
           "Type stubs (.pyi) do not appear; the adapter reads one distribution per root.",
           "A write to an attribute through another reference, or through setattr, stays unseen, so the attribute may keep a type that such a write breaks.",
           "The resolver ignores the order of statements: a name that del removes counts as unknown everywhere.",
-          "Of 79 call sites, 33 resolved to code on the map, 27 to outside code or built-ins, 1 by a unique method name (heuristic), and 18 to nothing.",
+          "Of 91 call sites, 40 resolved to code on the map, 28 to outside code or built-ins, 1 by a unique method name (heuristic), and 22 to nothing.",
           "Units import 6 outside packages; the adapter installs nothing, so their types count as unknown."
         ]
       }
@@ -1303,6 +1303,40 @@
       }
     },
     {
+      "id": "py:lending.carriers#bump_local",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "bump_local",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 179,
+        "endLine": 183
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that += rebinds.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that += rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that += rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def bump_local() -> None"
+      }
+    },
+    {
       "id": "py:lending.carriers#carrier",
       "kind": "variable",
       "languageKind": "variable",
@@ -1466,6 +1500,74 @@
       }
     },
     {
+      "id": "py:lending.carriers#pick_last",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "pick_last",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 199,
+        "endLine": 203
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that := inside a comprehension rebinds.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that := inside a comprehension rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that := inside a comprehension rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def pick_last() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#relay",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "relay",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 186,
+        "endLine": 196
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that a nested function rebinds through nonlocal.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that a nested function rebinds through nonlocal.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that a nested function rebinds through nonlocal."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def relay() -> None"
+      }
+    },
+    {
       "id": "py:lending.carriers#send_fixed",
       "kind": "function",
       "languageKind": "function",
@@ -1497,6 +1599,40 @@
           }
         ],
         "text": "def send_fixed() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#send_local",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "send_local",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 206,
+        "endLine": 209
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that nothing rebinds.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that nothing rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that nothing rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def send_local() -> None"
       }
     },
     {
@@ -4751,6 +4887,13 @@
       "kind": "calls",
       "confidence": "exact",
       "line": 71
+    },
+    {
+      "from": "py:lending.carriers#send_local",
+      "to": "py:lending.carriers#Courier.run",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 209
     },
     {
       "from": "py:lending.cli.main#borrow",
