@@ -1,6 +1,7 @@
 // Tests of the adapter on its invented fixtures: the golden files, the
 // schema, and the named facts that the viewer depends on. The first fixture
-// holds TypeScript only; the second, testdata/svelte, holds a SvelteKit app.
+// holds TypeScript only; the second, testdata/svelte, holds a SvelteKit app;
+// the third, testdata/javascript, holds JavaScript, for the JavaScript mode.
 // Run "npm run golden -w adapters/typescript" after a deliberate change, and
 // read the diff.
 
@@ -20,6 +21,8 @@ const golden = here("../../testdata/golden/fixture.json");
 const svelteFixture = here("../../testdata/svelte");
 const svelteGolden = here("../../testdata/golden/svelte.json");
 const schemaFile = here("../../../../schema/atlas.schema.json");
+const jsFixture = here("../../testdata/javascript");
+const jsGolden = here("../../testdata/golden/javascript.json");
 
 function runFixture(): { doc: Document; text: string } {
   const doc = run({
@@ -373,5 +376,185 @@ test("the notes name the limits that components add", () => {
   assert.ok(
     notes.some(n => /\.\/\$types/.test(n)),
     "the unresolved ./$types imports add a note",
+  );
+});
+
+/** Maps the JavaScript fixture with the express plugin, at a fixed time. `language` forces a mode. */
+function runJs(language?: string): { doc: Document; text: string } {
+  const doc = run({
+    protocol: 1,
+    root: jsFixture,
+    entryPoints: [{ plugin: "express" }],
+    options: language ? { language } : {},
+  });
+  doc.meta.generated = "2000-01-01T00:00:00Z";
+  return { doc, text: JSON.stringify(doc, null, 1) + "\n" };
+}
+
+const js = runJs();
+const jp = "js:lending-js/lib/";
+
+test("the JavaScript output matches its golden file", () => {
+  compareGolden(jsGolden, js.text);
+});
+
+test("two runs of the JavaScript fixture write the same bytes", () => {
+  assert.equal(runJs().text, js.text);
+});
+
+test("the JavaScript output passes schema/atlas.schema.json", () => {
+  validateSchema(js.text);
+});
+
+test("a project without TypeScript runs in the JavaScript mode", () => {
+  assert.deepEqual(js.doc.meta.languages, ["js"]);
+  assert.equal(js.doc.meta.adapters[0].language, "js");
+  assert.ok(
+    js.doc.containers.every(c => c.id.startsWith("js:") && c.language === "js"),
+    "every container ID starts with js: and carries the tag js",
+  );
+  assert.ok(
+    js.doc.symbols.every(s => s.id.startsWith("js:")),
+    "every symbol ID starts with js:",
+  );
+  const kind = (path: string) => js.doc.containers.find(c => c.path === path);
+  const files = new Map(js.doc.containers.filter(c => c.kind === "file").map(c => [c.name, c.languageKind]));
+  assert.equal(files.get("book.js"), "CommonJS module");
+  assert.equal(files.get("format.mjs"), "module");
+  assert.equal(files.get("card.jsx"), "module", "a .jsx file joins the map");
+  assert.ok(!files.has("seed.js"), "a file outside the jsconfig's include stays out");
+  assert.ok(!files.has("shelf.test.js"), "a test file stays out");
+  assert.equal(kind("lib")?.unit, true);
+});
+
+test("JavaScript declarations make the symbols that the plan names", () => {
+  const sym = (id: string) => js.doc.symbols.find(s => s.id === jp + id);
+  const want: [string, string, string][] = [
+    ["domain/book#Shelf", "class", "constructor function"],
+    ["domain/book#Shelf.constructor", "constructor", "constructor"],
+    ["domain/book#Shelf.add", "method", "method"],
+    ["domain/book#Shelf.from", "method", "function"],
+    ["domain/book#Shelf.books", "property", "property"],
+    ["domain/book#Shelf.home", "property", "property"],
+    ["domain/book#Book", "type_alias", "typedef"],
+    ["domain/book#Book.copies", "property", "property"],
+    ["domain/book#BookTest", "type_alias", "callback"],
+    ["domain/book#counting", "namespace", "object"],
+    ["domain/rules#rules", "namespace", "object"],
+    ["domain/rules#rules.daysLate", "method", "arrow function"],
+    ["domain/rules#rules.mayBorrow", "method", "function"],
+    ["domain/loan#Loan.member", "property", "property"],
+    ["index#lendFirst", "function", "function"],
+    ["index#version", "variable", "export"],
+  ];
+  for (const [id, kind, word] of want) {
+    const s = sym(id);
+    assert.ok(s, `missing symbol ${id}`);
+    assert.equal(s.kind, kind, `the kind of ${id}`);
+    assert.equal(s.languageKind, word, `the word of ${id}`);
+  }
+  assert.deepEqual(sym("domain/book#Shelf.from")?.modifiers, ["static"], "Shelf.from counts as static");
+  assert.equal(sym("domain/book#Shelf.books")?.type?.text, "Book[]", "@type gives this.books its type");
+  assert.equal(sym("domain/loan#Loan.member")?.type?.text, "string");
+  assert.equal(sym("domain/book#Shelf._sorted")?.exported, false, "a name with _ counts as private");
+  assert.equal(sym("domain/loan#Loan.#log")?.exported, false);
+  assert.equal(sym("index#openShelf")?.exported, true, "module.exports = { openShelf } exports it");
+  assert.equal(sym("web/books#listBooks")?.exported, false, "a function that no export names stays private");
+  assert.equal(sym("domain/loan#pick")?.signature?.typeParams, "<T>", "@template gives type parameters");
+  const add = sym("domain/book#Shelf.add")?.signature;
+  assert.equal(add?.params[0]?.type, "Book", "@param gives the parameter's type as written");
+  assert.equal(add?.results[0]?.type, "Shelf", "@returns gives the result's type");
+  assert.ok(
+    !js.doc.symbols.some(s => /#(path|express|rules)$/.test(s.id) && !s.id.includes("domain/rules")),
+    "a require() binding declares no symbol",
+  );
+});
+
+test("JavaScript edges follow require, prototypes and JSDoc types", () => {
+  const has = (from: string, to: string, kind: string) =>
+    js.doc.edges.some(e => e.from === jp + from && e.to === jp + to && e.kind === kind && e.confidence === "exact");
+  const want: [string, string, string][] = [
+    ["domain/book#Shelf.from", "domain/book#Shelf.constructor", "calls"],
+    ["domain/book#Shelf.from", "domain/book#Shelf.add", "calls"],
+    ["index#openShelf", "domain/book#Shelf.constructor", "calls"],
+    ["web/books#listBooks", "domain/book#Shelf.where", "calls"],
+    ["domain/loan#Loan.isLate", "domain/rules#rules.isLate", "calls"],
+    ["ui/card#BookList", "ui/card#BookCard", "calls"],
+    ["domain/book#Shelf.add", "domain/book#Book", "param_type"],
+    ["domain/book#Shelf.add", "domain/book#Shelf", "return_type"],
+    ["domain/book#Shelf.books", "domain/book#Book", "field_type"],
+    ["domain/book#Book.id", "domain/book#BookId", "field_type"],
+    ["domain/book#BookTest", "domain/book#Book", "param_type"],
+    ["ui/format#formatTitle", "domain/book#Book", "param_type"],
+    ["domain/loan#OverdueLoan", "domain/loan#Loan", "extends"],
+  ];
+  for (const [from, to, kind] of want) assert.ok(has(from, to, kind), `missing exact edge ${from} -${kind}-> ${to}`);
+  assert.ok(
+    js.doc.edges.some(
+      e => e.from === "js:dir:lending-js/lib/web" && e.to === "js:dir:lending-js/lib/domain" && e.kind === "imports",
+    ),
+    "require() joins folders with an imports edge",
+  );
+  const web = js.doc.containers.find(c => c.id === "js:dir:lending-js/lib/web");
+  assert.deepEqual(
+    web?.externalImports,
+    ["express"],
+    "require of an outside package goes to externalImports; node: stays out",
+  );
+  assert.ok(
+    js.doc.meta.adapters[0].notes?.some(n =>
+      /calls in JavaScript files name a symbol of the map but resolve to nothing/.test(n),
+    ),
+    "a note counts the calls that did not resolve",
+  );
+});
+
+test("the express plugin follows require in JavaScript", () => {
+  const eps = new Map((js.doc.entryPoints ?? []).map(e => [e.id, e]));
+  const want: Record<string, string> = {
+    "http:GET /health": jp + "web/app#GET /health",
+    "http:GET /loans/:id": jp + "web/app#showLoan",
+    "http:GET /books": jp + "web/books#listBooks",
+    "http:POST /books/:id/loans": jp + "web/books#POST /books/:id/loans",
+  };
+  for (const [id, handler] of Object.entries(want)) {
+    assert.ok(eps.has(id), `missing entry point ${id}`);
+    assert.equal(eps.get(id)!.handler, handler, `entry point ${id}`);
+  }
+});
+
+test("the JavaScript test index and docs work as in TypeScript", () => {
+  assert.deepEqual(
+    (js.doc.tests?.[jp + "domain/book#Shelf.from"] ?? []).map(u => u.name),
+    ["Shelf > keeps books in order"],
+  );
+  const book = js.doc.symbols.find(s => s.id === jp + "domain/book#Book");
+  assert.equal(book?.doc?.summary, "One book in the catalogue.", "a @typedef takes the text of its comment");
+  const copies = js.doc.symbols.find(s => s.id === jp + "domain/book#Book.copies");
+  assert.equal(copies?.doc?.summary, "How many copies the library owns.", "a @property takes its own text");
+  const counting = js.doc.symbols.find(s => s.id === jp + "domain/book#counting");
+  assert.match(
+    counting?.doc?.summary ?? "",
+    /^Counting helpers/,
+    "a typedef's comment never documents the next declaration",
+  );
+  const unit = js.doc.containers.find(c => c.id === "js:dir:lending-js/lib");
+  assert.match(unit?.doc?.summary ?? "", /front door/, "the folder takes the doc of its index file");
+});
+
+test("a mixed run keeps ts: IDs and marks each JavaScript file", () => {
+  const mixed = runJs("ts").doc;
+  assert.deepEqual(mixed.meta.languages, ["js", "ts"]);
+  assert.ok(
+    mixed.symbols.every(s => s.id.startsWith("ts:")),
+    "every ID starts with the run's tag",
+  );
+  const files = mixed.containers.filter(c => c.kind === "file");
+  assert.ok(files.length > 0 && files.every(c => c.language === "js"), "each JavaScript file carries the tag js");
+  assert.ok(
+    mixed.symbols.some(
+      s => s.id === "ts:lending-js/lib/domain/book#Shelf" && s.languageKind === "constructor function",
+    ),
+    "the JavaScript rules hold in the TypeScript mode",
   );
 });

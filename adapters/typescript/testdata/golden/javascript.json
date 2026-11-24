@@ -1,0 +1,2211 @@
+{
+ "version": 1,
+ "meta": {
+  "schemaVersion": 1,
+  "tool": {
+   "name": "acu-adapter-typescript",
+   "version": "0.1.0"
+  },
+  "generated": "2000-01-01T00:00:00Z",
+  "languages": [
+   "js"
+  ],
+  "adapters": [
+   {
+    "name": "typescript",
+    "version": "0.1.0",
+    "language": "js",
+    "notes": [
+     "Calls through function values, callbacks and computed property names do not appear.",
+     "A call through an interface points at the interface member.",
+     "Declaration files (.d.ts) do not appear; they describe code that lives elsewhere.",
+     "2 imports of outside packages did not resolve, so the types they bring count as unknown.",
+     "In JavaScript, a call through a value of unknown type does not appear: the map holds only the calls that the checker resolves.",
+     "Mixins, util.inherits, Object.create and other prototype changes at run time add no members and no edges.",
+     "A property that code adds outside a constructor, and an export under a computed name, do not appear.",
+     "3 calls in JavaScript files name a symbol of the map but resolve to nothing, so they do not appear."
+    ]
+   }
+  ]
+ },
+ "containers": [
+  {
+   "id": "js:dir:lending-js/lib",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "lib",
+   "path": "lib",
+   "language": "js",
+   "unit": true,
+   "parent": "js:pkg:lending-js",
+   "doc": {
+    "raw": "@file The lending library's front door. It gathers the shelves, the loans\nand the rules, and exports them as one object.",
+    "format": "jsdoc",
+    "summary": "The lending library's front door.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The lending library's front door. It gathers the shelves, the loans and the rules, and exports them as one object."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:dir:lending-js/lib/domain",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "lib/domain",
+   "path": "lib/domain",
+   "language": "js",
+   "unit": true,
+   "parent": "js:pkg:lending-js"
+  },
+  {
+   "id": "js:dir:lending-js/lib/ui",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "lib/ui",
+   "path": "lib/ui",
+   "language": "js",
+   "unit": true,
+   "parent": "js:pkg:lending-js"
+  },
+  {
+   "id": "js:dir:lending-js/lib/web",
+   "kind": "directory",
+   "languageKind": "folder",
+   "name": "lib/web",
+   "path": "lib/web",
+   "language": "js",
+   "unit": true,
+   "parent": "js:pkg:lending-js",
+   "externalImports": [
+    "express"
+   ]
+  },
+  {
+   "id": "js:file:lending-js/lib/domain/book.js",
+   "kind": "file",
+   "languageKind": "CommonJS module",
+   "name": "book.js",
+   "path": "lib/domain/book.js",
+   "parent": "js:dir:lending-js/lib/domain",
+   "language": "js",
+   "doc": {
+    "raw": "Books and the shelves that hold them. A shelf is a constructor function in\nthe older style: its methods live on its prototype.",
+    "format": "jsdoc",
+    "summary": "Books and the shelves that hold them.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Books and the shelves that hold them. A shelf is a constructor function in the older style: its methods live on its prototype."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:file:lending-js/lib/domain/loan.js",
+   "kind": "file",
+   "languageKind": "CommonJS module",
+   "name": "loan.js",
+   "path": "lib/domain/loan.js",
+   "parent": "js:dir:lending-js/lib/domain",
+   "language": "js",
+   "doc": {
+    "raw": "Loans: an ES class with its fields set in the constructor, and a subclass.",
+    "format": "jsdoc",
+    "summary": "Loans: an ES class with its fields set in the constructor, and a subclass.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Loans: an ES class with its fields set in the constructor, and a subclass."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:file:lending-js/lib/domain/rules.js",
+   "kind": "file",
+   "languageKind": "CommonJS module",
+   "name": "rules.js",
+   "path": "lib/domain/rules.js",
+   "parent": "js:dir:lending-js/lib/domain",
+   "language": "js",
+   "doc": {
+    "raw": "The lending rules, as an object literal that acts as a module.",
+    "format": "jsdoc",
+    "summary": "The lending rules, as an object literal that acts as a module.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The lending rules, as an object literal that acts as a module."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:file:lending-js/lib/index.js",
+   "kind": "file",
+   "languageKind": "CommonJS module",
+   "name": "index.js",
+   "path": "lib/index.js",
+   "parent": "js:dir:lending-js/lib",
+   "language": "js"
+  },
+  {
+   "id": "js:file:lending-js/lib/ui/card.jsx",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "card.jsx",
+   "path": "lib/ui/card.jsx",
+   "parent": "js:dir:lending-js/lib/ui",
+   "language": "js",
+   "doc": {
+    "raw": "The cards that show books, as JSX components.",
+    "format": "jsdoc",
+    "summary": "The cards that show books, as JSX components.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The cards that show books, as JSX components."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:file:lending-js/lib/ui/format.mjs",
+   "kind": "file",
+   "languageKind": "module",
+   "name": "format.mjs",
+   "path": "lib/ui/format.mjs",
+   "parent": "js:dir:lending-js/lib/ui",
+   "language": "js",
+   "doc": {
+    "raw": "Formatting for the screens, as an ES module.",
+    "format": "jsdoc",
+    "summary": "Formatting for the screens, as an ES module.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Formatting for the screens, as an ES module."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:file:lending-js/lib/web/app.js",
+   "kind": "file",
+   "languageKind": "CommonJS module",
+   "name": "app.js",
+   "path": "lib/web/app.js",
+   "parent": "js:dir:lending-js/lib/web",
+   "language": "js",
+   "doc": {
+    "raw": "The HTTP app: an Express app that mounts the books router.",
+    "format": "jsdoc",
+    "summary": "The HTTP app: an Express app that mounts the books router.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The HTTP app: an Express app that mounts the books router."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:file:lending-js/lib/web/books.js",
+   "kind": "file",
+   "languageKind": "CommonJS module",
+   "name": "books.js",
+   "path": "lib/web/books.js",
+   "parent": "js:dir:lending-js/lib/web",
+   "language": "js",
+   "doc": {
+    "raw": "The books router, which the app mounts under /books.",
+    "format": "jsdoc",
+    "summary": "The books router, which the app mounts under /books.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The books router, which the app mounts under /books."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:pkg:lending-js",
+   "kind": "package",
+   "languageKind": "package",
+   "name": "lending-js",
+   "path": ".",
+   "language": "js"
+  }
+ ],
+ "symbols": [
+  {
+   "id": "js:lending-js/lib/domain/book#Book",
+   "kind": "type_alias",
+   "languageKind": "typedef",
+   "name": "Book",
+   "parent": "js:file:lending-js/lib/domain/book.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 11,
+    "endLine": 15
+   },
+   "type": {
+    "text": "{ id: BookId; title: string; copies?: number }"
+   },
+   "doc": {
+    "raw": "One book in the catalogue.",
+    "format": "jsdoc",
+    "summary": "One book in the catalogue.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "One book in the catalogue."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Book.copies",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "copies",
+   "parent": "js:lending-js/lib/domain/book#Book",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 14
+   },
+   "type": {
+    "text": "number"
+   },
+   "modifiers": [
+    "optional"
+   ],
+   "doc": {
+    "raw": "How many copies the library owns.",
+    "format": "jsdoc",
+    "summary": "How many copies the library owns.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "How many copies the library owns."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Book.id",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "id",
+   "parent": "js:lending-js/lib/domain/book#Book",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 12
+   },
+   "type": {
+    "text": "BookId",
+    "refs": [
+     "js:lending-js/lib/domain/book#BookId"
+    ]
+   },
+   "doc": {
+    "raw": "The catalogue number.",
+    "format": "jsdoc",
+    "summary": "The catalogue number.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The catalogue number."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Book.title",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "title",
+   "parent": "js:lending-js/lib/domain/book#Book",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 13
+   },
+   "type": {
+    "text": "string"
+   },
+   "doc": {
+    "raw": "The title, as printed.",
+    "format": "jsdoc",
+    "summary": "The title, as printed.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The title, as printed."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#BookId",
+   "kind": "type_alias",
+   "languageKind": "typedef",
+   "name": "BookId",
+   "parent": "js:file:lending-js/lib/domain/book.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 17,
+    "endLine": 17
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#BookTest",
+   "kind": "type_alias",
+   "languageKind": "callback",
+   "name": "BookTest",
+   "parent": "js:file:lending-js/lib/domain/book.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 20,
+    "endLine": 23
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "book",
+      "type": "Book",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "@callback BookTest(book)"
+   },
+   "type": {
+    "text": "(book: Book) => boolean"
+   },
+   "doc": {
+    "raw": "",
+    "format": "jsdoc",
+    "summary": "",
+    "description": [],
+    "params": {
+     "book": "The book to test."
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf",
+   "kind": "class",
+   "languageKind": "constructor function",
+   "name": "Shelf",
+   "parent": "js:file:lending-js/lib/domain/book.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 39,
+    "endLine": 45
+   },
+   "doc": {
+    "raw": "A shelf of books, kept in the order they arrive.\n\n@constructor\n@param {string} name - The shelf's label.",
+    "format": "jsdoc",
+    "summary": "A shelf of books, kept in the order they arrive.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A shelf of books, kept in the order they arrive."
+     }
+    ],
+    "params": {
+     "name": "The shelf's label."
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf._sorted",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "_sorted",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": false,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 44,
+    "endLine": 44
+   },
+   "type": {
+    "text": "boolean"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.add",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "add",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 53,
+    "endLine": 56
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "book",
+      "type": "Book",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Shelf",
+      "refs": [
+       "js:lending-js/lib/domain/book#Shelf"
+      ]
+     }
+    ],
+    "text": "add(book)"
+   },
+   "doc": {
+    "raw": "Adds a book to the end of the shelf.\n\n@param {Book} book\n@returns {Shelf} The shelf, for chaining.",
+    "format": "jsdoc",
+    "summary": "Adds a book to the end of the shelf.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Adds a book to the end of the shelf."
+     }
+    ],
+    "returns": "The shelf, for chaining.",
+    "params": {
+     "book": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.books",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "books",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 43,
+    "endLine": 43
+   },
+   "type": {
+    "text": "Book[]",
+    "refs": [
+     "js:lending-js/lib/domain/book#Book"
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 39,
+    "endLine": 45
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "name",
+      "type": "string"
+     }
+    ],
+    "results": [],
+    "text": "constructor(name)"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.first",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "first",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 63,
+    "endLine": 65
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "Book | undefined",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "text": "first()"
+   },
+   "doc": {
+    "raw": "Returns the first book, or undefined on an empty shelf.\n\n@returns {Book | undefined}",
+    "format": "jsdoc",
+    "summary": "Returns the first book, or undefined on an empty shelf.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Returns the first book, or undefined on an empty shelf."
+     }
+    ],
+    "returns": ""
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.from",
+   "kind": "method",
+   "languageKind": "function",
+   "name": "from",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 84,
+    "endLine": 88
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "name",
+      "type": "string"
+     },
+     {
+      "name": "books",
+      "type": "Book[]",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Shelf",
+      "refs": [
+       "js:lending-js/lib/domain/book#Shelf"
+      ]
+     }
+    ],
+    "text": "static from(name, books)"
+   },
+   "modifiers": [
+    "static"
+   ],
+   "doc": {
+    "raw": "Makes a shelf from a list of books.\n\n@param {string} name\n@param {Book[]} books\n@returns {Shelf}",
+    "format": "jsdoc",
+    "summary": "Makes a shelf from a list of books.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Makes a shelf from a list of books."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "name": "",
+     "books": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.home",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "home",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 91,
+    "endLine": 91
+   },
+   "type": {
+    "text": "any"
+   },
+   "modifiers": [
+    "static"
+   ],
+   "doc": {
+    "raw": "The folder where shelves keep their files.",
+    "format": "jsdoc",
+    "summary": "The folder where shelves keep their files.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The folder where shelves keep their files."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.name",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "name",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 41,
+    "endLine": 41
+   },
+   "type": {
+    "text": "string"
+   },
+   "doc": {
+    "raw": "The shelf's label.",
+    "format": "jsdoc",
+    "summary": "The shelf's label.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The shelf's label."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Shelf.where",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "where",
+   "parent": "js:lending-js/lib/domain/book#Shelf",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 73,
+    "endLine": 75
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "test",
+      "type": "BookTest",
+      "refs": [
+       "js:lending-js/lib/domain/book#BookTest"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "Book[]",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "text": "where(test)"
+   },
+   "doc": {
+    "raw": "Finds the books that pass a test.\n\n@param {BookTest} test\n@returns {Book[]}",
+    "format": "jsdoc",
+    "summary": "Finds the books that pass a test.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Finds the books that pass a test."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "test": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#counting",
+   "kind": "namespace",
+   "languageKind": "object",
+   "name": "counting",
+   "parent": "js:file:lending-js/lib/domain/book.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 26,
+    "endLine": 31
+   },
+   "doc": {
+    "raw": "Counting helpers that every shelf gains through a mixin.",
+    "format": "jsdoc",
+    "summary": "Counting helpers that every shelf gains through a mixin.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Counting helpers that every shelf gains through a mixin."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#counting.count",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "count",
+   "parent": "js:lending-js/lib/domain/book#counting",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 28,
+    "endLine": 30
+   },
+   "signature": {
+    "params": [],
+    "results": [
+     {
+      "type": "any"
+     }
+    ],
+    "text": "count()"
+   },
+   "doc": {
+    "raw": "Counts the books.",
+    "format": "jsdoc",
+    "summary": "Counts the books.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Counts the books."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan",
+   "kind": "class",
+   "languageKind": "class",
+   "name": "Loan",
+   "parent": "js:file:lending-js/lib/domain/loan.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 8,
+    "endLine": 64
+   },
+   "doc": {
+    "raw": "A loan of one book to one member.",
+    "format": "jsdoc",
+    "summary": "A loan of one book to one member.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A loan of one book to one member."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.#log",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "#log",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": false,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 61,
+    "endLine": 63
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "what",
+      "type": "string"
+     }
+    ],
+    "results": [],
+    "text": "#log(what)"
+   },
+   "modifiers": [
+    "private"
+   ],
+   "doc": {
+    "raw": "Writes one line about the loan.\n\n@private\n@param {string} what",
+    "format": "jsdoc",
+    "summary": "Writes one line about the loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Writes one line about the loan."
+     }
+    ],
+    "tags": [
+     {
+      "name": "private",
+      "text": ""
+     }
+    ],
+    "params": {
+     "what": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.#returned",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "#returned",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": false,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 12,
+    "endLine": 12
+   },
+   "type": {
+    "text": "boolean"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.book",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "book",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 22,
+    "endLine": 22
+   },
+   "type": {
+    "text": "Book",
+    "refs": [
+     "js:lending-js/lib/domain/book#Book"
+    ]
+   },
+   "doc": {
+    "raw": "The book on loan.",
+    "format": "jsdoc",
+    "summary": "The book on loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The book on loan."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.close",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "close",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 40,
+    "endLine": 43
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "close()"
+   },
+   "doc": {
+    "raw": "Ends the loan.\n\n@returns {void}",
+    "format": "jsdoc",
+    "summary": "Ends the loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Ends the loan."
+     }
+    ],
+    "returns": ""
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 20,
+    "endLine": 28
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "book",
+      "type": "import('./book').Book",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     },
+     {
+      "name": "member",
+      "type": "string"
+     }
+    ],
+    "results": [],
+    "text": "constructor(book, member)"
+   },
+   "doc": {
+    "raw": "Starts a loan.\n\n@param {import('./book').Book} book - The book on loan.\n@param {string} member - Who borrows it.",
+    "format": "jsdoc",
+    "summary": "Starts a loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Starts a loan."
+     }
+    ],
+    "params": {
+     "book": "The book on loan.",
+     "member": "Who borrows it."
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.due",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "due",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 26,
+    "endLine": 26
+   },
+   "type": {
+    "text": "number"
+   },
+   "doc": {
+    "raw": "The day the loan falls due, counted from day 0.",
+    "format": "jsdoc",
+    "summary": "The day the loan falls due, counted from day 0.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The day the loan falls due, counted from day 0."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.isLate",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "isLate",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 51,
+    "endLine": 53
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "today",
+      "type": "number"
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "isLate(today)"
+   },
+   "doc": {
+    "raw": "Reports whether the loan runs past its due day.\n\n@param {number} today\n@returns {boolean}",
+    "format": "jsdoc",
+    "summary": "Reports whether the loan runs past its due day.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reports whether the loan runs past its due day."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "today": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.made",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "made",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 10,
+    "endLine": 10
+   },
+   "type": {
+    "text": "number"
+   },
+   "modifiers": [
+    "static"
+   ],
+   "doc": {
+    "raw": "The number of loans made so far.",
+    "format": "jsdoc",
+    "summary": "The number of loans made so far.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The number of loans made so far."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.member",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "member",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 24,
+    "endLine": 24
+   },
+   "type": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#Loan.returned",
+   "kind": "property",
+   "languageKind": "accessor",
+   "name": "returned",
+   "parent": "js:lending-js/lib/domain/loan#Loan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 31,
+    "endLine": 33
+   },
+   "type": {
+    "text": "boolean"
+   },
+   "modifiers": [
+    "get"
+   ],
+   "doc": {
+    "raw": "Whether the member has brought the book back.",
+    "format": "jsdoc",
+    "summary": "Whether the member has brought the book back.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Whether the member has brought the book back."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#OverdueLoan",
+   "kind": "class",
+   "languageKind": "class",
+   "name": "OverdueLoan",
+   "parent": "js:file:lending-js/lib/domain/loan.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 69,
+    "endLine": 74
+   },
+   "doc": {
+    "raw": "A loan that already runs late. {@link Loan.isLate} always holds for it.",
+    "format": "jsdoc",
+    "summary": "A loan that already runs late.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A loan that already runs late. [Loan.isLate](sym:js:lending-js/lib/domain/loan#Loan.isLate) always holds for it."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#OverdueLoan.isLate",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "isLate",
+   "parent": "js:lending-js/lib/domain/loan#OverdueLoan",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 71,
+    "endLine": 73
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "today",
+      "type": "number"
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "isLate(today)"
+   },
+   "doc": {
+    "raw": "@param {number} today",
+    "format": "jsdoc",
+    "summary": "",
+    "description": [],
+    "params": {
+     "today": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#pick",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "pick",
+   "parent": "js:file:lending-js/lib/domain/loan.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 84,
+    "endLine": 86
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "items",
+      "type": "T[]"
+     },
+     {
+      "name": "test",
+      "type": "(item: T) => boolean"
+     }
+    ],
+    "results": [
+     {
+      "type": "T | undefined"
+     }
+    ],
+    "typeParams": "<T>",
+    "text": "function pick<T>(items, test)"
+   },
+   "doc": {
+    "raw": "Picks the first item of a list that passes a test.\n\n@template T\n@param {T[]} items\n@param {(item: T) => boolean} test\n@returns {T | undefined}",
+    "format": "jsdoc",
+    "summary": "Picks the first item of a list that passes a test.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Picks the first item of a list that passes a test."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "items": "",
+     "test": ""
+    },
+    "typeParams": {
+     "T": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/rules#rules",
+   "kind": "namespace",
+   "languageKind": "object",
+   "name": "rules",
+   "parent": "js:file:lending-js/lib/domain/rules.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/rules.js",
+    "line": 4,
+    "endLine": 19
+   },
+   "doc": {
+    "raw": "The rules that every loan follows.",
+    "format": "jsdoc",
+    "summary": "The rules that every loan follows.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The rules that every loan follows."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/rules#rules.daysLate",
+   "kind": "method",
+   "languageKind": "arrow function",
+   "name": "daysLate",
+   "parent": "js:lending-js/lib/domain/rules#rules",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/rules.js",
+    "line": 18,
+    "endLine": 18
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "loan",
+      "type": "any"
+     },
+     {
+      "name": "today",
+      "type": "any"
+     }
+    ],
+    "results": [
+     {
+      "type": "number"
+     }
+    ],
+    "text": "daysLate = (loan, today) => …"
+   },
+   "doc": {
+    "raw": "Counts the days a loan runs late, or 0.",
+    "format": "jsdoc",
+    "summary": "Counts the days a loan runs late, or 0.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Counts the days a loan runs late, or 0."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/rules#rules.isLate",
+   "kind": "method",
+   "languageKind": "method",
+   "name": "isLate",
+   "parent": "js:lending-js/lib/domain/rules#rules",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/rules.js",
+    "line": 14,
+    "endLine": 16
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "loan",
+      "type": "{due: number}"
+     },
+     {
+      "name": "today",
+      "type": "number"
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "isLate(loan, today)"
+   },
+   "doc": {
+    "raw": "Reports whether a loan runs late.\n\n@param {{ due: number }} loan\n@param {number} today\n@returns {boolean}",
+    "format": "jsdoc",
+    "summary": "Reports whether a loan runs late.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reports whether a loan runs late."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "loan": "",
+     "today": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/rules#rules.limit",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "limit",
+   "parent": "js:lending-js/lib/domain/rules#rules",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/rules.js",
+    "line": 32,
+    "endLine": 32
+   },
+   "type": {
+    "text": "any"
+   },
+   "doc": {
+    "raw": "The most books a member may hold at once.",
+    "format": "jsdoc",
+    "summary": "The most books a member may hold at once.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The most books a member may hold at once."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/rules#rules.loanDays",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "loanDays",
+   "parent": "js:lending-js/lib/domain/rules#rules",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/rules.js",
+    "line": 6,
+    "endLine": 6
+   },
+   "type": {
+    "text": "number"
+   },
+   "doc": {
+    "raw": "How many days a loan lasts.",
+    "format": "jsdoc",
+    "summary": "How many days a loan lasts.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "How many days a loan lasts."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/rules#rules.mayBorrow",
+   "kind": "method",
+   "languageKind": "function",
+   "name": "mayBorrow",
+   "parent": "js:lending-js/lib/domain/rules#rules",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/rules.js",
+    "line": 27,
+    "endLine": 29
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "onLoan",
+      "type": "number"
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "mayBorrow(onLoan)"
+   },
+   "doc": {
+    "raw": "Reports whether a member may borrow one more book.\n\n@param {number} onLoan - The member's books on loan now.\n@returns {boolean}",
+    "format": "jsdoc",
+    "summary": "Reports whether a member may borrow one more book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reports whether a member may borrow one more book."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "onLoan": "The member's books on loan now."
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/index#lendFirst",
+   "name": "lendFirst",
+   "parent": "js:file:lending-js/lib/index.js",
+   "exported": true,
+   "location": {
+    "path": "lib/index.js",
+    "line": 26,
+    "endLine": 28
+   },
+   "kind": "function",
+   "languageKind": "function",
+   "signature": {
+    "params": [
+     {
+      "name": "shelf",
+      "type": "any"
+     },
+     {
+      "name": "member",
+      "type": "any"
+     }
+    ],
+    "results": [
+     {
+      "type": "Loan",
+      "refs": [
+       "js:lending-js/lib/domain/loan#Loan"
+      ]
+     }
+    ],
+    "text": "lendFirst(shelf, member)"
+   },
+   "doc": {
+    "raw": "Lends the first book of a shelf to a member.",
+    "format": "jsdoc",
+    "summary": "Lends the first book of a shelf to a member.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lends the first book of a shelf to a member."
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/index#openShelf",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "openShelf",
+   "parent": "js:file:lending-js/lib/index.js",
+   "exported": true,
+   "location": {
+    "path": "lib/index.js",
+    "line": 16,
+    "endLine": 18
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "name",
+      "type": "string"
+     }
+    ],
+    "results": [
+     {
+      "type": "Shelf",
+      "refs": [
+       "js:lending-js/lib/domain/book#Shelf"
+      ]
+     }
+    ],
+    "text": "function openShelf(name)"
+   },
+   "doc": {
+    "raw": "Opens a shelf with the default rules.\n\n@param {string} name - The shelf's name.\n@returns {Shelf}",
+    "format": "jsdoc",
+    "summary": "Opens a shelf with the default rules.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Opens a shelf with the default rules."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "name": "The shelf's name."
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/index#version",
+   "name": "version",
+   "parent": "js:file:lending-js/lib/index.js",
+   "exported": true,
+   "location": {
+    "path": "lib/index.js",
+    "line": 29,
+    "endLine": 29
+   },
+   "kind": "variable",
+   "languageKind": "export",
+   "group": "index.js:29",
+   "type": {
+    "text": "string"
+   },
+   "value": "\"1.0.0\""
+  },
+  {
+   "id": "js:lending-js/lib/ui/card#BookCard",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "BookCard",
+   "parent": "js:file:lending-js/lib/ui/card.jsx",
+   "exported": true,
+   "location": {
+    "path": "lib/ui/card.jsx",
+    "line": 10,
+    "endLine": 12
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{book}",
+      "type": "{book: import('../domain/book.js').Book}",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "any"
+     }
+    ],
+    "text": "function BookCard({book})"
+   },
+   "doc": {
+    "raw": "Shows one book.\n\n@param {{ book: import('../domain/book.js').Book }} props",
+    "format": "jsdoc",
+    "summary": "Shows one book.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Shows one book."
+     }
+    ],
+    "params": {
+     "props": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/ui/card#BookList",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "BookList",
+   "parent": "js:file:lending-js/lib/ui/card.jsx",
+   "exported": true,
+   "location": {
+    "path": "lib/ui/card.jsx",
+    "line": 19,
+    "endLine": 27
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "{books}",
+      "type": "{books: import('../domain/book.js').Book[]}",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "any"
+     }
+    ],
+    "text": "function BookList({books})"
+   },
+   "doc": {
+    "raw": "Shows a list of books.\n\n@param {{ books: import('../domain/book.js').Book[] }} props",
+    "format": "jsdoc",
+    "summary": "Shows a list of books.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Shows a list of books."
+     }
+    ],
+    "params": {
+     "props": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/ui/format#formatTitle",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "formatTitle",
+   "parent": "js:file:lending-js/lib/ui/format.mjs",
+   "exported": true,
+   "location": {
+    "path": "lib/ui/format.mjs",
+    "line": 9,
+    "endLine": 11
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "book",
+      "type": "import('../domain/book.js').Book",
+      "refs": [
+       "js:lending-js/lib/domain/book#Book"
+      ]
+     }
+    ],
+    "results": [
+     {
+      "type": "string"
+     }
+    ],
+    "text": "function formatTitle(book)"
+   },
+   "doc": {
+    "raw": "Formats a book's title for a card.\n\n@param {import('../domain/book.js').Book} book\n@returns {string}",
+    "format": "jsdoc",
+    "summary": "Formats a book's title for a card.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Formats a book's title for a card."
+     }
+    ],
+    "returns": "",
+    "params": {
+     "book": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/web/app#GET /health",
+   "kind": "function",
+   "languageKind": "arrow function",
+   "name": "GET /health",
+   "parent": "js:file:lending-js/lib/web/app.js",
+   "exported": false,
+   "location": {
+    "path": "lib/web/app.js",
+    "line": 18,
+    "endLine": 20
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "any"
+     },
+     {
+      "name": "res",
+      "type": "any"
+     }
+    ],
+    "results": [],
+    "text": "(req, res) => …"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/web/app#app",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "app",
+   "parent": "js:file:lending-js/lib/web/app.js",
+   "exported": true,
+   "location": {
+    "path": "lib/web/app.js",
+    "line": 6,
+    "endLine": 6
+   },
+   "group": "app.js:6",
+   "type": {
+    "text": "any"
+   },
+   "value": "express()"
+  },
+  {
+   "id": "js:lending-js/lib/web/app#showLoan",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "showLoan",
+   "parent": "js:file:lending-js/lib/web/app.js",
+   "exported": false,
+   "location": {
+    "path": "lib/web/app.js",
+    "line": 14,
+    "endLine": 16
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "{params: {id: string}}"
+     },
+     {
+      "name": "res",
+      "type": "{json: (body: unknown) => void}"
+     }
+    ],
+    "results": [],
+    "text": "function showLoan(req, res)"
+   },
+   "doc": {
+    "raw": "Shows one loan.\n\n@param {{ params: { id: string } }} req\n@param {{ json: (body: unknown) => void }} res",
+    "format": "jsdoc",
+    "summary": "Shows one loan.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Shows one loan."
+     }
+    ],
+    "params": {
+     "req": "",
+     "res": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/web/books#POST /books/:id/loans",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "POST /books/:id/loans",
+   "parent": "js:file:lending-js/lib/web/books.js",
+   "exported": false,
+   "location": {
+    "path": "lib/web/books.js",
+    "line": 21,
+    "endLine": 23
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "any"
+     },
+     {
+      "name": "res",
+      "type": "any"
+     }
+    ],
+    "results": [],
+    "text": "function handler(req, res)"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/web/books#listBooks",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "listBooks",
+   "parent": "js:file:lending-js/lib/web/books.js",
+   "exported": false,
+   "location": {
+    "path": "lib/web/books.js",
+    "line": 16,
+    "endLine": 18
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "req",
+      "type": "unknown"
+     },
+     {
+      "name": "res",
+      "type": "{json: (body: unknown) => void}"
+     }
+    ],
+    "results": [],
+    "text": "function listBooks(req, res)"
+   },
+   "doc": {
+    "raw": "Lists the books on the front desk.\n\n@param {unknown} req\n@param {{ json: (body: unknown) => void }} res",
+    "format": "jsdoc",
+    "summary": "Lists the books on the front desk.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Lists the books on the front desk."
+     }
+    ],
+    "params": {
+     "req": "",
+     "res": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/web/books#router",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "router",
+   "parent": "js:file:lending-js/lib/web/books.js",
+   "exported": true,
+   "location": {
+    "path": "lib/web/books.js",
+    "line": 7,
+    "endLine": 7
+   },
+   "group": "books.js:7",
+   "type": {
+    "text": "any"
+   },
+   "value": "Router()"
+  },
+  {
+   "id": "js:lending-js/lib/web/books#shelf",
+   "kind": "constant",
+   "languageKind": "constant",
+   "name": "shelf",
+   "parent": "js:file:lending-js/lib/web/books.js",
+   "exported": false,
+   "location": {
+    "path": "lib/web/books.js",
+    "line": 8,
+    "endLine": 8
+   },
+   "group": "books.js:8",
+   "type": {
+    "text": "Shelf",
+    "refs": [
+     "js:lending-js/lib/domain/book#Shelf"
+    ]
+   },
+   "value": "new Shelf(\"front desk\")"
+  }
+ ],
+ "edges": [
+  {
+   "from": "js:dir:lending-js/lib",
+   "to": "js:dir:lending-js/lib/domain",
+   "kind": "imports",
+   "confidence": "exact",
+   "count": 3
+  },
+  {
+   "from": "js:dir:lending-js/lib/web",
+   "to": "js:dir:lending-js/lib/domain",
+   "kind": "imports",
+   "confidence": "exact",
+   "count": 3
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Book.id",
+   "to": "js:lending-js/lib/domain/book#BookId",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 12
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#BookTest",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 20
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.add",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 53
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.add",
+   "to": "js:lending-js/lib/domain/book#Shelf",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 53
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.books",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 43
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.first",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 63
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.from",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 84
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.from",
+   "to": "js:lending-js/lib/domain/book#Shelf",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 84
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.from",
+   "to": "js:lending-js/lib/domain/book#Shelf.add",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 86
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.from",
+   "to": "js:lending-js/lib/domain/book#Shelf.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 85
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.where",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 73
+  },
+  {
+   "from": "js:lending-js/lib/domain/book#Shelf.where",
+   "to": "js:lending-js/lib/domain/book#BookTest",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 73
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#Loan.book",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "field_type",
+   "confidence": "exact",
+   "line": 22
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#Loan.close",
+   "to": "js:lending-js/lib/domain/loan#Loan.#log",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 42
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#Loan.constructor",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 20
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#Loan.isLate",
+   "to": "js:lending-js/lib/domain/rules#rules.isLate",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 52
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#OverdueLoan",
+   "to": "js:lending-js/lib/domain/loan#Loan",
+   "kind": "extends",
+   "confidence": "exact"
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#OverdueLoan.isLate",
+   "to": "js:lending-js/lib/domain/loan#Loan.isLate",
+   "kind": "overrides",
+   "confidence": "exact"
+  },
+  {
+   "from": "js:lending-js/lib/index#lendFirst",
+   "to": "js:lending-js/lib/domain/loan#Loan",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 26
+  },
+  {
+   "from": "js:lending-js/lib/index#lendFirst",
+   "to": "js:lending-js/lib/domain/loan#Loan.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 27
+  },
+  {
+   "from": "js:lending-js/lib/index#openShelf",
+   "to": "js:lending-js/lib/domain/book#Shelf",
+   "kind": "return_type",
+   "confidence": "exact",
+   "line": 16
+  },
+  {
+   "from": "js:lending-js/lib/index#openShelf",
+   "to": "js:lending-js/lib/domain/book#Shelf.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "js:lending-js/lib/ui/card#BookCard",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 10
+  },
+  {
+   "from": "js:lending-js/lib/ui/card#BookCard",
+   "to": "js:lending-js/lib/ui/format#formatTitle",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 11
+  },
+  {
+   "from": "js:lending-js/lib/ui/card#BookList",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 19
+  },
+  {
+   "from": "js:lending-js/lib/ui/card#BookList",
+   "to": "js:lending-js/lib/ui/card#BookCard",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 23
+  },
+  {
+   "from": "js:lending-js/lib/ui/format#formatTitle",
+   "to": "js:lending-js/lib/domain/book#Book",
+   "kind": "param_type",
+   "confidence": "exact",
+   "line": 9
+  },
+  {
+   "from": "js:lending-js/lib/web/app#showLoan",
+   "to": "js:lending-js/lib/domain/loan#Loan.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 15
+  },
+  {
+   "from": "js:lending-js/lib/web/books#listBooks",
+   "to": "js:lending-js/lib/domain/book#Shelf.where",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 17
+  },
+  {
+   "from": "js:lending-js/lib/web/books#shelf",
+   "to": "js:lending-js/lib/domain/book#Shelf.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 8
+  }
+ ],
+ "entryPoints": [
+  {
+   "id": "http:GET /health",
+   "kind": "http",
+   "name": "GET /health",
+   "method": "GET",
+   "path": "/health",
+   "handler": "js:lending-js/lib/web/app#GET /health",
+   "registeredAt": {
+    "path": "lib/web/app.js",
+    "line": 18
+   },
+   "plugin": "express"
+  },
+  {
+   "id": "http:GET /loans/:id",
+   "kind": "http",
+   "name": "GET /loans/:id",
+   "method": "GET",
+   "path": "/loans/:id",
+   "handler": "js:lending-js/lib/web/app#showLoan",
+   "registeredAt": {
+    "path": "lib/web/app.js",
+    "line": 21
+   },
+   "plugin": "express"
+  },
+  {
+   "id": "http:GET /books",
+   "kind": "http",
+   "name": "GET /books",
+   "method": "GET",
+   "path": "/books",
+   "handler": "js:lending-js/lib/web/books#listBooks",
+   "registeredAt": {
+    "path": "lib/web/books.js",
+    "line": 20
+   },
+   "plugin": "express"
+  },
+  {
+   "id": "http:POST /books/:id/loans",
+   "kind": "http",
+   "name": "POST /books/:id/loans",
+   "method": "POST",
+   "path": "/books/:id/loans",
+   "handler": "js:lending-js/lib/web/books#POST /books/:id/loans",
+   "registeredAt": {
+    "path": "lib/web/books.js",
+    "line": 21
+   },
+   "plugin": "express"
+  }
+ ],
+ "tests": {
+  "js:lending-js/lib/domain/book#Book.id": [
+   {
+    "name": "Shelf > keeps books in order",
+    "location": {
+     "path": "test/shelf.test.js",
+     "line": 8
+    }
+   }
+  ],
+  "js:lending-js/lib/domain/book#Shelf": [
+   {
+    "name": "Shelf > keeps books in order",
+    "location": {
+     "path": "test/shelf.test.js",
+     "line": 8
+    }
+   }
+  ],
+  "js:lending-js/lib/domain/book#Shelf.first": [
+   {
+    "name": "Shelf > keeps books in order",
+    "location": {
+     "path": "test/shelf.test.js",
+     "line": 8
+    }
+   }
+  ],
+  "js:lending-js/lib/domain/book#Shelf.from": [
+   {
+    "name": "Shelf > keeps books in order",
+    "location": {
+     "path": "test/shelf.test.js",
+     "line": 8
+    }
+   }
+  ]
+ }
+}
