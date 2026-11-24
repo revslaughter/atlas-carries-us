@@ -1,0 +1,73 @@
+# Config for the Python adapter's test fixture: an invented lending library.
+# The end-to-end tests build the viewer from it, and CI maps it with the
+# runtime image, so every plugin of the Python adapter runs in every check.
+version: 1
+project:
+  name: Lending library in Python (fixture)
+  repo: revslaughter/atlas-carries-us
+  links: github
+  descriptionDrafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+  description: |
+    An invented lending library that exercises every feature of the Python
+    adapter. It serves the library over HTTP with Flask, FastAPI and Django,
+    and from a shell with click and Typer. The lending package holds the
+    rules, and lending.store holds the storage contract.
+
+    The fixture never runs, so it installs none of these frameworks.
+languages:
+  - adapter: python
+    root: ../../adapters/python/testdata/fixture
+entryPoints:
+  - plugin: flask
+  - plugin: fastapi
+  - plugin: django
+  - plugin: click
+  - plugin: typer
+  - plugin: python-main
+regions:
+  - id: entry
+    name: HTTP and command line
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    paths: ["src/lending/web", "src/lending/cli"]
+    description: Three web frameworks and two command-line tools, each a way into the rules.
+    readingTip: Open the entry points to see each route and command.
+  - id: rules
+    name: Lending rules
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    paths: ["src/lending", "src/lending/plugins"]
+    description: The Library applies the rules; the domain module holds the shared vocabulary.
+  - id: storage
+    name: Storage
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    paths: ["src/lending/store"]
+    description: One abstract store, one protocol, and a store in memory.
+layout:
+  rows:
+    - [entry]
+    - [rules, storage]
+tour:
+  - title: Three layers
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: overview }
+    text: >-
+      The web and command-line code sits on top. It calls the lending rules,
+      which reach books through the storage contract.
+  - title: A loan
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: trace, symbol: "py:lending.library#Library.borrow" }
+    text: >-
+      borrow finds the book through Store, checks the rules, saves the book
+      and records the loan. The annotation on the constructor's store
+      parameter types self.store, so the call to find counts as exact.
+  - title: A route
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: trace, entryPoint: "GET /api/books/<book_id>" }
+    text: >-
+      The blueprint declares /books, but create_app mounts it under
+      /api/books, so the route's path takes the mount's prefix.
+  - title: A command
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: trace, entryPoint: "lendd report count" }
+    text: >-
+      pyproject.toml names the click group cli as the script lendd. The
+      report group adds count, which calls open_library.

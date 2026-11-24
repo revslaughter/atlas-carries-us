@@ -35,6 +35,10 @@ languages:
     exclude: ["corpus/**", "target/**", "out/**", "examples/**", "**/testdata/**", "**/dist/**", "**/dist-test/**"]
     tests: ["viewer/test/**", "adapters/typescript/test/**"]
   - adapter: rust
+  - adapter: python
+    root: adapters/python
+    exclude: ["testdata/**"]
+    tests: ["tests/**"]
 entryPoints:
   - plugin: clap
 regions:
@@ -75,6 +79,18 @@ regions:
       Start with run in extract.rs: it runs the passes in order. scip.rs
       decodes the index, docs.rs normalises the docs, and plugins.rs reads
       the tokens around each registration.
+  - id: python
+    name: Reading Python code
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    paths: ["adapters/python/**"]
+    description: >-
+      The Python adapter. It reads Python with the standard library's ast
+      module and a resolver of its own, finds routes and commands of six
+      frameworks, and writes the same data format.
+    readingTip: >-
+      Start with extract in extract.py: it runs the passes in order. index.py
+      records declarations, resolve.py gives names their meaning, and
+      plugins.py finds the entry points.
   - id: acu
     name: Running adapters and building the site
     drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
@@ -99,6 +115,7 @@ layout:
   rows:
     - [go, ts, rust]
     - [acu, viewer]
+    - [python]
 tour:
   - title: Five parts and a file between them
     drafted: { by: Claude Code, at: "2026-11-23T16:00:00Z" }
