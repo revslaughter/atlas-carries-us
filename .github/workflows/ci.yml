@@ -67,3 +67,120 @@ jobs:
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending-python.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending-js/atlas.yaml -o out/lending-js.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending-js.json
+      # The export stage writes the same programs to a folder on the runner.
+      # Its build stage already sits in this builder's cache from the step
+      # above. Then acu runs outside any container, with the runner's own Go
+      # and Node, and finds its adapters beside itself. Every step writes to
+      # the runner's temp folder: the container steps above leave out/ owned
+      # by root. provenance: false keeps buildx from writing a
+      # provenance.json into the folder.
+      - name: Write acu and its adapters to a folder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: export
+          provenance: false
+          outputs: type=local,dest=${{ runner.temp }}/acu-export
+          cache-from: |
+            type=gha,scope=toolchain
+            type=gha,scope=runtime
+      # The same stage cross-compiles for macOS and Windows on this Linux
+      # runner. The job "cross" below runs the results.
+      - name: Write the macOS (arm64) programs to a folder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: export
+          platforms: darwin/arm64
+          provenance: false
+          outputs: type=local,dest=${{ runner.temp }}/acu-darwin-arm64
+          cache-from: |
+            type=gha,scope=toolchain
+            type=gha,scope=runtime
+      - name: Write the Windows (amd64) programs to a folder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: export
+          platforms: windows/amd64
+          provenance: false
+          outputs: type=local,dest=${{ runner.temp }}/acu-windows-amd64
+          cache-from: |
+            type=gha,scope=toolchain
+            type=gha,scope=runtime
+      - name: Keep the macOS programs
+        uses: actions/upload-artifact@v4
+        with:
+          name: acu-darwin-arm64
+          path: ${{ runner.temp }}/acu-darwin-arm64
+          if-no-files-found: error
+      - name: Keep the Windows programs
+        uses: actions/upload-artifact@v4
+        with:
+          name: acu-windows-amd64
+          path: ${{ runner.temp }}/acu-windows-amd64
+          if-no-files-found: error
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: adapters/go/go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Map the Go and TypeScript fixtures with the exported folder
+        run: |
+          ls -l "$RUNNER_TEMP/acu-export"
+          [ "$(ls -A "$RUNNER_TEMP/acu-export" | LC_ALL=C sort | tr '\n' ' ')" = "acu acu-adapter-go acu-adapter-rust acu-adapter-typescript " ] \
+            || { echo "ci: the exported folder holds other files than acu and its three adapters" >&2; exit 1; }
+          "$RUNNER_TEMP/acu-export/acu" --version
+          "$RUNNER_TEMP/acu-export/acu" extract -c examples/mixed/atlas.yaml -o "$RUNNER_TEMP/mixed-export.json"
+          "$RUNNER_TEMP/acu-export/acu" check -d "$RUNNER_TEMP/mixed-export.json"
+
+  # The macOS and Windows programs from the "image" job, run on a machine of
+  # that system with its own Go and Node. Artifacts drop the executable mode,
+  # so the job sets it again. Outputs go to the runner's temp folder.
+  cross:
+    name: Exported programs on ${{ matrix.os }}
+    needs: image
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: acu-darwin-arm64
+            exe: ""
+          - os: windows-latest
+            artifact: acu-windows-amd64
+            exe: ".exe"
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/acu-export
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: adapters/go/go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Map the Go and TypeScript fixtures with the exported folder
+        env:
+          EXE: ${{ matrix.exe }}
+        run: |
+          tmp=$RUNNER_TEMP
+          if command -v cygpath >/dev/null 2>&1; then tmp=$(cygpath -u "$tmp"); fi
+          dir="$tmp/acu-export"
+          ls -l "$dir"
+          want=$(printf '%s\n' "acu$EXE" "acu-adapter-go$EXE" "acu-adapter-rust$EXE" acu-adapter-typescript | LC_ALL=C sort)
+          [ "$(ls -A "$dir" | LC_ALL=C sort)" = "$want" ] \
+            || { echo "ci: the exported folder holds other files than acu and its three adapters" >&2; exit 1; }
+          chmod +x "$dir/acu$EXE" "$dir/acu-adapter-go$EXE" "$dir/acu-adapter-rust$EXE"
+          "$dir/acu$EXE" --version
+          "$dir/acu$EXE" extract -c examples/mixed/atlas.yaml -o "$tmp/mixed-export.json"
+          "$dir/acu$EXE" check -d "$tmp/mixed-export.json"

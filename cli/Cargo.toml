@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+chrono = { version = "0.4", default-features = false, features = ["now", "std"] }
 clap = { version = "4.6", features = ["derive"] }
 globset = "0.4"
 include_dir = "0.7"

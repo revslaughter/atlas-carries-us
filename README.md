@@ -41,6 +41,42 @@ docker build -t acu .
 docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.0.0:4321
 ```
 
+To get the programs themselves on your machine, build the `export` stage
+with the wrapper script. It writes them to `out/docker`:
+
+```sh
+scripts/docker-export.sh                           # Linux, this machine's architecture
+scripts/docker-export.sh --platform darwin/arm64   # macOS on Apple silicon
+scripts/docker-export.sh --platform windows/amd64  # Windows on x86-64
+```
+
+`--platform` accepts `linux/amd64`, `linux/arm64`, `darwin/amd64`,
+`darwin/arm64`, `windows/amd64` and `windows/arm64`. Without it, Docker picks
+its own Linux platform, also on macOS and Windows, so name your system there.
+The build cross-compiles, so no step runs under emulation. The script takes
+another folder as its argument, and passes everything after `--` to
+`docker build`, for example `-- --build-arg REGISTRY=mirror.gcr.io`. Without
+the script, run the build yourself:
+
+```sh
+docker build --platform darwin/arm64 --target export --provenance=false \
+  --output type=local,dest=out/docker .
+```
+
+The folder then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
+`acu-adapter-typescript/`; on Windows the three programs end in `.exe`. `acu`
+finds its adapters beside itself, the `acu-adapter-typescript/` folder
+included, which it runs with Node. You need no `PATH` setup for them. They
+need the same tools at run time as the image holds, on every system: Go for
+the Go adapter, Node for the TypeScript adapter, and the pinned nightly for
+the Rust adapter.
+
+The Linux programs need glibc 2.28 or later; `acu-adapter-go` runs on any
+Linux. The macOS programs need macOS 12 or later. Nothing signs them. A local
+`--output` sets no quarantine mark, so Gatekeeper lets them run; a copy that
+came through a browser download needs `xattr -d com.apple.quarantine <file>`
+first.
+
 To build from source instead, you need Go 1.24 or later, Node 20 or later,
 and a Rust toolchain. The pinned versions sit in `adapters/go/go.mod`,
 `.node-version` and `rust-toolchain.toml`. The Rust adapter also needs its
