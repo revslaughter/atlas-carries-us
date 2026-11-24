@@ -894,7 +894,9 @@ export class Extractor {
       let s: S.Symbol;
       // const x = require("x") imports, as an import statement does; it declares nothing new.
       if (init && this.isJs(sf) && requireSpec(init) !== undefined) continue;
-      if (isConst && init && ts.isObjectLiteralExpression(init) && this.isJs(sf)) {
+      // In a project with components, an object keeps the TypeScript rule, so
+      // that the sveltekit plugin's inline actions keep their route names.
+      if (isConst && init && ts.isObjectLiteralExpression(init) && this.isJs(sf) && !this.svelte) {
         const ns = objectNamespace(this, sf, d, init, parent, p, exported, st);
         if (ns) {
           this.queueDecl(d, sf, ns);

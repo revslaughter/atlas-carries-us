@@ -117,6 +117,10 @@ The TypeScript table holds, with these additions:
    of an ES class. A class that declares the field keeps that declaration.
 5. A mixin (`Object.assign(F.prototype, mixin)`) adds no members; the limits
    list it.
+6. In a project with `.svelte` files, an object literal keeps the
+   TypeScript rule. SvelteKit's `export const actions = { … }` must keep its
+   inline actions as functions named after their routes, so the realworld
+   snapshot stays the same. (Found by `scripts/check.sh`.)
 
 ## Types
 

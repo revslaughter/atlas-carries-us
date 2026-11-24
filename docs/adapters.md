@@ -476,6 +476,10 @@ The TypeScript table holds, with these additions:
    private member by convention in JavaScript.
 4. `this.x = …` adds a member only in a constructor, unless the class
    already declares that name.
+5. In a project with `.svelte` files, an object literal keeps the
+   TypeScript rule and stays a constant. SvelteKit writes form actions as
+   `export const actions = { … }`, and the `sveltekit` plugin names an
+   inline action after its route.
 
 #### Types and edges
 

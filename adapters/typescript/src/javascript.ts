@@ -349,7 +349,7 @@ class JsFile {
     if (s.kind === "variable" || s.kind === "constant") {
       const d = sym?.valueDeclaration;
       const init = d && ts.isVariableDeclaration(d) && d.initializer ? lastValue(d.initializer) : undefined;
-      if (!init || !ts.isObjectLiteralExpression(init)) return undefined;
+      if (!init || !ts.isObjectLiteralExpression(init) || ex.svelte) return undefined;
       s.kind = "namespace";
       s.languageKind = "object";
       delete s.type;
@@ -530,7 +530,7 @@ class JsFile {
       ex.members(sf, s, name, value.members);
       const ctor = value.members.find(m => ts.isConstructorDeclaration(m) && m.body);
       if (ctor) this.thisMembers(s.id, ctor as ts.ConstructorDeclaration);
-    } else if (ts.isObjectLiteralExpression(value) && holdsFunction(value)) {
+    } else if (ts.isObjectLiteralExpression(value) && holdsFunction(value) && !ex.svelte) {
       s = ex.addSym({ ...base, kind: "namespace", languageKind: "object" }, name);
       ex.idOfNode.set(value, s.id);
       this.objectMembers(s, name, value, false);
