@@ -159,6 +159,25 @@ class Facts(unittest.TestCase):
         """Dispatch.go calls self.carrier.run, but swap writes a Drone, so no exact edge points at Courier.run."""
         self.assertFalse(has_edge("calls", L + "carriers#Dispatch.go", L + "carriers#Courier.run"))
 
+    def test_every_other_binding_form_unsettles_a_name(self) -> None:
+        """A loop, a with, +=, a global +=, a global import, a global := and del each leave no exact edge to Courier.run."""
+        for user in ["use_looped", "use_wrapped", "use_counted", "use_added", "use_imported", "use_walrused", "use_deleted"]:
+            with self.subTest(user=user):
+                self.assertFalse(has_edge("calls", L + "carriers#" + user, L + "carriers#Courier.run"), user + " still calls Courier.run")
+
+    def test_an_augmented_write_unsettles_an_attribute(self) -> None:
+        """Tally.bump writes self.carrier += 1, so Tally.go gets no exact edge to Courier.run."""
+        self.assertFalse(has_edge("calls", L + "carriers#Tally.go", L + "carriers#Courier.run"))
+
+    def test_a_subclass_write_unsettles_a_base_attribute(self) -> None:
+        """AirFleet.fly writes a Drone into self.carrier, so Fleet.go gets no exact edge to Courier.run."""
+        self.assertFalse(has_edge("calls", L + "carriers#Fleet.go", L + "carriers#Courier.run"))
+
+    def test_a_member_of_an_unexported_class_stays_unexported(self) -> None:
+        """__all__ leaves Shelfmark out, so its public method label counts as not exported."""
+        self.assertFalse(symbol(L + "domain#Shelfmark")["exported"])
+        self.assertFalse(symbol(L + "domain#Shelfmark.label")["exported"])
+
     def test_a_name_with_one_write_keeps_its_exact_call(self) -> None:
         """send_fixed calls Courier.run through fixed, which nothing rebinds."""
         self.assertTrue(has_edge("calls", L + "carriers#send_fixed", L + "carriers#Courier.run"))

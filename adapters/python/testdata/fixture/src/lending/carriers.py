@@ -4,6 +4,8 @@ A name or attribute that holds a Courier in one place and a Drone in
 another has no single type. A call through it gets no exact edge.
 """
 
+from contextlib import nullcontext
+
 from .domain import LOAN_DAYS
 
 
@@ -29,6 +31,23 @@ backup = Courier()
 
 fixed = Courier()
 """A carrier that nothing rebinds."""
+
+looped = Courier()
+for looped in [Drone()]:
+    pass
+
+wrapped = Courier()
+with nullcontext(Drone()) as wrapped:
+    pass
+
+counted = Courier()
+counted += 1
+
+added = Courier()
+imported = Courier()
+walrused = Courier()
+deleted = Courier()
+del deleted
 
 
 def deliver() -> None:
@@ -66,3 +85,92 @@ class Dispatch:
     def go(self) -> None:
         """Sends the books with the current carrier."""
         self.carrier.run()
+
+
+def use_looped() -> None:
+    """Sends books with the carrier that a module-level loop rebinds."""
+    looped.run()
+
+
+def use_wrapped() -> None:
+    """Sends books with the carrier that a module-level with rebinds."""
+    wrapped.run()
+
+
+def use_counted() -> None:
+    """Sends books with the carrier that a module-level += rebinds."""
+    counted.run()
+
+
+def bump_added() -> None:
+    """Rebinds added with += through global."""
+    global added
+    added += 1
+
+
+def use_added() -> None:
+    """Sends books with added."""
+    added.run()
+
+
+def import_over() -> None:
+    """Rebinds imported with an import through global."""
+    global imported
+    import lending.domain as imported  # noqa: F401
+
+
+def use_imported() -> None:
+    """Sends books with imported."""
+    imported.run()
+
+
+def walrus_over() -> None:
+    """Rebinds walrused with := through global."""
+    global walrused
+    (walrused := Drone())
+
+
+def use_walrused() -> None:
+    """Sends books with walrused."""
+    walrused.run()
+
+
+def use_deleted() -> None:
+    """Reads a name that del removed."""
+    deleted.run()
+
+
+class Tally:
+    """Holds a carrier that one method bumps with +=."""
+
+    def __init__(self) -> None:
+        """Starts with a courier."""
+        self.carrier = Courier()
+
+    def bump(self) -> None:
+        """Adds to the carrier."""
+        self.carrier += 1
+
+    def go(self) -> None:
+        """Sends the books with the current carrier."""
+        self.carrier.run()
+
+
+class Fleet:
+    """Holds a carrier that a subclass may replace."""
+
+    def __init__(self) -> None:
+        """Starts with a courier."""
+        self.carrier = Courier()
+
+    def go(self) -> None:
+        """Sends the books with the current carrier."""
+        self.carrier.run()
+
+
+class AirFleet(Fleet):
+    """A fleet whose carrier flies."""
+
+    def fly(self) -> None:
+        """Swaps to a drone."""
+        self.carrier = Drone()

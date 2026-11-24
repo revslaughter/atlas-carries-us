@@ -118,6 +118,9 @@ class Sym:
     #: hides it), the function that writes it (None at module or class
     #: level), and the class of that function.
     writes: list[tuple] = field(default_factory=list)
+    #: For a class: every write of ``self.<name>`` in its own methods, by
+    #: name, so that its bases and subclasses can share them.
+    self_writes: dict[str, list[tuple]] = field(default_factory=dict)
     #: The base class expressions of a class.
     bases: list[ast.expr] = field(default_factory=list)
     #: The first line of the declaration.

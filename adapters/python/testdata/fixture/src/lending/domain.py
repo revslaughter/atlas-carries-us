@@ -69,6 +69,14 @@ class MemberRecord(TypedDict):
     loans: list[Loan]
 
 
+class Shelfmark:
+    """Marks where a book stands; __all__ leaves this class out."""
+
+    def label(self) -> str:
+        """Returns the mark as printed on the spine."""
+        return ""
+
+
 class LendingError(Exception):
     """Reports a broken lending rule."""
 

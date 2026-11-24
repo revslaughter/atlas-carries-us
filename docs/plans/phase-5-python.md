@@ -300,7 +300,10 @@ The output's notes list these limits, and the help text repeats them:
 6. Code that runs at module level, outside a function, makes no calls on
    the map, except inside a main guard.
 7. Type stubs (`.pyi`) do not appear.
-8. The adapter reads one distribution per root. A monorepo needs one
+8. A write through another reference or `setattr` stays unseen. The
+   resolver ignores statement order, so `del` makes a name unknown
+   everywhere.
+9. The adapter reads one distribution per root. A monorepo needs one
    language entry per distribution.
 
 ## Risks

@@ -234,12 +234,16 @@ class Indexer:
                 self.read_all(stmt)
 
     def global_writes(self) -> None:
-        """Adds the writes that functions make through ``global``, and the main guard's writes.
+        """Adds every later write of each module variable, and the writes of ``global`` scopes.
 
-        Each one joins the writes of the module variable that it rebinds, so
-        that the resolver types the variable only when every write agrees.
+        Each write joins the writes of the variable that it rebinds, so that
+        the resolver types the variable only when every write agrees. A write
+        whose value the adapter cannot see, such as a ``for`` target, an
+        augmented assignment or an import, joins as an opaque write (None).
         """
         mod = self.mod
+        for target, value, stmt, _nested in bindings(mod.tree.body, deep=False):
+            self.rebind(target, value, stmt, None, None, None)
         classes = {id(s.node): s for s in mod.symbols if s.kind == "class"}
 
         def visit(node: ast.AST, cls: Optional[Sym]) -> None:
@@ -248,44 +252,32 @@ class Indexer:
                 if isinstance(child, ast.ClassDef):
                     visit(child, classes.get(id(child)))
                 elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    names = set()
-                    for stmt in _own_statements(child):
-                        if isinstance(stmt, ast.Global):
-                            names.update(stmt.names)
+                    names = {n for st in _own_statements(child) if isinstance(st, ast.Global) for n in st.names}
                     if names:
-                        self.rebinds(child, names, child, cls)
+                        for target, value, stmt, nested in bindings(child.body, deep=False):
+                            if not nested:
+                                self.rebind(target, value, stmt, names, child, cls)
                     visit(child, cls)
                 else:
                     visit(child, cls)
 
         visit(mod.tree, None)
-        if mod.guard is not None:
-            names = {n for n, b in mod.scope.items() if b.kind == "symbol"}
-            self.rebinds(mod.guard.node, names, None, None)
 
-    def rebinds(self, scope_node: ast.AST, names: set[str], fn: Optional[ast.AST], cls: Optional[Sym]) -> None:
-        """Records each write to one of ``names`` among a scope's own statements."""
-        stmts = _own_statements(scope_node) if fn is not None else ast.walk(scope_node)
-        for stmt in stmts:
-            pairs: list[tuple[ast.expr, Optional[ast.expr]]] = []
-            if isinstance(stmt, ast.Assign):
-                pairs = [(t, stmt.value) for t in stmt.targets]
-            elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
-                pairs = [(stmt.target, stmt.value)]
-            elif isinstance(stmt, (ast.AugAssign, ast.For, ast.AsyncFor)):
-                pairs = [(stmt.target, None)]
-            elif isinstance(stmt, (ast.With, ast.AsyncWith)):
-                pairs = [(i.optional_vars, None) for i in stmt.items if i.optional_vars is not None]
-            for target, value in pairs:
-                if isinstance(stmt, ast.AugAssign):
-                    continue
-                flat = [(target, value)] if isinstance(target, ast.Name) else [(e, None) for e in ast.walk(target) if isinstance(e, ast.Name)]
-                for t, v in flat:
-                    if not isinstance(t, ast.Name) or t.id not in names:
-                        continue
-                    b = self.mod.scope.get(t.id)
-                    if b is not None and b.kind == "symbol" and b.symbol is not None and b.symbol.kind in {"variable", "field"} and b.symbol.node is not stmt:
-                        b.symbol.writes.append((v, fn, cls))
+    def rebind(self, target: ast.expr, value: Optional[ast.expr], stmt: ast.AST, names: Optional[set[str]], fn: Optional[ast.AST], cls: Optional[Sym]) -> None:
+        """Adds one write to the module variable that ``target`` names, if any.
+
+        ``names`` limits the names to those a ``global`` statement declares;
+        None means module level. The statement that declares the variable
+        adds no second write.
+        """
+        if not isinstance(target, ast.Name) or (names is not None and target.id not in names):
+            return
+        b = self.mod.scope.get(target.id)
+        if b is None or b.kind != "symbol" or b.symbol is None or b.symbol.kind not in {"variable", "field"}:
+            return
+        if b.symbol.node is stmt:
+            return
+        b.symbol.writes.append((value, fn, cls))
 
     def read_all(self, stmt: ast.stmt) -> None:
         """Reads ``__all__`` from an assignment, as a list or tuple of strings."""
@@ -495,10 +487,16 @@ class Indexer:
         self.instance_attributes(sym, node)
 
     def instance_attributes(self, cls: Sym, node: ast.ClassDef) -> None:
-        """Records each ``self.x = …`` in the class's methods as a field."""
+        """Records each ``self.x = …`` in the class's methods as a field, with every write of it.
+
+        A plain assignment in a method's own body makes the field. Every other
+        binding of ``self.x`` (``+=``, a ``for`` or ``with`` target, ``del``,
+        a write inside a nested function) adds an opaque write. All writes go
+        to ``cls.self_writes`` too, so that a subclass can share them.
+        """
         methods = [s for s in node.body if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef))]
         methods.sort(key=lambda f: (f.name != "__init__", f.lineno))
-        pending: dict[str, ast.expr] = {}
+        found: dict[str, list[tuple]] = {}
         for fn in methods:
             names = [_decorator_name(d) for d in fn.decorator_list]
             if "staticmethod" in names or "classmethod" in names:
@@ -507,69 +505,52 @@ class Indexer:
             if not args:
                 continue
             me = args[0].arg
-            own = {id(s) for s in _own_statements(fn)}
-            stmts = [n for n in ast.walk(fn) if isinstance(n, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.For, ast.AsyncFor, ast.With, ast.AsyncWith))]
-            stmts.sort(key=lambda n: (n.lineno, n.col_offset))
-            for stmt in stmts:
-                nested = id(stmt) not in own
-                targets: list[tuple[ast.expr, Optional[ast.expr], Optional[ast.expr]]] = []
-                if isinstance(stmt, ast.Assign):
-                    targets = [(t, None, stmt.value) for t in stmt.targets]
-                elif isinstance(stmt, ast.AnnAssign):
-                    targets = [(stmt.target, stmt.annotation, stmt.value)]
-                elif isinstance(stmt, (ast.For, ast.AsyncFor)):
-                    targets = [(stmt.target, None, None)]
-                elif isinstance(stmt, (ast.With, ast.AsyncWith)):
-                    targets = [(i.optional_vars, None, None) for i in stmt.items if i.optional_vars is not None]
-                flat: list[tuple[ast.expr, Optional[ast.expr], Optional[ast.expr]]] = []
-                for target, ann, value in targets:
-                    if isinstance(target, (ast.Tuple, ast.List)):
-                        flat.extend((e.value if isinstance(e, ast.Starred) else e, None, None) for e in target.elts)
-                    else:
-                        flat.append((target, ann, value))
-                for target, ann, value in flat:
-                    if not (isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name) and target.value.id == me):
-                        continue
-                    name = target.attr
-                    write = (None if nested else value, fn, cls)
-                    if name in cls.members:
-                        member = cls.members[name]
-                        if member.kind == "field":
-                            if ann is not None and member.ann is None:
-                                member.ann = ann
-                            member.writes.append(write)
-                        continue
-                    if isinstance(stmt, (ast.AugAssign, ast.For, ast.AsyncFor, ast.With, ast.AsyncWith)) or nested:
-                        continue
-                    if ann is None and isinstance(value, ast.Name):
-                        param = next((a for a in fn.args.args + fn.args.kwonlyargs + fn.args.posonlyargs if a.arg == value.id), None)
-                        if param is not None and param.annotation is not None:
-                            pending[name] = param.annotation
-                    qual = cls.qual + "." + name
-                    field_sym = Sym(
-                        id=self.new_id(qual, stmt),
-                        kind="field",
-                        lkind="instance attribute",
-                        name=name,
-                        qual=qual,
-                        module=self.mod,
-                        node=stmt,
-                        parent=cls,
-                        ann=ann,
-                        value=value,
-                        method=fn,
-                        writes=[write],
-                        doc_raw=comment_doc(self.lines, stmt.lineno),
-                        line=stmt.lineno,
-                        end_line=stmt.end_lineno or stmt.lineno,
-                    )
-                    self.add(field_sym)
-        # The annotation of a parameter types an attribute only when that
-        # parameter's value forms the attribute's one write.
-        for name, ann in pending.items():
+            for target, value, stmt, nested in bindings(fn.body, deep=True):
+                if not (isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name) and target.value.id == me):
+                    continue
+                plain = isinstance(stmt, (ast.Assign, ast.AnnAssign)) and not nested and value is not None
+                ann = stmt.annotation if isinstance(stmt, ast.AnnAssign) and stmt.target is target else None
+                found.setdefault(target.attr, []).append((fn, stmt, value if plain else None, ann, plain))
+        for name, writes in found.items():
+            cls.self_writes[name] = [(v, fn, cls) for fn, _stmt, v, _ann, _plain in writes]
             member = cls.members.get(name)
-            if member is not None and member.ann is None and len(member.writes) == 1:
-                member.ann = ann
+            if member is None:
+                first = next((w for w in writes if w[4]), None)
+                if first is None:
+                    continue
+                fn, stmt, value, ann, _plain = first
+                qual = cls.qual + "." + name
+                member = Sym(
+                    id=self.new_id(qual, stmt),
+                    kind="field",
+                    lkind="instance attribute",
+                    name=name,
+                    qual=qual,
+                    module=self.mod,
+                    node=stmt,
+                    parent=cls,
+                    value=value,
+                    method=fn,
+                    doc_raw=comment_doc(self.lines, stmt.lineno),
+                    line=stmt.lineno,
+                    end_line=stmt.end_lineno or stmt.lineno,
+                )
+                self.add(member)
+            if member.kind != "field":
+                continue
+            for _fn, _stmt, _v, ann, _plain in writes:
+                if ann is not None and member.ann is None:
+                    member.ann = ann
+            member.writes.extend(cls.self_writes[name])
+            # A parameter's annotation types the field only when that
+            # parameter's value forms the field's one write.
+            if member.ann is None and len(member.writes) == 1:
+                value, fn, _cls = member.writes[0]
+                if isinstance(value, ast.Name):
+                    a = fn.args
+                    param = next((p for p in a.posonlyargs + a.args + a.kwonlyargs if p.arg == value.id), None)
+                    if param is not None and param.annotation is not None:
+                        member.ann = param.annotation
 
     def assign(self, stmts: list[ast.stmt], i: int, owner: Optional[Sym]) -> None:
         """Records the names that a module-level or class-level assignment binds."""
@@ -595,7 +576,7 @@ class Indexer:
                 if name in scope:
                     existing = scope[name]
                     found = existing if owner is not None else existing.symbol if existing.kind == "symbol" else None
-                    if found is not None and found.kind in {"field", "variable"}:
+                    if owner is not None and found is not None and found.kind == "field":
                         found.writes.extend(writes)
                     if owner is not None or existing.kind == "symbol":
                         continue
@@ -683,3 +664,74 @@ def _has_yield(fn: ast.AST) -> bool:
 
 #: Top-level names of the standard library, which never count as outside packages.
 STDLIB = set(sys.stdlib_module_names) | {"__future__"}
+
+
+def _leaves(target: ast.expr):
+    """Yields the names and attributes that one assignment target binds."""
+    if isinstance(target, (ast.Tuple, ast.List)):
+        for e in target.elts:
+            yield from _leaves(e)
+    elif isinstance(target, ast.Starred):
+        yield from _leaves(target.value)
+    elif isinstance(target, (ast.Name, ast.Attribute)):
+        yield target
+
+
+def bindings(body: list[ast.stmt], deep: bool):
+    """Yields every binding in one scope: ``(target, value, statement, nested)``.
+
+    ``value`` holds the assigned expression for a plain ``x = …`` or
+    ``x: T = …`` whose target forms the whole left side, and None for every
+    other form: a tuple target, ``+=``, ``for``, ``with … as``, ``:=``,
+    ``import``, ``except … as``, a ``match`` capture, ``del``, and ``def``
+    or ``class`` names. With ``deep``, the walk enters nested functions and
+    classes too, and marks what it finds there as ``nested``.
+    """
+    stack: list[tuple[ast.AST, bool]] = [(n, False) for n in reversed(body)]
+    while stack:
+        node, nested = stack.pop()
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                direct = isinstance(t, (ast.Name, ast.Attribute))
+                for leaf in _leaves(t):
+                    yield leaf, (node.value if direct else None), node, nested
+        elif isinstance(node, ast.AnnAssign):
+            if node.value is not None:
+                yield node.target, node.value, node, nested
+        elif isinstance(node, ast.AugAssign):
+            yield node.target, None, node, nested
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            for leaf in _leaves(node.target):
+                yield leaf, None, node, nested
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                if item.optional_vars is not None:
+                    for leaf in _leaves(item.optional_vars):
+                        yield leaf, None, node, nested
+        elif isinstance(node, ast.NamedExpr):
+            yield node.target, None, node, nested
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                if alias.name != "*":
+                    local = alias.asname or alias.name.split(".")[0]
+                    yield ast.Name(id=local, ctx=ast.Store()), None, node, nested
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            yield ast.Name(id=node.name, ctx=ast.Store()), None, node, nested
+        elif isinstance(node, (ast.MatchAs, ast.MatchStar)) and node.name:
+            yield ast.Name(id=node.name, ctx=ast.Store()), None, node, nested
+        elif isinstance(node, ast.MatchMapping) and node.rest:
+            yield ast.Name(id=node.rest, ctx=ast.Store()), None, node, nested
+        elif isinstance(node, ast.Delete):
+            for t in node.targets:
+                for leaf in _leaves(t):
+                    yield leaf, None, node, nested
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            yield ast.Name(id=node.name, ctx=ast.Store()), None, node, nested
+            if deep:
+                stack.extend((n, True) for n in reversed(node.body))
+            continue
+        if isinstance(node, ast.Lambda):
+            if deep:
+                stack.append((node.body, True))
+            continue
+        stack.extend((n, nested) for n in reversed(list(ast.iter_child_nodes(node))))

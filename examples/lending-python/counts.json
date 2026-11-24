@@ -4,23 +4,23 @@
     "package": 6
   },
   "symbols": {
-    "class": 11,
+    "class": 15,
     "constant": 5,
-    "constructor": 4,
+    "constructor": 6,
     "enum": 1,
-    "field": 16,
-    "function": 28,
+    "field": 19,
+    "function": 38,
     "interface": 1,
-    "method": 21,
+    "method": 26,
     "property": 2,
     "struct": 2,
     "type": 1,
     "type_alias": 2,
-    "variable": 14
+    "variable": 21
   },
   "edges": {
     "calls": 22,
-    "extends": 3,
+    "extends": 4,
     "field_type": 7,
     "implements": 1,
     "imports": 7,

@@ -850,11 +850,19 @@ function's `@overload` stubs and its implementation.
    the class it builds. Both hold only when that write forms the field's
    one write.
 6. The resolver types a field or a module-level variable from its
-   annotation. Without one, it reads every write: each `self.x = …` in any
-   method, each assignment at module level, and each write through
-   `global` inside a function. It infers a type only when all the writes
-   agree, as for a local name. A write that hides its value, such as a
-   tuple target, leaves the type unknown.
+   annotation. Without one, it reads every write and infers a type only
+   when all the writes agree, as for a local name:
+   - for a field: each binding of `self.x` in the methods of the class, of
+     its bases and of its subclasses, nested functions included;
+   - for a module variable: each binding at module level, main guard
+     included, and each binding inside a function that declares the name
+     `global`.
+
+   A plain `x = …` gives its value. Every other binding form counts as a
+   write whose value the adapter cannot see, so it leaves the type unknown:
+   a tuple target, `+=` and the other augmented assignments, a `for` or
+   `with … as` target, `:=`, `import … as`, `except … as`, a `match`
+   capture, `del`, and a `def` or `class` of the same name.
 7. `satisfies` lists a class's outside bases, such as `Exception` or `ABC`.
 
 #### Docs
@@ -956,6 +964,12 @@ The output's notes list these limits, and the help text repeats them:
    guard.
 6. Type stubs (`.pyi`) do not appear: they describe code that lives
    elsewhere. The adapter reads one distribution per root.
+7. A write to an attribute through another reference
+   (`def poke(h: Holder): h.x = B()`), or through `setattr`, stays unseen,
+   so the attribute may keep a type that such a write breaks.
+8. The resolver ignores the order of statements. A name that `del`
+   removes counts as unknown everywhere, even before the `del`; a read
+   after the `del` would raise at run time.
 
 The plugins read the syntax tree. A route that a loop or a computed string
 registers escapes them, and so does a Flask app's `app.cli` group.
