@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .globs import matches
-from .model import Binding, Module, Sym, attribute_doc, docstring
+from .model import Binding, Module, Sym, attribute_doc, comment_doc, docstring
 
 #: The test globs that apply when the request names none.
 DEFAULT_TESTS = ["**/test_*.py", "**/*_test.py", "**/tests/**", "**/test/**", "**/conftest.py"]
@@ -28,15 +28,25 @@ SKIP_DIRS = {"__pycache__", "node_modules", "site-packages", "build", "dist"}
 class Project:
     """Holds every module of one run, and the symbols that they declare."""
 
+    #: The repository root; output paths start there.
     repo_root: str
+    #: The folder that the adapter reads.
     root: str
+    #: The folders where dotted module names start, relative to the root.
     source_roots: list[str]
+    #: Every module, mapped or test, by dotted name.
     modules: dict[str, Module] = field(default_factory=dict)
+    #: Every symbol by ID.
     symbols: dict[str, Sym] = field(default_factory=dict)
+    #: Notes for the output, in plain words.
     notes: list[str] = field(default_factory=list)
+    #: The distribution's name.
     distribution: str = ""
+    #: Each console script's target and its line in ``pyproject.toml``.
     scripts: dict[str, tuple[str, int]] = field(default_factory=dict)
+    #: The path of ``pyproject.toml``, when the root holds one.
     pyproject_path: Optional[str] = None
+    #: The files that stay out, each with the reason.
     skipped: list[str] = field(default_factory=list)
 
     def rel_to_repo(self, abspath: str) -> str:
@@ -205,9 +215,13 @@ class Indexer:
 
     def __init__(self, project: Project, mod: Module) -> None:
         """Prepares to index ``mod`` into ``project``."""
+        #: The project that receives the module's symbols.
         self.project = project
+        #: The module that this indexer reads.
         self.mod = mod
+        #: The module's source lines, for ``#:`` comments.
         self.lines = mod.source.split("\n")
+        #: The symbol IDs given out so far, to spot repeats.
         self.ids: set[str] = set()
 
     def run(self) -> None:
@@ -327,6 +341,7 @@ class Indexer:
             qual="__main__",
             module=self.mod,
             node=stmt,
+            doc_raw=comment_doc(self.lines, stmt.lineno),
             line=stmt.lineno,
             end_line=stmt.end_lineno or stmt.lineno,
         )
@@ -467,6 +482,7 @@ class Indexer:
                         ann=ann,
                         value=value,
                         method=fn,
+                        doc_raw=comment_doc(self.lines, stmt.lineno),
                         line=stmt.lineno,
                         end_line=stmt.end_lineno or stmt.lineno,
                     )

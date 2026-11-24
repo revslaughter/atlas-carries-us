@@ -23,6 +23,7 @@ from typing import Optional
 from .index import Project
 from .model import Binding, Module, Sym
 
+#: A resolved value: a tuple whose first item names its form, or None.
 Value = Optional[tuple]
 
 #: Names of the built-in exception classes.
@@ -34,6 +35,7 @@ _WRAPPERS = {"Optional", "Annotated", "Final", "ClassVar", "Required", "NotRequi
 #: Kinds of symbol that a type annotation may name.
 TYPE_KINDS = {"class", "struct", "interface", "enum", "type_alias", "type"}
 
+#: The module prefixes whose names count as typing's own.
 _TYPING = ("typing.", "typing_extensions.")
 
 
@@ -53,13 +55,21 @@ class Ctx:
 
     def __init__(self, resolver: "Resolver", module: Module, func: Optional[ast.AST] = None, cls: Optional[Sym] = None, parent: Optional["Ctx"] = None) -> None:
         """Builds the scope of ``func`` (or of the module when ``func`` is None)."""
+        #: The resolver that owns this scope.
         self.r = resolver
+        #: The module that holds the scope.
         self.module = module
+        #: The function of the scope; None for a module's top level.
         self.func = func
+        #: The class whose method this scope is, if any.
         self.cls = cls
+        #: The enclosing scope.
         self.parent = parent
+        #: How the function binds each local name.
         self.locals: dict[str, list[tuple]] = {}
+        #: The names that ``global`` or ``nonlocal`` send outward.
         self.outer: set[str] = set()
+        #: Each name's value, once looked up.
         self.cache: dict[str, Value] = {}
         if func is not None:
             self._collect()
@@ -188,8 +198,11 @@ class Resolver:
 
     def __init__(self, project: Project) -> None:
         """Prepares caches for one project."""
+        #: The project whose names it resolves.
         self.p = project
+        #: The scope of each module's top level, by name.
         self.module_ctx: dict[str, Ctx] = {}
+        #: The scope of each function, by the identity of its node.
         self.func_ctx: dict[int, Ctx] = {}
         self._mro: dict[str, list[Sym]] = {}
         self._busy: set[str] = set()

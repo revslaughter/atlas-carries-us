@@ -64,5 +64,6 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+#: Runs the adapter when Python runs this module.
 if __name__ == "__main__":
     sys.exit(main())

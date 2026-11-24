@@ -22,14 +22,23 @@ KNOWN = ["click", "django", "fastapi", "flask", "python-main", "typer"]
 #: HTTP verbs that a decorator such as ``@app.get`` names.
 VERBS = ["get", "post", "put", "patch", "delete", "options", "head", "trace"]
 
+#: The dotted names of Flask's application class.
 _FLASK_APP = {"flask.Flask", "flask.app.Flask"}
+#: The dotted names of Flask's blueprint class.
 _FLASK_BP = {"flask.Blueprint", "flask.blueprints.Blueprint"}
+#: The dotted names of FastAPI's application class.
 _FASTAPI_APP = {"fastapi.FastAPI", "fastapi.applications.FastAPI"}
+#: The dotted names of FastAPI's router class.
 _FASTAPI_ROUTER = {"fastapi.APIRouter", "fastapi.routing.APIRouter"}
+#: The dotted names of click's group classes.
 _CLICK_GROUP = {"click.Group", "click.core.Group", "click.MultiCommand", "click.core.MultiCommand", "click.CommandCollection"}
+#: Maps click's decorators to the kind of command they make.
 _CLICK_DECORATORS = {"click.command": "command", "click.group": "group", "click.decorators.command": "command", "click.decorators.group": "group"}
+#: The dotted names of Typer's application class.
 _TYPER = {"typer.Typer", "typer.main.Typer"}
+#: The dotted names of Django's URL pattern functions.
 _DJANGO_PATH = {"django.urls.path", "django.urls.re_path", "django.urls.conf.path", "django.urls.conf.re_path", "django.conf.urls.url"}
+#: The dotted names of Django's ``include``.
 _DJANGO_INCLUDE = {"django.urls.include", "django.urls.conf.include", "django.conf.urls.include"}
 
 
@@ -41,15 +50,25 @@ class UnknownPlugin(Exception):
 class Obj:
     """Holds one framework object: an app, a router, a blueprint or a group."""
 
+    #: What the object is: app, blueprint, router, group or command.
     kind: str
+    #: The command or app name.
     name: str = ""
+    #: The URL prefix that the object declares itself.
     prefix: str = ""
+    #: The module that builds or declares the object.
     module: Optional[Module] = None
+    #: The line that builds or declares it.
     line: int = 0
+    #: Each parent that mounts the object, with the mount's prefix.
     mounts: list[tuple[object, str]] = field(default_factory=list)
+    #: Each command or app below the object, with a name the mount gives.
     children: list[tuple[object, Optional[str]]] = field(default_factory=list)
+    #: The ID of the symbol that serves the object.
     handler: Optional[str] = None
+    #: True when the handler serves inline, inside another function.
     inline: bool = False
+    #: The project class that builds the object, if any.
     cls: Optional[Sym] = None
 
 
@@ -57,9 +76,13 @@ class Obj:
 class Site:
     """Holds one node of a module with the scope and the symbol around it."""
 
+    #: The syntax node.
     node: ast.AST
+    #: The scope around the node.
     ctx: Ctx
+    #: The function or method around the node.
     owner: Optional[Sym]
+    #: The module that holds the node.
     module: Module
 
 
@@ -68,12 +91,16 @@ class Finder:
 
     def __init__(self, project: Project, r: Resolver) -> None:
         """Indexes the symbols of the mapped modules by their syntax node."""
+        #: The project that the plugins read.
         self.p = project
+        #: The resolver that gives names their meaning.
         self.r = r
+        #: The mapped symbols by the identity of their syntax node.
         self.by_node: dict[int, Sym] = {}
         for mod in project.mapped():
             for s in mod.symbols:
                 self.by_node[id(s.node)] = s
+        #: The entry points found so far.
         self.entries: list[dict] = []
 
     def sites(self) -> Iterator[Site]:

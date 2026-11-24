@@ -62,13 +62,21 @@ class Output:
 
     def __init__(self, project: Project, r: Resolver) -> None:
         """Prepares empty lists for one project."""
+        #: The project that phase one indexed.
         self.p = project
+        #: The resolver that gives names their meaning.
         self.r = r
+        #: The containers by ID.
         self.cont: dict[str, dict] = {}
+        #: The symbol objects, in the order the modules list them.
         self.syms: list[dict] = []
+        #: Each edge's first line, count and confidence, by its ends and kind.
         self.edge_map: dict[tuple[str, str, str], list] = {}
+        #: The tests that use each symbol, by the symbol's ID.
         self.test_map: dict[str, list[dict]] = {}
+        #: The outside packages that each unit imports.
         self.external: dict[str, set[str]] = {}
+        #: How many call sites resolved, and how.
         self.stats = {"map": 0, "outside": 0, "unknown": 0, "heuristic": 0}
 
     # Kinds.
@@ -408,6 +416,7 @@ class Output:
     def edges(self) -> None:
         """Resolves calls, type uses, class relations and imports."""
         r = self.r
+        #: The methods whose names only one mapped class defines.
         self.unique = self._unique_methods()
         for mod in self.p.mapped():
             self._current = mod

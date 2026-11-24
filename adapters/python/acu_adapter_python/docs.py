@@ -14,6 +14,7 @@ from typing import Callable, Optional
 #: Resolves a name that a docstring mentions to a symbol or container ID.
 Resolver = Callable[[str], Optional[str]]
 
+#: Maps each Google or NumPy section title to the doc field it fills.
 _GOOGLE_SECTIONS = {
     "args": "params",
     "arguments": "params",
@@ -43,9 +44,13 @@ _GOOGLE_SECTIONS = {
     "warns": "heading",
 }
 
+#: Matches a Google section header, such as ``Args:``.
 _GOOGLE_HEADER = re.compile(r"^(?P<name>[A-Z][A-Za-z ]*?):\s*$")
+#: Matches the line of dashes under a NumPy section title.
 _NUMPY_UNDERLINE = re.compile(r"^-{3,}\s*$")
+#: Matches one Sphinx field line, such as ``:param x: text``.
 _SPHINX_FIELD = re.compile(r"^:(?P<field>[A-Za-z]+)(?:\s+(?P<arg>[^:]+?))?:\s*(?P<text>.*)$")
+#: Names the Sphinx fields that make a docstring count as Sphinx style.
 _SPHINX_FIELDS = {
     "param",
     "parameter",
@@ -70,9 +75,13 @@ _SPHINX_FIELDS = {
     "vartype",
     "meta",
 }
+#: Matches a reStructuredText directive line, such as ``.. note::``.
 _DIRECTIVE = re.compile(r"^\.\.\s+(?P<name>[A-Za-z][\w:-]*)::\s*(?P<arg>.*)$")
+#: Matches the first line of a bullet or numbered list item.
 _BULLET = re.compile(r"^(?P<marker>[-*+]|\d+[.)]|#\.)\s+(?P<text>.*)$")
+#: Matches the line of punctuation under a section title.
 _ADORNMENT = re.compile(r"^([=\-~^\"'`#*+<>:.])\1{2,}\s*$")
+#: Matches one piece of inline markup: a role, a literal, a link or emphasis.
 _ROLE = re.compile(
     r":(?:py:)?(?P<role>[a-z]+):`(?P<target>[^`]+)`"
     r"|``(?P<literal>.+?)``"
@@ -82,7 +91,9 @@ _ROLE = re.compile(
     r"|\*\*(?P<strong>[^*]+)\*\*"
     r"|\*(?P<emph>[^*\s][^*]*)\*"
 )
+#: Names the Sphinx roles that point at a symbol or a module.
 _SYMBOL_ROLES = {"class", "func", "meth", "attr", "exc", "mod", "data", "obj", "const", "type", "deco", "function", "method"}
+#: Names the directives that set a passage apart, such as ``note``.
 _ADMONITIONS = {
     "note",
     "warning",
@@ -220,18 +231,31 @@ class _Doc:
 
     def __init__(self, raw: str, fmt: str, resolve: Resolver) -> None:
         """Starts an empty doc for the text ``raw`` in the style ``fmt``."""
+        #: The docstring as written.
         self.raw = raw
+        #: The style that the parser detected.
         self.format = fmt
+        #: Turns a name that the doc mentions into an ID.
         self.resolve = resolve
+        #: The description's blocks, each with its source text under ``_raw``.
         self.blocks: list[dict] = []
+        #: The text of each parameter, by name.
         self.params: dict[str, str] = {}
+        #: The pieces of text about the result.
         self.returns: list[str] = []
+        #: The exceptions that the doc names, with their text.
         self.throws: list[dict] = []
+        #: The examples, as code.
         self.examples: list[dict] = []
+        #: The references that the doc names.
         self.see_also: list[str] = []
+        #: The deprecation text, when the doc marks the item deprecated.
         self.deprecated: Optional[str] = None
+        #: The version that added the item.
         self.since: Optional[str] = None
+        #: Other fields, kept for display.
         self.tags: list[dict] = []
+        #: The title underline characters in order of first use; they set heading levels.
         self.heading_chars: list[str] = []
 
     def text(self, s: str) -> str:
@@ -555,6 +579,22 @@ def _directive(name: str, arg: str, content: list[str], doc: _Doc) -> None:
         doc.see_also.append(doc.text(" ".join(x for x in [arg, text] if x)))
     elif name in _ADMONITIONS:
         title = arg if name == "admonition" else name.capitalize()
-        doc.blocks.append({"type": "quote", "text": doc.text(title + ": " + (arg + " " if name != "admonition" and arg else "") + text)})
+        lead = arg if name != "admonition" else ""
+        _inner(title, lead, content, doc)
     elif text:
-        doc.blocks.append({"type": "quote", "text": doc.text(text)})
+        _inner("", "", content, doc)
+
+
+def _inner(title: str, lead: str, content: list[str], doc: _Doc) -> None:
+    """Adds a directive's content: its first paragraph as a quote, then its other blocks."""
+    inner = _Doc("", doc.format, doc.resolve)
+    inner.heading_chars = doc.heading_chars
+    _blocks(content, inner)
+    blocks = inner.blocks
+    first = ""
+    if blocks and blocks[0]["type"] == "paragraph":
+        first = blocks.pop(0)["_raw"]
+    words = " ".join(x for x in [lead, first] if x)
+    if title or words:
+        doc.blocks.append({"type": "quote", "text": doc.text((title + ": " if title and words else title) + words)})
+    doc.blocks.extend(blocks)

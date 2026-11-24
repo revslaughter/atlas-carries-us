@@ -21,9 +21,13 @@ class Binding:
     ``external`` (an import of an outside package).
     """
 
+    #: What the name stands for: symbol, module, from or external.
     kind: str
+    #: The symbol ID, module name or outside dotted name.
     target: str
+    #: The imported name, for a ``from`` binding.
     attr: Optional[str] = None
+    #: The symbol, for a ``symbol`` binding.
     symbol: Optional["Sym"] = None
 
 
@@ -31,19 +35,33 @@ class Binding:
 class Module:
     """Holds one Python file: its dotted name, its tree and its scope."""
 
+    #: The dotted module name; a package's ``__init__`` takes the package's name.
     name: str
+    #: The path relative to the repository root.
     path: str
+    #: The path relative to the adapter's root.
     rel: str
+    #: The source text.
     source: str
+    #: The syntax tree.
     tree: ast.Module
+    #: True for an ``__init__.py`` file.
     is_package: bool
+    #: True for a file that a test glob matches; the map leaves it out.
     is_test: bool
+    #: The ID of the unit that holds the module.
     unit_id: str = ""
+    #: The ID of the module's file container.
     file_id: str = ""
+    #: The names at the module's top level.
     scope: dict[str, Binding] = field(default_factory=dict)
+    #: The names in ``__all__``, when the module sets it.
     all_names: Optional[list[str]] = None
+    #: The project modules that ``from x import *`` reads.
     star_imports: list[str] = field(default_factory=list)
+    #: The module's symbols, in source order.
     symbols: list["Sym"] = field(default_factory=list)
+    #: The symbol of the module's main guard, if any.
     guard: Optional["Sym"] = None
 
     def segment(self, node: Optional[ast.AST]) -> str:
@@ -60,26 +78,47 @@ class Module:
 class Sym:
     """Holds one declaration that becomes a symbol of the map."""
 
+    #: The symbol's ID.
     id: str
+    #: The neutral kind from the schema's list.
     kind: str
+    #: The Python word for it, written to ``languageKind``.
     lkind: str
+    #: The declared name.
     name: str
+    #: The path inside the module, such as ``Library.borrow``.
     qual: str
+    #: The module that declares it.
     module: Module
+    #: The declaring syntax node.
     node: ast.AST
+    #: The owning symbol, for a member.
     parent: Optional["Sym"] = None
+    #: True when code outside the unit may use it.
     exported: bool = False
+    #: The members of a class, by name.
     members: dict[str, "Sym"] = field(default_factory=dict)
+    #: More declaring nodes: property setters and overload stubs.
     extra: list[ast.AST] = field(default_factory=list)
+    #: Words such as ``async`` or ``abstract``.
     modifiers: set[str] = field(default_factory=set)
+    #: The decorator expressions, as written.
     decorators: list[ast.expr] = field(default_factory=list)
+    #: The cleaned docstring, or the attribute's doc.
     doc_raw: Optional[str] = None
+    #: The annotation of a field or variable.
     ann: Optional[ast.expr] = None
+    #: The module whose names the annotation uses.
     ann_module: Optional[Module] = None
+    #: The assigned value of a field or variable.
     value: Optional[ast.expr] = None
+    #: The method that assigns an instance attribute.
     method: Optional[ast.AST] = None
+    #: The base class expressions of a class.
     bases: list[ast.expr] = field(default_factory=list)
+    #: The first line of the declaration.
     line: int = 0
+    #: The last line of the declaration.
     end_line: int = 0
 
     @property
@@ -105,9 +144,13 @@ def attribute_doc(body: list[ast.stmt], index: int, lines: list[str]) -> Optiona
         nxt = body[index + 1]
         if isinstance(nxt, ast.Expr) and isinstance(nxt.value, ast.Constant) and isinstance(nxt.value.value, str):
             return inspect.cleandoc(nxt.value.value)
-    stmt = body[index]
+    return comment_doc(lines, body[index].lineno)
+
+
+def comment_doc(lines: list[str], lineno: int) -> Optional[str]:
+    """Returns the run of ``#:`` comments right above line ``lineno``."""
     found: list[str] = []
-    line = stmt.lineno - 2
+    line = lineno - 2
     while line >= 0 and lines[line].strip().startswith("#:"):
         found.insert(0, lines[line].strip()[2:].strip())
         line -= 1
