@@ -114,6 +114,10 @@ class Sym:
     value: Optional[ast.expr] = None
     #: The method that assigns an instance attribute.
     method: Optional[ast.AST] = None
+    #: Every write of a field or variable: its value (None when the write
+    #: hides it), the function that writes it (None at module or class
+    #: level), and the class of that function.
+    writes: list[tuple] = field(default_factory=list)
     #: The base class expressions of a class.
     bases: list[ast.expr] = field(default_factory=list)
     #: The first line of the declaration.

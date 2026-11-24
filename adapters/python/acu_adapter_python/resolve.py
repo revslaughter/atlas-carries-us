@@ -328,7 +328,7 @@ class Resolver:
         return self.variable_value(sym)
 
     def variable_value(self, sym: Sym) -> Value:
-        """Infers a variable's or field's value from its annotation or value."""
+        """Infers a variable's or field's value from its annotation, or from writes that all agree."""
         if sym.id in self._var:
             return self._var[sym.id]
         if sym.id in self._busy:
@@ -339,12 +339,18 @@ class Resolver:
             value = ("inst", sym.parent)
         elif sym.ann is not None:
             value = self.annotation_value(sym.ann, sym.module)
-        elif sym.value is not None:
-            if sym.method is not None:
-                ctx = self.ctx_of(sym.method, sym.module, sym.parent)
-            else:
-                ctx = self.ctx_of_module(sym.module)
-            value = self.value(sym.value, ctx)
+        elif sym.writes:
+            # As for a local name: a type holds only when every write agrees.
+            values = []
+            for expr, fn, cls in sym.writes:
+                if expr is None:
+                    values = [None]
+                    break
+                ctx = self.ctx_of(fn, sym.module, cls) if fn is not None else self.ctx_of_module(sym.module)
+                values.append(self.value(expr, ctx))
+            first = values[0]
+            if first is not None and all(_same(v, first) for v in values[1:]):
+                value = first
         self._busy.discard(sym.id)
         self._var[sym.id] = value
         return value

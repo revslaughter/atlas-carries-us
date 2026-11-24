@@ -147,6 +147,22 @@ class Facts(unittest.TestCase):
         """Library.borrow calls its decorator audited."""
         self.assertTrue(has_edge("calls", L + "library#Library.borrow", L + "library#audited"))
 
+    def test_a_module_name_bound_to_two_classes_gives_no_exact_call(self) -> None:
+        """deliver calls carrier.run, but carrier holds a Courier or a Drone, so no exact edge points at Courier.run."""
+        self.assertFalse(has_edge("calls", L + "carriers#deliver", L + "carriers#Courier.run"))
+
+    def test_a_global_write_unsettles_a_module_name(self) -> None:
+        """switch_backup rebinds backup through global, so use_backup gets no exact edge to Courier.run."""
+        self.assertFalse(has_edge("calls", L + "carriers#use_backup", L + "carriers#Courier.run"))
+
+    def test_an_attribute_that_two_methods_write_gives_no_exact_call(self) -> None:
+        """Dispatch.go calls self.carrier.run, but swap writes a Drone, so no exact edge points at Courier.run."""
+        self.assertFalse(has_edge("calls", L + "carriers#Dispatch.go", L + "carriers#Courier.run"))
+
+    def test_a_name_with_one_write_keeps_its_exact_call(self) -> None:
+        """send_fixed calls Courier.run through fixed, which nothing rebinds."""
+        self.assertTrue(has_edge("calls", L + "carriers#send_fixed", L + "carriers#Courier.run"))
+
     def test_kinds_follow_the_bases(self) -> None:
         """Status is an enum, Readable a protocol, Loan a named tuple, NotAvailable an exception."""
         self.assertEqual(symbol(L + "domain#Status")["kind"], "enum")

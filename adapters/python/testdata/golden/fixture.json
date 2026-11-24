@@ -23,7 +23,7 @@
           "A decorator that changes a signature leaves the signature as the def writes it; metaclasses and class decorators add no members.",
           "Code at module level, outside functions, makes no calls on the map, except inside a main guard.",
           "Type stubs (.pyi) do not appear; the adapter reads one distribution per root.",
-          "Of 59 call sites, 25 resolved to code on the map, 27 to outside code or built-ins, 1 by a unique method name (heuristic), and 6 to nothing.",
+          "Of 66 call sites, 29 resolved to code on the map, 27 to outside code or built-ins, 1 by a unique method name (heuristic), and 9 to nothing.",
           "Units import 6 outside packages; the adapter installs nothing, so their types count as unknown."
         ]
       }
@@ -84,6 +84,30 @@
           {
             "type": "paragraph",
             "text": "Runs the lendd command: `python -m lending`."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/carriers.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "carriers.py",
+      "path": "src/lending/carriers.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "Delivers books in two ways, so the resolver must not pick one.\n\nA name or attribute that holds a Courier in one place and a Drone in\nanother has no single type. A call through it gets no exact edge.",
+        "format": "plain",
+        "summary": "Delivers books in two ways, so the resolver must not pick one.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Delivers books in two ways, so the resolver must not pick one."
+          },
+          {
+            "type": "paragraph",
+            "text": "A name or attribute that holds a Courier in one place and a Drone in another has no single type. A call through it gets no exact edge."
           }
         ]
       }
@@ -632,6 +656,454 @@
           }
         ],
         "text": "def open_library() -> Library"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Courier",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Courier",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 10,
+        "endLine": 14
+      },
+      "doc": {
+        "raw": "Carries books by hand.",
+        "format": "plain",
+        "summary": "Carries books by hand.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Carries books by hand."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Courier.run",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "run",
+      "parent": "py:lending.carriers#Courier",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 13,
+        "endLine": 14
+      },
+      "doc": {
+        "raw": "Delivers by hand.",
+        "format": "plain",
+        "summary": "Delivers by hand.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Delivers by hand."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def run(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Dispatch",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 55,
+        "endLine": 68
+      },
+      "doc": {
+        "raw": "Holds a carrier that one method swaps.",
+        "format": "plain",
+        "summary": "Holds a carrier that one method swaps.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier that one method swaps."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.__init__",
+      "kind": "constructor",
+      "languageKind": "constructor",
+      "name": "__init__",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 58,
+        "endLine": 60
+      },
+      "doc": {
+        "raw": "Starts with a courier.",
+        "format": "plain",
+        "summary": "Starts with a courier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Starts with a courier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def __init__(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.carrier",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 60,
+        "endLine": 60
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 66,
+        "endLine": 68
+      },
+      "doc": {
+        "raw": "Sends the books with the current carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the current carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the current carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.swap",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "swap",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 62,
+        "endLine": 64
+      },
+      "doc": {
+        "raw": "Swaps to a drone.",
+        "format": "plain",
+        "summary": "Swaps to a drone.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Swaps to a drone."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def swap(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Drone",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Drone",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 17,
+        "endLine": 21
+      },
+      "doc": {
+        "raw": "Carries books by air.",
+        "format": "plain",
+        "summary": "Carries books by air.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Carries books by air."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Drone.run",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "run",
+      "parent": "py:lending.carriers#Drone",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 20,
+        "endLine": 21
+      },
+      "doc": {
+        "raw": "Delivers by air.",
+        "format": "plain",
+        "summary": "Delivers by air.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Delivers by air."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def run(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#backup",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "backup",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 28,
+        "endLine": 28
+      }
+    },
+    {
+      "id": "py:lending.carriers#carrier",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "carrier",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 24,
+        "endLine": 24
+      }
+    },
+    {
+      "id": "py:lending.carriers#deliver",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "deliver",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 34,
+        "endLine": 36
+      },
+      "doc": {
+        "raw": "Sends today's books with whichever carrier the module holds.",
+        "format": "plain",
+        "summary": "Sends today's books with whichever carrier the module holds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends today's books with whichever carrier the module holds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def deliver() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#fixed",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "fixed",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 30,
+        "endLine": 30
+      },
+      "doc": {
+        "raw": "A carrier that nothing rebinds.",
+        "format": "plain",
+        "summary": "A carrier that nothing rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A carrier that nothing rebinds."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#send_fixed",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "send_fixed",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 50,
+        "endLine": 52
+      },
+      "doc": {
+        "raw": "Sends books with the carrier that never changes.",
+        "format": "plain",
+        "summary": "Sends books with the carrier that never changes.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with the carrier that never changes."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def send_fixed() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#switch_backup",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "switch_backup",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 44,
+        "endLine": 47
+      },
+      "doc": {
+        "raw": "Makes a drone the backup carrier.",
+        "format": "plain",
+        "summary": "Makes a drone the backup carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes a drone the backup carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def switch_backup() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_backup",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_backup",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 39,
+        "endLine": 41
+      },
+      "doc": {
+        "raw": "Sends books with the backup carrier.",
+        "format": "plain",
+        "summary": "Sends books with the backup carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with the backup carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_backup() -> None"
       }
     },
     {
@@ -3445,6 +3917,13 @@
       "kind": "return_type",
       "confidence": "exact",
       "line": 17
+    },
+    {
+      "from": "py:lending.carriers#send_fixed",
+      "to": "py:lending.carriers#Courier.run",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 52
     },
     {
       "from": "py:lending.cli.main#borrow",

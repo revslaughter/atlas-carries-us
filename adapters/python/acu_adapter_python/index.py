@@ -228,9 +228,64 @@ class Indexer:
         """Indexes the module's top level, then each class inside it."""
         mod = self.mod
         self.body(mod.tree.body, None)
+        self.global_writes()
         for stmt in mod.tree.body:
             if isinstance(stmt, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
                 self.read_all(stmt)
+
+    def global_writes(self) -> None:
+        """Adds the writes that functions make through ``global``, and the main guard's writes.
+
+        Each one joins the writes of the module variable that it rebinds, so
+        that the resolver types the variable only when every write agrees.
+        """
+        mod = self.mod
+        classes = {id(s.node): s for s in mod.symbols if s.kind == "class"}
+
+        def visit(node: ast.AST, cls: Optional[Sym]) -> None:
+            """Walks the module, keeping the class around each function."""
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, ast.ClassDef):
+                    visit(child, classes.get(id(child)))
+                elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    names = set()
+                    for stmt in _own_statements(child):
+                        if isinstance(stmt, ast.Global):
+                            names.update(stmt.names)
+                    if names:
+                        self.rebinds(child, names, child, cls)
+                    visit(child, cls)
+                else:
+                    visit(child, cls)
+
+        visit(mod.tree, None)
+        if mod.guard is not None:
+            names = {n for n, b in mod.scope.items() if b.kind == "symbol"}
+            self.rebinds(mod.guard.node, names, None, None)
+
+    def rebinds(self, scope_node: ast.AST, names: set[str], fn: Optional[ast.AST], cls: Optional[Sym]) -> None:
+        """Records each write to one of ``names`` among a scope's own statements."""
+        stmts = _own_statements(scope_node) if fn is not None else ast.walk(scope_node)
+        for stmt in stmts:
+            pairs: list[tuple[ast.expr, Optional[ast.expr]]] = []
+            if isinstance(stmt, ast.Assign):
+                pairs = [(t, stmt.value) for t in stmt.targets]
+            elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
+                pairs = [(stmt.target, stmt.value)]
+            elif isinstance(stmt, (ast.AugAssign, ast.For, ast.AsyncFor)):
+                pairs = [(stmt.target, None)]
+            elif isinstance(stmt, (ast.With, ast.AsyncWith)):
+                pairs = [(i.optional_vars, None) for i in stmt.items if i.optional_vars is not None]
+            for target, value in pairs:
+                if isinstance(stmt, ast.AugAssign):
+                    continue
+                flat = [(target, value)] if isinstance(target, ast.Name) else [(e, None) for e in ast.walk(target) if isinstance(e, ast.Name)]
+                for t, v in flat:
+                    if not isinstance(t, ast.Name) or t.id not in names:
+                        continue
+                    b = self.mod.scope.get(t.id)
+                    if b is not None and b.kind == "symbol" and b.symbol is not None and b.symbol.kind in {"variable", "field"} and b.symbol.node is not stmt:
+                        b.symbol.writes.append((v, fn, cls))
 
     def read_all(self, stmt: ast.stmt) -> None:
         """Reads ``__all__`` from an assignment, as a list or tuple of strings."""
@@ -443,6 +498,7 @@ class Indexer:
         """Records each ``self.x = …`` in the class's methods as a field."""
         methods = [s for s in node.body if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef))]
         methods.sort(key=lambda f: (f.name != "__init__", f.lineno))
+        pending: dict[str, ast.expr] = {}
         for fn in methods:
             names = [_decorator_name(d) for d in fn.decorator_list]
             if "staticmethod" in names or "classmethod" in names:
@@ -451,24 +507,44 @@ class Indexer:
             if not args:
                 continue
             me = args[0].arg
-            for stmt in _own_statements(fn):
+            own = {id(s) for s in _own_statements(fn)}
+            stmts = [n for n in ast.walk(fn) if isinstance(n, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.For, ast.AsyncFor, ast.With, ast.AsyncWith))]
+            stmts.sort(key=lambda n: (n.lineno, n.col_offset))
+            for stmt in stmts:
+                nested = id(stmt) not in own
                 targets: list[tuple[ast.expr, Optional[ast.expr], Optional[ast.expr]]] = []
                 if isinstance(stmt, ast.Assign):
                     targets = [(t, None, stmt.value) for t in stmt.targets]
                 elif isinstance(stmt, ast.AnnAssign):
                     targets = [(stmt.target, stmt.annotation, stmt.value)]
+                elif isinstance(stmt, (ast.For, ast.AsyncFor)):
+                    targets = [(stmt.target, None, None)]
+                elif isinstance(stmt, (ast.With, ast.AsyncWith)):
+                    targets = [(i.optional_vars, None, None) for i in stmt.items if i.optional_vars is not None]
+                flat: list[tuple[ast.expr, Optional[ast.expr], Optional[ast.expr]]] = []
                 for target, ann, value in targets:
+                    if isinstance(target, (ast.Tuple, ast.List)):
+                        flat.extend((e.value if isinstance(e, ast.Starred) else e, None, None) for e in target.elts)
+                    else:
+                        flat.append((target, ann, value))
+                for target, ann, value in flat:
                     if not (isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name) and target.value.id == me):
                         continue
                     name = target.attr
+                    write = (None if nested else value, fn, cls)
                     if name in cls.members:
-                        if ann is not None and cls.members[name].kind == "field" and cls.members[name].ann is None:
-                            cls.members[name].ann = ann
+                        member = cls.members[name]
+                        if member.kind == "field":
+                            if ann is not None and member.ann is None:
+                                member.ann = ann
+                            member.writes.append(write)
+                        continue
+                    if isinstance(stmt, (ast.AugAssign, ast.For, ast.AsyncFor, ast.With, ast.AsyncWith)) or nested:
                         continue
                     if ann is None and isinstance(value, ast.Name):
                         param = next((a for a in fn.args.args + fn.args.kwonlyargs + fn.args.posonlyargs if a.arg == value.id), None)
                         if param is not None and param.annotation is not None:
-                            ann = param.annotation
+                            pending[name] = param.annotation
                     qual = cls.qual + "." + name
                     field_sym = Sym(
                         id=self.new_id(qual, stmt),
@@ -482,11 +558,18 @@ class Indexer:
                         ann=ann,
                         value=value,
                         method=fn,
+                        writes=[write],
                         doc_raw=comment_doc(self.lines, stmt.lineno),
                         line=stmt.lineno,
                         end_line=stmt.end_lineno or stmt.lineno,
                     )
                     self.add(field_sym)
+        # The annotation of a parameter types an attribute only when that
+        # parameter's value forms the attribute's one write.
+        for name, ann in pending.items():
+            member = cls.members.get(name)
+            if member is not None and member.ann is None and len(member.writes) == 1:
+                member.ann = ann
 
     def assign(self, stmts: list[ast.stmt], i: int, owner: Optional[Sym]) -> None:
         """Records the names that a module-level or class-level assignment binds."""
@@ -507,8 +590,13 @@ class Indexer:
                 if name == "__all__" and owner is None:
                     continue
                 scope = owner.members if owner else self.mod.scope
+                # A bare annotation (``x: int``) writes nothing.
+                writes = [] if value is None else [(value if single else None, None, None)]
                 if name in scope:
                     existing = scope[name]
+                    found = existing if owner is not None else existing.symbol if existing.kind == "symbol" else None
+                    if found is not None and found.kind in {"field", "variable"}:
+                        found.writes.extend(writes)
                     if owner is not None or existing.kind == "symbol":
                         continue
                 qual = self.qual_of(name, owner)
@@ -523,6 +611,7 @@ class Indexer:
                     parent=owner,
                     ann=ann,
                     value=value if single else None,
+                    writes=writes,
                     doc_raw=doc,
                     line=stmt.lineno,
                     end_line=stmt.end_lineno or stmt.lineno,

@@ -161,7 +161,9 @@ class Output:
             if s.module.all_names is not None:
                 return s.name in s.module.all_names
             return not s.name.startswith("_")
-        return not (s.name.startswith("_") and not s.name.endswith("__"))
+        # A member follows its owner: a member of a class that the module
+        # does not export stays unexported too.
+        return s.parent.exported and not (s.name.startswith("_") and not s.name.endswith("__"))
 
     # Containers.
 
@@ -300,7 +302,7 @@ class Output:
                         out["type"] = {"text": mod.segment(ret), "refs": r.refs(ret, mod)}
                 elif s.kind in {"field", "constant", "variable"} and s.ann is not None:
                     out["type"] = {"text": (s.module.segment(s.ann)), "refs": r.refs(s.ann, s.module)}
-                elif s.kind == "field" and isinstance(s.value, ast.Call) and s.method is not None:
+                elif s.kind == "field" and isinstance(s.value, ast.Call) and s.method is not None and len(s.writes) == 1:
                     v = r.value(s.value.func, r.ctx_of(s.method, mod, s.parent))
                     if v is not None and v[0] == "class" and not v[1].module.is_test:
                         out["type"] = {"text": mod.segment(s.value.func), "refs": [v[1].id]}

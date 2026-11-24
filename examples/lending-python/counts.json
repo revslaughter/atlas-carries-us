@@ -1,25 +1,25 @@
 {
   "containers": {
-    "file": 20,
+    "file": 21,
     "package": 6
   },
   "symbols": {
-    "class": 8,
+    "class": 11,
     "constant": 5,
-    "constructor": 3,
+    "constructor": 4,
     "enum": 1,
-    "field": 15,
-    "function": 24,
+    "field": 16,
+    "function": 28,
     "interface": 1,
-    "method": 17,
+    "method": 21,
     "property": 2,
     "struct": 2,
     "type": 1,
     "type_alias": 2,
-    "variable": 11
+    "variable": 14
   },
   "edges": {
-    "calls": 21,
+    "calls": 22,
     "extends": 3,
     "field_type": 7,
     "implements": 1,
