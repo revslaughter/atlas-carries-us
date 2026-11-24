@@ -6,6 +6,7 @@ project:
   name: Lending library in JavaScript (fixture)
   repo: revslaughter/atlas-carries-us
   links: github
+  descriptionDrafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
   description: |
     An invented lending library that exercises the JavaScript mode of the
     TypeScript adapter: CommonJS and ES modules, a constructor function, an
@@ -19,14 +20,17 @@ entryPoints:
 regions:
   - id: web
     name: HTTP API
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
     paths: ["lib/web"]
     description: The Express app and the books router that it mounts.
   - id: domain
     name: Books and loans
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
     paths: ["lib/domain"]
     description: Shelves, loans and the lending rules.
   - id: front
     name: Front door and screens
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
     paths: ["lib", "lib/ui"]
     description: The object that the library exports, and the cards that show books.
 layout:
@@ -35,8 +39,10 @@ layout:
     - [domain]
 tour:
   - title: The shape of the library
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
     open: { view: overview }
     text: A request enters through the HTTP API, and the rules live in the domain folder.
   - title: A shelf
+    drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
     open: { view: symbol, name: Shelf }
     text: Shelf is a constructor function. Its methods live on its prototype.

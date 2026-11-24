@@ -35,11 +35,17 @@ This plan turns issue #25 into work. Read `AGENTS.md`, `docs/schema.md`,
    infers JavaScript the same way with it off, and the adapter never asks
    for diagnostics. The fixture and the corpus give the same bytes either
    way; section "Checks" records the measurement.
-7. **Every edge stays `exact`.** The adapter records only what the checker
-   resolves. A call through a value of unknown type resolves to nothing, so
-   it adds no edge; the adapter never guesses by name. A note counts the
-   calls that name a function of the map but did not resolve, so that a
-   reader knows what the map misses.
+7. **Confidence.** The adapter records only what the checker resolves. A
+   call through a value of unknown type resolves to nothing, so it adds no
+   edge; the adapter never guesses by name. A note counts the calls that
+   name a function of the map but did not resolve. In JavaScript, a `calls`
+   edge counts as `heuristic` when the receiver's type comes only from
+   inference: a variable may take a value of another type later, which
+   TypeScript forbids and JavaScript allows. A call stays `exact` for a
+   declared function or an import, `new X().m()`, `this.m()` and `super`,
+   and a receiver whose type a class, a `const`, a JSDoc type, an import or
+   a declared result fixes. Every other edge stays `exact`. (Review round 1
+   changed this decision; the first draft kept every edge `exact`.)
 8. **No change to the data format.** Every JavaScript word goes to
    `languageKind`; every kind comes from the schema's lists.
 9. **No new dependency, no new tool.** Node and TypeScript 6.0.3 already sit
@@ -223,6 +229,10 @@ tool enters. CI runs `scripts/check.sh`, so the example joins CI there.
    declarations for code that imports it by package path. Commander's tests
    import `../` and so reach `typings/index.d.ts`, which stays out of the
    map. (Found in the build.)
+8. A call through a receiver of a union type (`@param {A|B} x`) points at
+   one member of the union only, as in TypeScript. (Review round 1.)
+9. A call through a receiver whose type the checker infers counts as
+   `heuristic`, and points at one callee only. (Review round 1.)
 
 ## Checks
 

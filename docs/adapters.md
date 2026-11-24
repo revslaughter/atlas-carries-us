@@ -86,8 +86,9 @@ The TypeScript adapter, `adapters/typescript`, runs in Node and reads the
 project with the TypeScript compiler API, pinned to TypeScript 6.0.3.
 TypeScript 7, the native port, offers its programmatic API only as "unstable"
 so far; the adapter will move once that API settles. The checker resolves
-every edge, so every edge counts as `exact`; only the layout edges of the
-`sveltekit` plugin, below, count as `heuristic`. On immer v11.2.9 and Hono
+every edge, so in TypeScript every edge counts as `exact`; only the layout
+edges of the `sveltekit` plugin, below, count as `heuristic`. JavaScript
+marks some calls `heuristic`; see "JavaScript" below. On immer v11.2.9 and Hono
 v4.13.17 the counts sit in `examples/immer/counts.json` and
 `examples/hono/counts.json`.
 
@@ -494,9 +495,17 @@ The TypeScript table holds, with these additions:
 4. `new F()` and `F()` on a constructor function call `F.constructor`.
 5. `extends` comes from an ES class's clause, and from `@augments` (or
    `@extends`) and `@implements` tags.
-6. Every edge counts as `exact`. The adapter never matches names: a call
-   that the checker cannot resolve adds no edge, and a note counts the
-   calls that name a symbol of the map but resolve to nothing.
+6. The adapter never matches names: a call that the checker cannot resolve
+   adds no edge, and a note counts the calls that name a symbol of the map
+   but resolve to nothing. A call that the checker resolves counts as
+   `exact` when declarations fix its callee: a declared function or an
+   import, `new`, `this` or `super`, or a method on a receiver whose type a
+   class, a `const`, a JSDoc type, an import or a declared result fixes.
+   Otherwise it counts as `heuristic`. JavaScript lets a variable take a
+   value of another type later, so a callee that the checker finds through
+   an inferred type may not be the one that runs: in
+   `let x = new A(); if (f) x = new B(); x.m()`, the map shows only
+   `A.m`, as `heuristic`. Every other edge counts as `exact`.
 7. The `express` and `hono` plugins follow `require`: `const express =
    require("express")` marks `express()` as an app, and
    `app.use("/books", require("./books"))` mounts the router that
@@ -516,7 +525,12 @@ The output's notes list these limits, and the help text repeats them:
    literal (`rules.mayBorrow = function …`) only as a property of that
    literal's file. The map shows the member, but calls to it from elsewhere
    do not resolve.
-5. A package whose `package.json` names `types` resolves, for code that
+5. A call through a receiver whose type the checker infers counts as
+   `heuristic`, and points at one callee only.
+6. A call through a receiver of a union type, such as `@param {A|B} x`,
+   points at one member of the union only, as in TypeScript. JSDoc unions
+   turn up often in JavaScript.
+7. A package whose `package.json` names `types` resolves, for code that
    imports it by package path, to those declarations. Commander's tests
    import `../`, so their uses reach `typings/index.d.ts`, which stays out of
    the map; the test index holds few of them.

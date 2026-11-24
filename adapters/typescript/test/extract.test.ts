@@ -558,3 +558,40 @@ test("a mixed run keeps ts: IDs and marks each JavaScript file", () => {
     "the JavaScript rules hold in the TypeScript mode",
   );
 });
+
+test("ES5 inheritance and a lone @constructor make classes with one constructor each", () => {
+  const sym = (id: string) => js.doc.symbols.find(s => s.id === jp + id);
+  assert.equal(sym("domain/book#Periodicals")?.languageKind, "constructor function");
+  assert.equal(
+    js.doc.symbols.filter(s => s.parent === jp + "domain/book#Periodicals" && s.name === "constructor").length,
+    1,
+    "Periodicals.prototype.constructor = Periodicals adds no second constructor",
+  );
+  assert.equal(sym("domain/book#LibraryCard")?.kind, "class", "@constructor on a var's function makes a class");
+});
+
+test("a JavaScript call through an inferred receiver counts as heuristic", () => {
+  const edge = (from: string, to: string) =>
+    js.doc.edges.find(e => e.from === jp + from && e.to === jp + to && e.kind === "calls");
+  assert.equal(
+    edge("domain/loan#latestLate", "domain/loan#Loan.isLate")?.confidence,
+    "heuristic",
+    "let takes its type from inference",
+  );
+  assert.equal(edge("domain/loan#latestLate", "domain/loan#Loan.constructor")?.confidence, "exact", "new stays exact");
+  assert.equal(edge("domain/loan#Loan.close", "domain/loan#Loan.#log")?.confidence, "exact", "this stays exact");
+  assert.equal(
+    edge("web/books#listBooks", "domain/book#Shelf.where")?.confidence,
+    "exact",
+    "a const receiver stays exact",
+  );
+  assert.equal(
+    edge("domain/loan#Loan.isLate", "domain/rules#rules.isLate")?.confidence,
+    "exact",
+    "an import stays exact",
+  );
+  assert.ok(
+    doc.edges.every(e => e.kind !== "calls" || e.confidence === "exact"),
+    "the TypeScript mode keeps every call exact",
+  );
+});

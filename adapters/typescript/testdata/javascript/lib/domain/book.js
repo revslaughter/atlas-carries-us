@@ -92,5 +92,24 @@ Shelf.home = path.join("var", "shelves");
 
 Object.assign(Shelf.prototype, counting);
 
+/**
+ * A shelf of periodicals: a shelf that also records the latest issue.
+ *
+ * @param {string} name
+ * @param {number} issue - The latest issue number.
+ */
+function Periodicals(name, issue) {
+  Shelf.call(this, name);
+  /** The latest issue number. */
+  this.issue = issue;
+}
+Periodicals.prototype = Object.create(Shelf.prototype);
+Periodicals.prototype.constructor = Periodicals;
+
+/** A member's library card. It holds nothing yet. @constructor */
+var LibraryCard = function () {};
+
 exports.Shelf = Shelf;
+exports.Periodicals = Periodicals;
+exports.LibraryCard = LibraryCard;
 exports.counting = counting;

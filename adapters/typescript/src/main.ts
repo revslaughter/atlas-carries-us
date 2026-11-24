@@ -8,9 +8,10 @@
  * The acu command runs it with a request on standard input (protocol 1, see
  * [docs/adapters.md](https://github.com/revslaughter/atlas-carries-us/blob/main/docs/adapters.md)).
  * {@link run} reads the project in four passes: declarations, entry points,
- * relations, then docs and tests. The type checker resolves every edge, so
- * every edge counts as exact, except the layout edges of the sveltekit
- * plugin. Svelte components join the program through svelte2tsx.
+ * relations, then docs and tests. The type checker resolves every edge. In
+ * TypeScript every edge counts as exact, except the layout edges of the
+ * sveltekit plugin; in JavaScript, a call through a receiver whose type the
+ * checker infers counts as heuristic. Svelte components join the program through svelte2tsx.
  *
  * For a run by hand, pass flags instead:
  *
@@ -50,7 +51,8 @@ calls through function values and callbacks, and declaration files (.d.ts).
 In JavaScript, the types come from JSDoc (@param, @returns, @type, @typedef,
 @callback, @template) or from inference. CommonJS exports, constructor
 functions and their prototypes, and object literals that act as modules make
-symbols. The map leaves out calls through values of unknown type, members that
+symbols. A call through a receiver whose type the checker infers counts as
+heuristic. The map leaves out calls through values of unknown type, members that
 mixins or other run-time prototype changes add, properties that code adds
 outside a constructor, and exports under a computed name.
 

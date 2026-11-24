@@ -21,6 +21,8 @@
      "Declaration files (.d.ts) do not appear; they describe code that lives elsewhere.",
      "2 imports of outside packages did not resolve, so the types they bring count as unknown.",
      "In JavaScript, a call through a value of unknown type does not appear: the map holds only the calls that the checker resolves.",
+     "In JavaScript, a call through a receiver whose type the checker infers counts as heuristic: a variable may hold a value of another type later.",
+     "A call through a receiver of a union type, such as a JSDoc {A|B}, points at one member of the union only.",
      "Mixins, util.inherits, Object.create and other prototype changes at run time add no members and no edges.",
      "A property that code adds outside a constructor, and an export under a computed name, do not appear.",
      "3 calls in JavaScript files name a symbol of the map but resolve to nothing, so they do not appear."
@@ -409,6 +411,130 @@
     "params": {
      "book": "The book to test."
     }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#LibraryCard",
+   "kind": "class",
+   "languageKind": "constructor function",
+   "name": "LibraryCard",
+   "parent": "js:file:lending-js/lib/domain/book.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 110,
+    "endLine": 110
+   },
+   "doc": {
+    "raw": "A member's library card. It holds nothing yet. @constructor",
+    "format": "jsdoc",
+    "summary": "A member's library card.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A member's library card. It holds nothing yet. @constructor"
+     }
+    ]
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#LibraryCard.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "js:lending-js/lib/domain/book#LibraryCard",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 110,
+    "endLine": 110
+   },
+   "signature": {
+    "params": [],
+    "results": [],
+    "text": "constructor()"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Periodicals",
+   "kind": "class",
+   "languageKind": "constructor function",
+   "name": "Periodicals",
+   "parent": "js:file:lending-js/lib/domain/book.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 101,
+    "endLine": 105
+   },
+   "doc": {
+    "raw": "A shelf of periodicals: a shelf that also records the latest issue.\n\n@param {string} name\n@param {number} issue - The latest issue number.",
+    "format": "jsdoc",
+    "summary": "A shelf of periodicals: a shelf that also records the latest issue.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "A shelf of periodicals: a shelf that also records the latest issue."
+     }
+    ],
+    "params": {
+     "name": "",
+     "issue": "The latest issue number."
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Periodicals.constructor",
+   "kind": "constructor",
+   "languageKind": "constructor",
+   "name": "constructor",
+   "parent": "js:lending-js/lib/domain/book#Periodicals",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 101,
+    "endLine": 105
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "name",
+      "type": "string"
+     },
+     {
+      "name": "issue",
+      "type": "number"
+     }
+    ],
+    "results": [],
+    "text": "constructor(name, issue)"
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/book#Periodicals.issue",
+   "kind": "property",
+   "languageKind": "property",
+   "name": "issue",
+   "parent": "js:lending-js/lib/domain/book#Periodicals",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/book.js",
+    "line": 104,
+    "endLine": 104
+   },
+   "type": {
+    "text": "number"
+   },
+   "doc": {
+    "raw": "The latest issue number.",
+    "format": "jsdoc",
+    "summary": "The latest issue number.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "The latest issue number."
+     }
+    ]
    }
   },
   {
@@ -1192,6 +1318,47 @@
     "description": [],
     "params": {
      "today": ""
+    }
+   }
+  },
+  {
+   "id": "js:lending-js/lib/domain/loan#latestLate",
+   "kind": "function",
+   "languageKind": "function",
+   "name": "latestLate",
+   "parent": "js:file:lending-js/lib/domain/loan.js",
+   "exported": true,
+   "location": {
+    "path": "lib/domain/loan.js",
+    "line": 94,
+    "endLine": 98
+   },
+   "signature": {
+    "params": [
+     {
+      "name": "overdue",
+      "type": "boolean"
+     }
+    ],
+    "results": [
+     {
+      "type": "boolean"
+     }
+    ],
+    "text": "function latestLate(overdue)"
+   },
+   "doc": {
+    "raw": "Reports whether a member's latest loan runs late. The variable takes its\ntype from its first value, so the map marks its call as heuristic.\n\n@param {boolean} overdue",
+    "format": "jsdoc",
+    "summary": "Reports whether a member's latest loan runs late.",
+    "description": [
+     {
+      "type": "paragraph",
+      "text": "Reports whether a member's latest loan runs late. The variable takes its type from its first value, so the map marks its call as heuristic."
+     }
+    ],
+    "params": {
+     "overdue": ""
     }
    }
   },
@@ -2030,6 +2197,21 @@
    "to": "js:lending-js/lib/domain/loan#Loan.isLate",
    "kind": "overrides",
    "confidence": "exact"
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#latestLate",
+   "to": "js:lending-js/lib/domain/loan#Loan.constructor",
+   "kind": "calls",
+   "confidence": "exact",
+   "line": 95,
+   "count": 2
+  },
+  {
+   "from": "js:lending-js/lib/domain/loan#latestLate",
+   "to": "js:lending-js/lib/domain/loan#Loan.isLate",
+   "kind": "calls",
+   "confidence": "heuristic",
+   "line": 97
   },
   {
    "from": "js:lending-js/lib/index#lendFirst",

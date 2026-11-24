@@ -5,18 +5,18 @@
     "package": 1
   },
   "symbols": {
-    "class": 3,
+    "class": 5,
     "constant": 3,
-    "constructor": 2,
-    "function": 10,
+    "constructor": 4,
+    "function": 11,
     "method": 12,
     "namespace": 2,
-    "property": 15,
+    "property": 16,
     "type_alias": 3,
     "variable": 1
   },
   "edges": {
-    "calls": 11,
+    "calls": 13,
     "extends": 1,
     "field_type": 3,
     "imports": 2,

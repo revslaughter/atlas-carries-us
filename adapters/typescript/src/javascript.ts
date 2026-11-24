@@ -231,7 +231,8 @@ class JsFile {
 
   /** Reports whether a function acts as a class: JSDoc marks it @constructor or @class, its body sets this.x, or the file assigns to its prototype. */
   private isConstructor(fn: ts.FunctionDeclaration | ts.FunctionExpression): boolean {
-    const doc = ts.isFunctionExpression(fn) ? fn.parent.parent : fn;
+    // A function expression takes its JSDoc from its variable, as in promote.
+    const doc = ts.isFunctionExpression(fn) ? fn.parent : fn;
     if (ts.getJSDocTags(doc).some(t => t.tagName.text === "constructor" || t.tagName.text === "class")) return true;
     if (fn.body && thisAssignments(fn.body).length) return true;
     const sym = this.ex.checker.getSymbolAtLocation(fn.name ?? (fn.parent as ts.VariableDeclaration).name);
@@ -277,7 +278,7 @@ class JsFile {
   private thisMembers(ownerId: string, fn: ts.FunctionLikeDeclaration) {
     const ex = this.ex;
     const p = ex.pathOfId(ownerId)!;
-    const taken = new Set([...ex.syms.values()].filter(s => s.parent === ownerId).map(s => s.name));
+    const taken = new Set(ex.childNames.get(ownerId));
     for (const a of thisAssignments(fn.body!)) {
       const name = assignedName(a.left);
       if (name === undefined || taken.has(name)) continue;
@@ -305,7 +306,9 @@ class JsFile {
     const proto = prototypeOf(target);
     if (proto) {
       const owner = this.owner(proto, true);
-      if (owner && name !== undefined)
+      // F.prototype.constructor = F restores a link that ES5 inheritance
+      // breaks; the constructor member already stands for it.
+      if (owner && name !== undefined && name !== "constructor")
         this.member(owner.id, this.ex.pathOfId(owner.id)!, name, a, unwrap(a.right), {
           isStatic: false,
           method: true,

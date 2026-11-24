@@ -85,4 +85,16 @@ function pick(items, test) {
   return items.find(test);
 }
 
-module.exports = { Loan, OverdueLoan, pick };
+/**
+ * Reports whether a member's latest loan runs late. The variable takes its
+ * type from its first value, so the map marks its call as heuristic.
+ *
+ * @param {boolean} overdue
+ */
+function latestLate(overdue) {
+  let loan = new Loan({ id: "1", title: "One" }, "ann");
+  if (overdue) loan = new OverdueLoan({ id: "2", title: "Two" }, "ann");
+  return loan.isLate(0);
+}
+
+module.exports = { Loan, OverdueLoan, pick, latestLate };

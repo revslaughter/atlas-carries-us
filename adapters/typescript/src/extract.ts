@@ -212,6 +212,8 @@ export class Extractor {
   tag: "ts" | "js" = "ts";
   /** The calls in JavaScript files that name a symbol of the map but resolve to nothing, for a note. */
   unresolvedCalls = 0;
+  /** The names of the symbols under each parent ID, for a quick check of a name that a member already takes. */
+  readonly childNames = new Map<string, Set<string>>();
   /** Constructor functions to their constructor members: a call of the function, or new, reaches the member. */
   readonly ctorOf = new Map<ts.Node, string>();
   /** The Svelte components of the run; undefined when the root holds no .svelte file. */
@@ -457,6 +459,9 @@ export class Extractor {
   addSym(s: S.Symbol, p: string): S.Symbol {
     if (this.syms.has(s.id)) s.id = `${s.id}@${path.posix.basename(s.location.path)}:${s.location.line}`;
     this.syms.set(s.id, s);
+    let names = this.childNames.get(s.parent);
+    if (!names) this.childNames.set(s.parent, (names = new Set()));
+    names.add(s.name);
     this.pathOf.set(s.id, p);
     this.names.add(s.name);
     return s;
@@ -1495,9 +1500,75 @@ export class Extractor {
       const sig = this.checker.getResolvedSignature(n);
       const decl = sig?.declaration;
       const callee = decl && (this.ctorOf.get(decl) ?? this.idOfNode.get(decl));
-      if (callee && this.syms.has(callee)) this.addEdge(caller, callee, "calls", this.line(n, sf));
+      if (callee && this.syms.has(callee))
+        this.addEdge(caller, callee, "calls", this.line(n, sf), js && !this.declaredCallee(n) ? "heuristic" : "exact");
       else if (!decl && js && name !== "super" && this.names.has(name!)) this.unresolvedCalls++;
     });
+  }
+
+  /**
+   * Reports whether a call in a JavaScript file reaches its callee through
+   * declared types alone. JavaScript lets a variable take a value of another
+   * type later, so a callee that the checker finds through an inferred type
+   * may not be the one that runs. A call counts as declared when it names a
+   * declared function or an import, uses new, this or super, or calls a
+   * method on a receiver whose type a declaration fixes: a class, a const, a
+   * JSDoc or TypeScript type, an import, or the declared result of a call.
+   */
+  private declaredCallee(n: ts.Node): boolean {
+    if (!ts.isCallExpression(n)) return true;
+    const e = unwrap(n.expression);
+    if (ts.isIdentifier(e)) return this.declaredValue(e);
+    if (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e))
+      return this.declaredReceiver(e.expression, 0);
+    return e.kind === ts.SyntaxKind.SuperKeyword;
+  }
+
+  /** Reports whether the type of a receiver comes from a declaration rather than from inference. */
+  private declaredReceiver(r: ts.Expression, depth: number): boolean {
+    r = unwrap(r);
+    if (depth > 6) return false;
+    if (r.kind === ts.SyntaxKind.ThisKeyword || r.kind === ts.SyntaxKind.SuperKeyword || ts.isNewExpression(r))
+      return true;
+    if (ts.isIdentifier(r)) return this.declaredValue(r);
+    if (ts.isPropertyAccessExpression(r)) return this.declaredValue(r.name);
+    if (ts.isCallExpression(r)) {
+      const d = this.checker.getResolvedSignature(r)?.declaration;
+      return (
+        !!d && !ts.isJSDocSignature(d) && (!!d.type || !!ts.getJSDocReturnType(d) || !this.isJs(d.getSourceFile()))
+      );
+    }
+    return false;
+  }
+
+  /** Reports whether a name's type comes from a declaration: a class, function, enum, namespace, module, import, const, or a declaration with a written type. */
+  private declaredValue(id: ts.Identifier | ts.PrivateIdentifier): boolean {
+    const sym = this.checker.getSymbolAtLocation(id);
+    if (!sym) return false;
+    if (sym.flags & ts.SymbolFlags.Alias) return true;
+    for (const d of sym.declarations ?? []) {
+      if (!this.isJs(d.getSourceFile())) return true;
+      if (
+        ts.isClassLike(d) ||
+        ts.isFunctionLike(d) ||
+        ts.isEnumDeclaration(d) ||
+        ts.isModuleDeclaration(d) ||
+        ts.isSourceFile(d) ||
+        ts.isJSDocTypedefTag(d) ||
+        ts.isJSDocPropertyLikeTag(d)
+      )
+        return true;
+      if (ts.isVariableDeclaration(d) && ts.getCombinedNodeFlags(d) & ts.NodeFlags.Const) return true;
+      if ((d as { type?: ts.TypeNode }).type || jsDocTypeNode(d)) return true;
+      // A member whose value is a function, such as F.prototype.m = function …
+      if (
+        ts.isPropertyAccessExpression(d) &&
+        ts.isBinaryExpression(d.parent) &&
+        ts.isFunctionLike(unwrap(d.parent.right))
+      )
+        return true;
+    }
+    return false;
   }
 
   /* Pass 4: docs. */
@@ -1624,6 +1695,8 @@ export class Extractor {
     if (languages.has("js"))
       notes.push(
         "In JavaScript, a call through a value of unknown type does not appear: the map holds only the calls that the checker resolves.",
+        "In JavaScript, a call through a receiver whose type the checker infers counts as heuristic: a variable may hold a value of another type later.",
+        "A call through a receiver of a union type, such as a JSDoc {A|B}, points at one member of the union only.",
         "Mixins, util.inherits, Object.create and other prototype changes at run time add no members and no edges.",
         "A property that code adds outside a constructor, and an export under a computed name, do not appear.",
       );

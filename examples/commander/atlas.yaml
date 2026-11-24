@@ -64,8 +64,9 @@ tour:
     open: { view: overview }
     text: >-
       Commander keeps its code in lib, and index.js at the root exports it.
-      Every file is a CommonJS module: it imports with require and exports
-      with exports.name.
+      index.js and every file in lib are CommonJS modules: they import with
+      require and export with exports.name. esm.mjs, an ES module, gives the
+      same exports to code that uses import.
   - title: The object that programs use
     drafted: { by: Claude Code, at: "2026-11-24T00:00:00Z" }
     open: { view: symbol, id: "js:commander/index#program" }
