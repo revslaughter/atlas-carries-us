@@ -1,0 +1,5974 @@
+{
+  "version": 1,
+  "meta": {
+    "schemaVersion": 1,
+    "tool": {
+      "name": "acu-adapter-python",
+      "version": "0.1.0"
+    },
+    "generated": "",
+    "languages": [
+      "py"
+    ],
+    "adapters": [
+      {
+        "name": "python",
+        "version": "0.1.0",
+        "language": "py",
+        "root": ".",
+        "notes": [
+          "Calls through values whose type the adapter cannot tell do not appear, unless one method of the project alone carries the name; such calls count as heuristic.",
+          "A call through a base class or a protocol points at that class's method.",
+          "Monkey-patching, setattr, getattr with a computed name and __getattr__ hide what code runs; the map shows only names written in the code.",
+          "A decorator that changes a signature leaves the signature as the def writes it; metaclasses and class decorators add no members.",
+          "Code at module level, outside functions, makes no calls on the map, except inside a main guard.",
+          "Type stubs (.pyi) do not appear; the adapter reads one distribution per root.",
+          "A write to an attribute through another reference, such as a parameter or the class's name in another module, or through setattr, stays unseen, so the attribute may keep a type that such a write breaks.",
+          "The resolver ignores the order of statements: a name that del removes counts as unknown everywhere.",
+          "Of 95 call sites, 42 resolved to code on the map, 28 to outside code or built-ins, 1 by a unique method name (heuristic), and 24 to nothing.",
+          "Units import 6 outside packages; the adapter installs nothing, so their types count as unknown."
+        ]
+      }
+    ]
+  },
+  "containers": [
+    {
+      "id": "py:dist:lending",
+      "kind": "package",
+      "languageKind": "distribution",
+      "name": "lending",
+      "path": ".",
+      "language": "py"
+    },
+    {
+      "id": "py:file:src/lending/__init__.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "__init__.py",
+      "path": "src/lending/__init__.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "Lends books to members and keeps track of loans.\n\nThe package re-exports the parts that most callers need: :class:`Library`\nand the domain types.\n\nExample:\n    >>> lib = open_library()",
+        "format": "docstring-google",
+        "summary": "Lends books to members and keeps track of loans.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends books to members and keeps track of loans."
+          },
+          {
+            "type": "paragraph",
+            "text": "The package re-exports the parts that most callers need: [Library](sym:py:lending.library#Library) and the domain types."
+          }
+        ],
+        "examples": [
+          {
+            "code": ">>> lib = open_library()",
+            "language": "python"
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/__main__.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "__main__.py",
+      "path": "src/lending/__main__.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "Runs the lendd command: ``python -m lending``.",
+        "format": "plain",
+        "summary": "Runs the lendd command: `python -m lending`.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Runs the lendd command: `python -m lending`."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/carriers.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "carriers.py",
+      "path": "src/lending/carriers.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "Delivers books in two ways, so the resolver must not pick one.\n\nA name or attribute that holds a Courier in one place and a Drone in\nanother has no single type. A call through it gets no exact edge.",
+        "format": "plain",
+        "summary": "Delivers books in two ways, so the resolver must not pick one.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Delivers books in two ways, so the resolver must not pick one."
+          },
+          {
+            "type": "paragraph",
+            "text": "A name or attribute that holds a Courier in one place and a Drone in another has no single type. A call through it gets no exact edge."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/cli/__init__.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "__init__.py",
+      "path": "src/lending/cli/__init__.py",
+      "parent": "py:pkg:lending.cli",
+      "language": "py",
+      "doc": {
+        "raw": "The command line: lendd (click) and lendctl (Typer).",
+        "format": "plain",
+        "summary": "The command line: lendd (click) and lendctl (Typer).",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The command line: lendd (click) and lendctl (Typer)."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/cli/admin.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "admin.py",
+      "path": "src/lending/cli/admin.py",
+      "parent": "py:pkg:lending.cli",
+      "language": "py",
+      "doc": {
+        "raw": "The lendctl command, built with Typer.",
+        "format": "plain",
+        "summary": "The lendctl command, built with Typer.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The lendctl command, built with Typer."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/cli/main.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "main.py",
+      "path": "src/lending/cli/main.py",
+      "parent": "py:pkg:lending.cli",
+      "language": "py",
+      "doc": {
+        "raw": "The lendd command, built with click.",
+        "format": "plain",
+        "summary": "The lendd command, built with click.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The lendd command, built with click."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/compat.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "compat.py",
+      "path": "src/lending/compat.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "Bridges to optional outside packages.",
+        "format": "plain",
+        "summary": "Bridges to optional outside packages.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Bridges to optional outside packages."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/domain.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "domain.py",
+      "path": "src/lending/domain.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "The shared vocabulary: books, members, loans and errors.\n\nNotes\n-----\nEvery other module speaks these words.",
+        "format": "docstring-numpy",
+        "summary": "The shared vocabulary: books, members, loans and errors.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The shared vocabulary: books, members, loans and errors."
+          },
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "Notes"
+          },
+          {
+            "type": "paragraph",
+            "text": "Every other module speaks these words."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/library.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "library.py",
+      "path": "src/lending/library.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "The lending rules.\n\nA :class:`Library` applies the rules to a :class:`~lending.store.base.Store`.\nThe rules:\n\n- a member holds at most :data:`~lending.domain.MAX_LOANS` books;\n- a book on loan cannot go out again.\n\nUse it like this::\n\n    lib = Library(MemoryStore())\n    lib.borrow(\"b1\", \"ann\")\n\n.. versionadded:: 0.1",
+        "format": "plain",
+        "summary": "The lending rules.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The lending rules."
+          },
+          {
+            "type": "paragraph",
+            "text": "A [Library](sym:py:lending.library#Library) applies the rules to a [Store](sym:py:lending.store.base#Store). The rules:"
+          },
+          {
+            "type": "list",
+            "ordered": false,
+            "items": [
+              "a member holds at most [MAX_LOANS](sym:py:lending.domain#MAX_LOANS) books;",
+              "a book on loan cannot go out again."
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "Use it like this:"
+          },
+          {
+            "type": "code",
+            "code": "lib = Library(MemoryStore())\nlib.borrow(\"b1\", \"ann\")",
+            "language": "python"
+          }
+        ],
+        "since": "0.1"
+      }
+    },
+    {
+      "id": "py:file:src/lending/plugins/extra.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "extra.py",
+      "path": "src/lending/plugins/extra.py",
+      "parent": "py:pkg:lending.plugins",
+      "language": "py",
+      "doc": {
+        "raw": "Extra rules that live in a namespace package.",
+        "format": "plain",
+        "summary": "Extra rules that live in a namespace package.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Extra rules that live in a namespace package."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/report.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "report.py",
+      "path": "src/lending/report.py",
+      "parent": "py:pkg:lending",
+      "language": "py",
+      "doc": {
+        "raw": "Prints a report of the loans.",
+        "format": "plain",
+        "summary": "Prints a report of the loans.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints a report of the loans."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/store/__init__.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "__init__.py",
+      "path": "src/lending/store/__init__.py",
+      "parent": "py:pkg:lending.store",
+      "language": "py",
+      "doc": {
+        "raw": "Keeps books: one storage contract and a store in memory.",
+        "format": "plain",
+        "summary": "Keeps books: one storage contract and a store in memory.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Keeps books: one storage contract and a store in memory."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/store/base.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "base.py",
+      "path": "src/lending/store/base.py",
+      "parent": "py:pkg:lending.store",
+      "language": "py",
+      "doc": {
+        "raw": "The storage contract that every store follows.",
+        "format": "plain",
+        "summary": "The storage contract that every store follows.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The storage contract that every store follows."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/store/memory.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "memory.py",
+      "path": "src/lending/store/memory.py",
+      "parent": "py:pkg:lending.store",
+      "language": "py",
+      "doc": {
+        "raw": "A store that keeps books in a dictionary.",
+        "format": "plain",
+        "summary": "A store that keeps books in a dictionary.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A store that keeps books in a dictionary."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/web/__init__.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "__init__.py",
+      "path": "src/lending/web/__init__.py",
+      "parent": "py:pkg:lending.web",
+      "language": "py",
+      "doc": {
+        "raw": "Serves the library over HTTP with three frameworks.",
+        "format": "plain",
+        "summary": "Serves the library over HTTP with three frameworks.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Serves the library over HTTP with three frameworks."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/web/api_urls.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "api_urls.py",
+      "path": "src/lending/web/api_urls.py",
+      "parent": "py:pkg:lending.web",
+      "language": "py",
+      "doc": {
+        "raw": "The Django URL patterns of the API, which the site includes.",
+        "format": "plain",
+        "summary": "The Django URL patterns of the API, which the site includes.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The Django URL patterns of the API, which the site includes."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/web/fastapi_app.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "fastapi_app.py",
+      "path": "src/lending/web/fastapi_app.py",
+      "parent": "py:pkg:lending.web",
+      "language": "py",
+      "doc": {
+        "raw": "The FastAPI app: loan routes on a router, mounted under /v1.",
+        "format": "plain",
+        "summary": "The FastAPI app: loan routes on a router, mounted under /v1.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The FastAPI app: loan routes on a router, mounted under /v1."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/web/flask_app.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "flask_app.py",
+      "path": "src/lending/web/flask_app.py",
+      "parent": "py:pkg:lending.web",
+      "language": "py",
+      "doc": {
+        "raw": "The Flask app: a blueprint of book routes and an app factory.",
+        "format": "plain",
+        "summary": "The Flask app: a blueprint of book routes and an app factory.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The Flask app: a blueprint of book routes and an app factory."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/web/settings.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "settings.py",
+      "path": "src/lending/web/settings.py",
+      "parent": "py:pkg:lending.web",
+      "language": "py",
+      "doc": {
+        "raw": "The Django settings that name the root URL patterns.",
+        "format": "plain",
+        "summary": "The Django settings that name the root URL patterns.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The Django settings that name the root URL patterns."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/web/urls.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "urls.py",
+      "path": "src/lending/web/urls.py",
+      "parent": "py:pkg:lending.web",
+      "language": "py",
+      "doc": {
+        "raw": "The Django URL patterns of the site.",
+        "format": "plain",
+        "summary": "The Django URL patterns of the site.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The Django URL patterns of the site."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:file:src/lending/web/views.py",
+      "kind": "file",
+      "languageKind": "module",
+      "name": "views.py",
+      "path": "src/lending/web/views.py",
+      "parent": "py:pkg:lending.web",
+      "language": "py",
+      "doc": {
+        "raw": "Django views of the library.",
+        "format": "plain",
+        "summary": "Django views of the library.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Django views of the library."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:pkg:lending",
+      "kind": "package",
+      "languageKind": "package",
+      "name": "lending",
+      "path": "src/lending",
+      "parent": "py:dist:lending",
+      "language": "py",
+      "unit": true,
+      "doc": {
+        "raw": "Lends books to members and keeps track of loans.\n\nThe package re-exports the parts that most callers need: :class:`Library`\nand the domain types.\n\nExample:\n    >>> lib = open_library()",
+        "format": "docstring-google",
+        "summary": "Lends books to members and keeps track of loans.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends books to members and keeps track of loans."
+          },
+          {
+            "type": "paragraph",
+            "text": "The package re-exports the parts that most callers need: [Library](sym:py:lending.library#Library) and the domain types."
+          }
+        ],
+        "examples": [
+          {
+            "code": ">>> lib = open_library()",
+            "language": "python"
+          }
+        ]
+      },
+      "externalImports": [
+        "requests"
+      ]
+    },
+    {
+      "id": "py:pkg:lending.cli",
+      "kind": "package",
+      "languageKind": "package",
+      "name": "lending.cli",
+      "path": "src/lending/cli",
+      "parent": "py:dist:lending",
+      "language": "py",
+      "unit": true,
+      "doc": {
+        "raw": "The command line: lendd (click) and lendctl (Typer).",
+        "format": "plain",
+        "summary": "The command line: lendd (click) and lendctl (Typer).",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "The command line: lendd (click) and lendctl (Typer)."
+          }
+        ]
+      },
+      "externalImports": [
+        "click",
+        "typer"
+      ]
+    },
+    {
+      "id": "py:pkg:lending.plugins",
+      "kind": "package",
+      "languageKind": "namespace package",
+      "name": "lending.plugins",
+      "path": "src/lending/plugins",
+      "parent": "py:dist:lending",
+      "language": "py",
+      "unit": true
+    },
+    {
+      "id": "py:pkg:lending.store",
+      "kind": "package",
+      "languageKind": "package",
+      "name": "lending.store",
+      "path": "src/lending/store",
+      "parent": "py:dist:lending",
+      "language": "py",
+      "unit": true,
+      "doc": {
+        "raw": "Keeps books: one storage contract and a store in memory.",
+        "format": "plain",
+        "summary": "Keeps books: one storage contract and a store in memory.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Keeps books: one storage contract and a store in memory."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:pkg:lending.web",
+      "kind": "package",
+      "languageKind": "package",
+      "name": "lending.web",
+      "path": "src/lending/web",
+      "parent": "py:dist:lending",
+      "language": "py",
+      "unit": true,
+      "doc": {
+        "raw": "Serves the library over HTTP with three frameworks.",
+        "format": "plain",
+        "summary": "Serves the library over HTTP with three frameworks.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Serves the library over HTTP with three frameworks."
+          }
+        ]
+      },
+      "externalImports": [
+        "django",
+        "fastapi",
+        "flask"
+      ]
+    }
+  ],
+  "symbols": [
+    {
+      "id": "py:lending#open_library",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "open_library",
+      "parent": "py:file:src/lending/__init__.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/__init__.py",
+        "line": 17,
+        "endLine": 19
+      },
+      "doc": {
+        "raw": "Opens a library over an empty store in memory.",
+        "format": "plain",
+        "summary": "Opens a library over an empty store in memory.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Opens a library over an empty store in memory."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Library",
+            "refs": [
+              "py:lending.library#Library"
+            ]
+          }
+        ],
+        "text": "def open_library() -> Library"
+      }
+    },
+    {
+      "id": "py:lending.carriers#AirFleet",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "AirFleet",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 171,
+        "endLine": 176
+      },
+      "doc": {
+        "raw": "A fleet whose carrier flies.",
+        "format": "plain",
+        "summary": "A fleet whose carrier flies.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A fleet whose carrier flies."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#AirFleet.carrier",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#AirFleet",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 176,
+        "endLine": 176
+      }
+    },
+    {
+      "id": "py:lending.carriers#AirFleet.fly",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "fly",
+      "parent": "py:lending.carriers#AirFleet",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 174,
+        "endLine": 176
+      },
+      "doc": {
+        "raw": "Swaps to a drone.",
+        "format": "plain",
+        "summary": "Swaps to a drone.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Swaps to a drone."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def fly(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Courier",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Courier",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 12,
+        "endLine": 16
+      },
+      "doc": {
+        "raw": "Carries books by hand.",
+        "format": "plain",
+        "summary": "Carries books by hand.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Carries books by hand."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Courier.run",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "run",
+      "parent": "py:lending.carriers#Courier",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 15,
+        "endLine": 16
+      },
+      "doc": {
+        "raw": "Delivers by hand.",
+        "format": "plain",
+        "summary": "Delivers by hand.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Delivers by hand."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def run(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Depot",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Depot",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 212,
+        "endLine": 224
+      },
+      "doc": {
+        "raw": "Holds a carrier as a class attribute that a class method swaps.",
+        "format": "plain",
+        "summary": "Holds a carrier as a class attribute that a class method swaps.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier as a class attribute that a class method swaps."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Depot.carrier",
+      "kind": "field",
+      "languageKind": "class attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Depot",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 215,
+        "endLine": 215
+      }
+    },
+    {
+      "id": "py:lending.carriers#Depot.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Depot",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 222,
+        "endLine": 224
+      },
+      "doc": {
+        "raw": "Sends the books with the depot's carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the depot's carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the depot's carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Depot.modernize",
+      "kind": "method",
+      "languageKind": "class method",
+      "name": "modernize",
+      "parent": "py:lending.carriers#Depot",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 218,
+        "endLine": 220
+      },
+      "doc": {
+        "raw": "Swaps the depot's carrier for a drone.",
+        "format": "plain",
+        "summary": "Swaps the depot's carrier for a drone.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Swaps the depot's carrier for a drone."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def modernize(cls) -> None"
+      },
+      "modifiers": [
+        "classmethod"
+      ],
+      "annotations": [
+        "@classmethod"
+      ]
+    },
+    {
+      "id": "py:lending.carriers#Dispatch",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Dispatch",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 74,
+        "endLine": 87
+      },
+      "doc": {
+        "raw": "Holds a carrier that one method swaps.",
+        "format": "plain",
+        "summary": "Holds a carrier that one method swaps.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier that one method swaps."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.__init__",
+      "kind": "constructor",
+      "languageKind": "constructor",
+      "name": "__init__",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 77,
+        "endLine": 79
+      },
+      "doc": {
+        "raw": "Starts with a courier.",
+        "format": "plain",
+        "summary": "Starts with a courier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Starts with a courier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def __init__(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.carrier",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 79,
+        "endLine": 79
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 85,
+        "endLine": 87
+      },
+      "doc": {
+        "raw": "Sends the books with the current carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the current carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the current carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Dispatch.swap",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "swap",
+      "parent": "py:lending.carriers#Dispatch",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 81,
+        "endLine": 83
+      },
+      "doc": {
+        "raw": "Swaps to a drone.",
+        "format": "plain",
+        "summary": "Swaps to a drone.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Swaps to a drone."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def swap(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Drone",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Drone",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 19,
+        "endLine": 23
+      },
+      "doc": {
+        "raw": "Carries books by air.",
+        "format": "plain",
+        "summary": "Carries books by air.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Carries books by air."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Drone.run",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "run",
+      "parent": "py:lending.carriers#Drone",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 22,
+        "endLine": 23
+      },
+      "doc": {
+        "raw": "Delivers by air.",
+        "format": "plain",
+        "summary": "Delivers by air.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Delivers by air."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def run(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Fleet",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Fleet",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 159,
+        "endLine": 168
+      },
+      "doc": {
+        "raw": "Holds a carrier that a subclass may replace.",
+        "format": "plain",
+        "summary": "Holds a carrier that a subclass may replace.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier that a subclass may replace."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Fleet.__init__",
+      "kind": "constructor",
+      "languageKind": "constructor",
+      "name": "__init__",
+      "parent": "py:lending.carriers#Fleet",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 162,
+        "endLine": 164
+      },
+      "doc": {
+        "raw": "Starts with a courier.",
+        "format": "plain",
+        "summary": "Starts with a courier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Starts with a courier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def __init__(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Fleet.carrier",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Fleet",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 164,
+        "endLine": 164
+      }
+    },
+    {
+      "id": "py:lending.carriers#Fleet.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Fleet",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 166,
+        "endLine": 168
+      },
+      "doc": {
+        "raw": "Sends the books with the current carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the current carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the current carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Hub",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Hub",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 227,
+        "endLine": 234
+      },
+      "doc": {
+        "raw": "Holds a carrier as a class attribute that module code replaces.",
+        "format": "plain",
+        "summary": "Holds a carrier as a class attribute that module code replaces.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier as a class attribute that module code replaces."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Hub.carrier",
+      "kind": "field",
+      "languageKind": "class attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Hub",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 230,
+        "endLine": 230
+      }
+    },
+    {
+      "id": "py:lending.carriers#Hub.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Hub",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 232,
+        "endLine": 234
+      },
+      "doc": {
+        "raw": "Sends the books with the hub's carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the hub's carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the hub's carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Station",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Station",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 237,
+        "endLine": 244
+      },
+      "doc": {
+        "raw": "Holds a carrier as a class attribute that module code sets again to the same class.",
+        "format": "plain",
+        "summary": "Holds a carrier as a class attribute that module code sets again to the same class.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier as a class attribute that module code sets again to the same class."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Station.carrier",
+      "kind": "field",
+      "languageKind": "class attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Station",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 240,
+        "endLine": 240
+      }
+    },
+    {
+      "id": "py:lending.carriers#Station.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Station",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 242,
+        "endLine": 244
+      },
+      "doc": {
+        "raw": "Sends the books with the station's carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the station's carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the station's carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Tally",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Tally",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 143,
+        "endLine": 156
+      },
+      "doc": {
+        "raw": "Holds a carrier that one method bumps with +=.",
+        "format": "plain",
+        "summary": "Holds a carrier that one method bumps with +=.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier that one method bumps with +=."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Tally.__init__",
+      "kind": "constructor",
+      "languageKind": "constructor",
+      "name": "__init__",
+      "parent": "py:lending.carriers#Tally",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 146,
+        "endLine": 148
+      },
+      "doc": {
+        "raw": "Starts with a courier.",
+        "format": "plain",
+        "summary": "Starts with a courier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Starts with a courier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def __init__(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Tally.bump",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "bump",
+      "parent": "py:lending.carriers#Tally",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 150,
+        "endLine": 152
+      },
+      "doc": {
+        "raw": "Adds to the carrier.",
+        "format": "plain",
+        "summary": "Adds to the carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Adds to the carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def bump(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Tally.carrier",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Tally",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 148,
+        "endLine": 148
+      }
+    },
+    {
+      "id": "py:lending.carriers#Tally.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Tally",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 154,
+        "endLine": 156
+      },
+      "doc": {
+        "raw": "Sends the books with the current carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the current carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the current carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#added",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "added",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 46,
+        "endLine": 46
+      }
+    },
+    {
+      "id": "py:lending.carriers#backup",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "backup",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 30,
+        "endLine": 30
+      }
+    },
+    {
+      "id": "py:lending.carriers#bump_added",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "bump_added",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 105,
+        "endLine": 108
+      },
+      "doc": {
+        "raw": "Rebinds added with += through global.",
+        "format": "plain",
+        "summary": "Rebinds added with += through global.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Rebinds added with += through global."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def bump_added() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#bump_local",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "bump_local",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 179,
+        "endLine": 183
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that += rebinds.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that += rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that += rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def bump_local() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#carrier",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "carrier",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 26,
+        "endLine": 26
+      }
+    },
+    {
+      "id": "py:lending.carriers#counted",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "counted",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 43,
+        "endLine": 43
+      }
+    },
+    {
+      "id": "py:lending.carriers#deleted",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "deleted",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 49,
+        "endLine": 49
+      }
+    },
+    {
+      "id": "py:lending.carriers#deliver",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "deliver",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 53,
+        "endLine": 55
+      },
+      "doc": {
+        "raw": "Sends today's books with whichever carrier the module holds.",
+        "format": "plain",
+        "summary": "Sends today's books with whichever carrier the module holds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends today's books with whichever carrier the module holds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def deliver() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#fixed",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "fixed",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 32,
+        "endLine": 32
+      },
+      "doc": {
+        "raw": "A carrier that nothing rebinds.",
+        "format": "plain",
+        "summary": "A carrier that nothing rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A carrier that nothing rebinds."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#import_over",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "import_over",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 116,
+        "endLine": 119
+      },
+      "doc": {
+        "raw": "Rebinds imported with an import through global.",
+        "format": "plain",
+        "summary": "Rebinds imported with an import through global.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Rebinds imported with an import through global."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def import_over() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#imported",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "imported",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 47,
+        "endLine": 47
+      }
+    },
+    {
+      "id": "py:lending.carriers#looped",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "looped",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 35,
+        "endLine": 35
+      }
+    },
+    {
+      "id": "py:lending.carriers#pick_last",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "pick_last",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 199,
+        "endLine": 203
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that := inside a comprehension rebinds.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that := inside a comprehension rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that := inside a comprehension rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def pick_last() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#relay",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "relay",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 186,
+        "endLine": 196
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that a nested function rebinds through nonlocal.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that a nested function rebinds through nonlocal.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that a nested function rebinds through nonlocal."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def relay() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#send_fixed",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "send_fixed",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 69,
+        "endLine": 71
+      },
+      "doc": {
+        "raw": "Sends books with the carrier that never changes.",
+        "format": "plain",
+        "summary": "Sends books with the carrier that never changes.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with the carrier that never changes."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def send_fixed() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#send_local",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "send_local",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 206,
+        "endLine": 209
+      },
+      "doc": {
+        "raw": "Sends books with a local carrier that nothing rebinds.",
+        "format": "plain",
+        "summary": "Sends books with a local carrier that nothing rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with a local carrier that nothing rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def send_local() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#switch_backup",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "switch_backup",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 63,
+        "endLine": 66
+      },
+      "doc": {
+        "raw": "Makes a drone the backup carrier.",
+        "format": "plain",
+        "summary": "Makes a drone the backup carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes a drone the backup carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def switch_backup() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_added",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_added",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 111,
+        "endLine": 113
+      },
+      "doc": {
+        "raw": "Sends books with added.",
+        "format": "plain",
+        "summary": "Sends books with added.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with added."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_added() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_backup",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_backup",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 58,
+        "endLine": 60
+      },
+      "doc": {
+        "raw": "Sends books with the backup carrier.",
+        "format": "plain",
+        "summary": "Sends books with the backup carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with the backup carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_backup() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_counted",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_counted",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 100,
+        "endLine": 102
+      },
+      "doc": {
+        "raw": "Sends books with the carrier that a module-level += rebinds.",
+        "format": "plain",
+        "summary": "Sends books with the carrier that a module-level += rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with the carrier that a module-level += rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_counted() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_deleted",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_deleted",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 138,
+        "endLine": 140
+      },
+      "doc": {
+        "raw": "Reads a name that del removed.",
+        "format": "plain",
+        "summary": "Reads a name that del removed.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reads a name that del removed."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_deleted() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_imported",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_imported",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 122,
+        "endLine": 124
+      },
+      "doc": {
+        "raw": "Sends books with imported.",
+        "format": "plain",
+        "summary": "Sends books with imported.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with imported."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_imported() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_looped",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_looped",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 90,
+        "endLine": 92
+      },
+      "doc": {
+        "raw": "Sends books with the carrier that a module-level loop rebinds.",
+        "format": "plain",
+        "summary": "Sends books with the carrier that a module-level loop rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with the carrier that a module-level loop rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_looped() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_walrused",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_walrused",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 133,
+        "endLine": 135
+      },
+      "doc": {
+        "raw": "Sends books with walrused.",
+        "format": "plain",
+        "summary": "Sends books with walrused.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with walrused."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_walrused() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#use_wrapped",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "use_wrapped",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 95,
+        "endLine": 97
+      },
+      "doc": {
+        "raw": "Sends books with the carrier that a module-level with rebinds.",
+        "format": "plain",
+        "summary": "Sends books with the carrier that a module-level with rebinds.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends books with the carrier that a module-level with rebinds."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def use_wrapped() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#walrus_over",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "walrus_over",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 127,
+        "endLine": 130
+      },
+      "doc": {
+        "raw": "Rebinds walrused with := through global.",
+        "format": "plain",
+        "summary": "Rebinds walrused with := through global.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Rebinds walrused with := through global."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def walrus_over() -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#walrused",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "walrused",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 48,
+        "endLine": 48
+      }
+    },
+    {
+      "id": "py:lending.carriers#wrapped",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "wrapped",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 39,
+        "endLine": 39
+      }
+    },
+    {
+      "id": "py:lending.cli.admin#add_user",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "add_user",
+      "parent": "py:file:src/lending/cli/admin.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/admin.py",
+        "line": 15,
+        "endLine": 16
+      },
+      "doc": {
+        "raw": "Adds a member.",
+        "format": "plain",
+        "summary": "Adds a member.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Adds a member."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "name",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def add_user(name: str) -> None"
+      },
+      "annotations": [
+        "@users.command(\"add\")"
+      ]
+    },
+    {
+      "id": "py:lending.cli.admin#app",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "app",
+      "parent": "py:file:src/lending/cli/admin.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/admin.py",
+        "line": 5,
+        "endLine": 5
+      }
+    },
+    {
+      "id": "py:lending.cli.admin#sync_all",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "sync_all",
+      "parent": "py:file:src/lending/cli/admin.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/admin.py",
+        "line": 10,
+        "endLine": 11
+      },
+      "doc": {
+        "raw": "Syncs every store.",
+        "format": "plain",
+        "summary": "Syncs every store.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Syncs every store."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def sync_all() -> None"
+      },
+      "annotations": [
+        "@app.command()"
+      ]
+    },
+    {
+      "id": "py:lending.cli.admin#users",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "users",
+      "parent": "py:file:src/lending/cli/admin.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/admin.py",
+        "line": 6,
+        "endLine": 6
+      }
+    },
+    {
+      "id": "py:lending.cli.main#borrow",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "borrow",
+      "parent": "py:file:src/lending/cli/main.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/main.py",
+        "line": 16,
+        "endLine": 18
+      },
+      "doc": {
+        "raw": "Lends a book.",
+        "format": "plain",
+        "summary": "Lends a book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends a book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "str"
+          },
+          {
+            "name": "member",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def borrow(book_id: str, member: str) -> None"
+      },
+      "annotations": [
+        "@cli.command()",
+        "@click.argument(\"book_id\")",
+        "@click.argument(\"member\")"
+      ]
+    },
+    {
+      "id": "py:lending.cli.main#cli",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "cli",
+      "parent": "py:file:src/lending/cli/main.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/main.py",
+        "line": 9,
+        "endLine": 10
+      },
+      "doc": {
+        "raw": "Runs the lending library from a shell.",
+        "format": "plain",
+        "summary": "Runs the lending library from a shell.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Runs the lending library from a shell."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def cli() -> None"
+      },
+      "annotations": [
+        "@click.group()"
+      ]
+    },
+    {
+      "id": "py:lending.cli.main#count_cmd",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "count_cmd",
+      "parent": "py:file:src/lending/cli/main.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/main.py",
+        "line": 27,
+        "endLine": 29
+      },
+      "doc": {
+        "raw": "Prints how many books sit on loan.",
+        "format": "plain",
+        "summary": "Prints how many books sit on loan.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints how many books sit on loan."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def count_cmd() -> None"
+      },
+      "annotations": [
+        "@report.command(\"count\")"
+      ]
+    },
+    {
+      "id": "py:lending.cli.main#import_command",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "import_command",
+      "parent": "py:file:src/lending/cli/main.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/main.py",
+        "line": 33,
+        "endLine": 34
+      },
+      "doc": {
+        "raw": "Imports books from the old system.",
+        "format": "plain",
+        "summary": "Imports books from the old system.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Imports books from the old system."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def import_command() -> None"
+      },
+      "annotations": [
+        "@click.command()"
+      ]
+    },
+    {
+      "id": "py:lending.cli.main#report",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "report",
+      "parent": "py:file:src/lending/cli/main.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/cli/main.py",
+        "line": 22,
+        "endLine": 23
+      },
+      "doc": {
+        "raw": "Prints reports.",
+        "format": "plain",
+        "summary": "Prints reports.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints reports."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def report() -> None"
+      },
+      "annotations": [
+        "@cli.group()"
+      ]
+    },
+    {
+      "id": "py:lending.compat#fetch_book",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "fetch_book",
+      "parent": "py:file:src/lending/compat.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/compat.py",
+        "line": 13,
+        "endLine": 16
+      },
+      "doc": {
+        "raw": "Fetches a book's record over HTTP.",
+        "format": "plain",
+        "summary": "Fetches a book's record over HTTP.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Fetches a book's record over HTTP."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "url",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "Book",
+            "refs": [
+              "py:lending.domain#Book"
+            ]
+          }
+        ],
+        "text": "def fetch_book(url: str) -> Book"
+      }
+    },
+    {
+      "id": "py:lending.compat#tomllib",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "tomllib",
+      "parent": "py:file:src/lending/compat.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/compat.py",
+        "line": 6,
+        "endLine": 6
+      }
+    },
+    {
+      "id": "py:lending.domain#Book",
+      "kind": "class",
+      "languageKind": "dataclass",
+      "name": "Book",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 36,
+        "endLine": 54
+      },
+      "doc": {
+        "raw": "One copy of a book.\n\nParameters\n----------\nid : BookId\n    The catalogue number.\ntitle : str\n    The title, as printed.\n\nSee Also\n--------\nLoan : The record of a book on loan.",
+        "format": "docstring-numpy",
+        "summary": "One copy of a book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "One copy of a book."
+          }
+        ],
+        "params": {
+          "id": "The catalogue number.",
+          "title": "The title, as printed."
+        },
+        "seeAlso": [
+          "[Loan](sym:py:lending.domain#Loan) The record of a book on loan."
+        ]
+      },
+      "annotations": [
+        "@dataclass"
+      ]
+    },
+    {
+      "id": "py:lending.domain#Book.id",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "id",
+      "parent": "py:lending.domain#Book",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 51,
+        "endLine": 51
+      },
+      "type": {
+        "text": "BookId",
+        "refs": [
+          "py:lending.domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#Book.status",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "status",
+      "parent": "py:lending.domain#Book",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 53,
+        "endLine": 53
+      },
+      "type": {
+        "text": "Status",
+        "refs": [
+          "py:lending.domain#Status"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#Book.tags",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "tags",
+      "parent": "py:lending.domain#Book",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 54,
+        "endLine": 54
+      },
+      "type": {
+        "text": "list[str]"
+      }
+    },
+    {
+      "id": "py:lending.domain#Book.title",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "title",
+      "parent": "py:lending.domain#Book",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 52,
+        "endLine": 52
+      },
+      "type": {
+        "text": "str"
+      }
+    },
+    {
+      "id": "py:lending.domain#BookId",
+      "kind": "type",
+      "languageKind": "new type",
+      "name": "BookId",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 22,
+        "endLine": 22
+      },
+      "doc": {
+        "raw": "A book's catalogue number.",
+        "format": "plain",
+        "summary": "A book's catalogue number.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A book's catalogue number."
+          }
+        ]
+      },
+      "type": {
+        "text": "str"
+      }
+    },
+    {
+      "id": "py:lending.domain#Catalog",
+      "kind": "type_alias",
+      "languageKind": "type alias",
+      "name": "Catalog",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 88,
+        "endLine": 88
+      },
+      "doc": {
+        "raw": "All books by catalogue number.",
+        "format": "plain",
+        "summary": "All books by catalogue number.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "All books by catalogue number."
+          }
+        ]
+      },
+      "type": {
+        "text": "dict[BookId, Book]",
+        "refs": [
+          "py:lending.domain#Book",
+          "py:lending.domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#LOAN_DAYS",
+      "kind": "constant",
+      "languageKind": "constant",
+      "name": "LOAN_DAYS",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 19,
+        "endLine": 19
+      },
+      "doc": {
+        "raw": "How many days a loan lasts.",
+        "format": "plain",
+        "summary": "How many days a loan lasts.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "How many days a loan lasts."
+          }
+        ]
+      },
+      "value": "14"
+    },
+    {
+      "id": "py:lending.domain#LendingError",
+      "kind": "class",
+      "languageKind": "exception",
+      "name": "LendingError",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 80,
+        "endLine": 81
+      },
+      "doc": {
+        "raw": "Reports a broken lending rule.",
+        "format": "plain",
+        "summary": "Reports a broken lending rule.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reports a broken lending rule."
+          }
+        ]
+      },
+      "satisfies": [
+        "Exception"
+      ]
+    },
+    {
+      "id": "py:lending.domain#Loan",
+      "kind": "struct",
+      "languageKind": "named tuple",
+      "name": "Loan",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 57,
+        "endLine": 62
+      },
+      "doc": {
+        "raw": "Records that a member holds a book.",
+        "format": "plain",
+        "summary": "Records that a member holds a book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Records that a member holds a book."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#Loan.book",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "book",
+      "parent": "py:lending.domain#Loan",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 60,
+        "endLine": 60
+      },
+      "type": {
+        "text": "BookId",
+        "refs": [
+          "py:lending.domain#BookId"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#Loan.days",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "days",
+      "parent": "py:lending.domain#Loan",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 62,
+        "endLine": 62
+      },
+      "type": {
+        "text": "int"
+      }
+    },
+    {
+      "id": "py:lending.domain#Loan.member",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "member",
+      "parent": "py:lending.domain#Loan",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 61,
+        "endLine": 61
+      },
+      "type": {
+        "text": "str"
+      }
+    },
+    {
+      "id": "py:lending.domain#MAX_LOANS",
+      "kind": "constant",
+      "languageKind": "constant",
+      "name": "MAX_LOANS",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 17,
+        "endLine": 17
+      },
+      "doc": {
+        "raw": "How many books one member may hold at once.",
+        "format": "plain",
+        "summary": "How many books one member may hold at once.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "How many books one member may hold at once."
+          }
+        ]
+      },
+      "type": {
+        "text": "Final"
+      },
+      "value": "3"
+    },
+    {
+      "id": "py:lending.domain#MemberRecord",
+      "kind": "struct",
+      "languageKind": "typed dict",
+      "name": "MemberRecord",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 65,
+        "endLine": 69
+      },
+      "doc": {
+        "raw": "A member as the old system exported it.",
+        "format": "plain",
+        "summary": "A member as the old system exported it.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A member as the old system exported it."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#MemberRecord.loans",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "loans",
+      "parent": "py:lending.domain#MemberRecord",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 69,
+        "endLine": 69
+      },
+      "type": {
+        "text": "list[Loan]",
+        "refs": [
+          "py:lending.domain#Loan"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#MemberRecord.name",
+      "kind": "field",
+      "languageKind": "field",
+      "name": "name",
+      "parent": "py:lending.domain#MemberRecord",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 68,
+        "endLine": 68
+      },
+      "type": {
+        "text": "str"
+      }
+    },
+    {
+      "id": "py:lending.domain#NotAvailable",
+      "kind": "class",
+      "languageKind": "exception",
+      "name": "NotAvailable",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 84,
+        "endLine": 85
+      },
+      "doc": {
+        "raw": "Reports a book that sits on loan already.",
+        "format": "plain",
+        "summary": "Reports a book that sits on loan already.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Reports a book that sits on loan already."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#Shelf",
+      "kind": "type_alias",
+      "languageKind": "type alias",
+      "name": "Shelf",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 91,
+        "endLine": 91
+      },
+      "type": {
+        "text": "list[Book]",
+        "refs": [
+          "py:lending.domain#Book"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#Shelfmark",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Shelfmark",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": false,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 72,
+        "endLine": 77
+      },
+      "doc": {
+        "raw": "Marks where a book stands; __all__ leaves this class out.",
+        "format": "plain",
+        "summary": "Marks where a book stands; __all__ leaves this class out.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Marks where a book stands; __all__ leaves this class out."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.domain#Shelfmark.label",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "label",
+      "parent": "py:lending.domain#Shelfmark",
+      "language": "py",
+      "exported": false,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 75,
+        "endLine": 77
+      },
+      "doc": {
+        "raw": "Returns the mark as printed on the spine.",
+        "format": "plain",
+        "summary": "Returns the mark as printed on the spine.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns the mark as printed on the spine."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "str"
+          }
+        ],
+        "text": "def label(self) -> str"
+      }
+    },
+    {
+      "id": "py:lending.domain#Status",
+      "kind": "enum",
+      "languageKind": "enum",
+      "name": "Status",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 28,
+        "endLine": 32
+      },
+      "doc": {
+        "raw": "Says where a book is.",
+        "format": "plain",
+        "summary": "Says where a book is.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Says where a book is."
+          }
+        ]
+      },
+      "satisfies": [
+        "enum.Enum"
+      ]
+    },
+    {
+      "id": "py:lending.domain#Status.ON_LOAN",
+      "kind": "constant",
+      "languageKind": "enum member",
+      "name": "ON_LOAN",
+      "parent": "py:lending.domain#Status",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 32,
+        "endLine": 32
+      },
+      "value": "\"on loan\""
+    },
+    {
+      "id": "py:lending.domain#Status.ON_SHELF",
+      "kind": "constant",
+      "languageKind": "enum member",
+      "name": "ON_SHELF",
+      "parent": "py:lending.domain#Status",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 31,
+        "endLine": 31
+      },
+      "value": "\"on shelf\""
+    },
+    {
+      "id": "py:lending.domain#T",
+      "kind": "variable",
+      "languageKind": "type variable",
+      "name": "T",
+      "parent": "py:file:src/lending/domain.py",
+      "language": "py",
+      "exported": false,
+      "location": {
+        "path": "src/lending/domain.py",
+        "line": 25,
+        "endLine": 25
+      }
+    },
+    {
+      "id": "py:lending.library#BranchLibrary",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "BranchLibrary",
+      "parent": "py:file:src/lending/library.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 95,
+        "endLine": 111
+      },
+      "doc": {
+        "raw": "A library that also knows its branch.\n\n.. deprecated:: 0.2\n   Use a :class:`Library` per branch.",
+        "format": "plain",
+        "summary": "A library that also knows its branch.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "A library that also knows its branch."
+          }
+        ],
+        "deprecated": "0.2 Use a [Library](sym:py:lending.library#Library) per branch."
+      }
+    },
+    {
+      "id": "py:lending.library#BranchLibrary.__init__",
+      "kind": "constructor",
+      "languageKind": "constructor",
+      "name": "__init__",
+      "parent": "py:lending.library#BranchLibrary",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 102,
+        "endLine": 105
+      },
+      "doc": {
+        "raw": "Wraps a store for one branch.",
+        "format": "plain",
+        "summary": "Wraps a store for one branch.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Wraps a store for one branch."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "store",
+            "type": "MemoryStore",
+            "refs": [
+              "py:lending.store.memory#MemoryStore"
+            ]
+          },
+          {
+            "name": "branch",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def __init__(self, store: MemoryStore, branch: str) -> None"
+      }
+    },
+    {
+      "id": "py:lending.library#BranchLibrary.borrow",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "borrow",
+      "parent": "py:lending.library#BranchLibrary",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 107,
+        "endLine": 111
+      },
+      "doc": {
+        "raw": "Lends a book, then logs the branch.",
+        "format": "plain",
+        "summary": "Lends a book, then logs the branch.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends a book, then logs the branch."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          },
+          {
+            "name": "member",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "Loan",
+            "refs": [
+              "py:lending.domain#Loan"
+            ]
+          }
+        ],
+        "text": "def borrow(self, book_id: BookId, member: str) -> Loan"
+      }
+    },
+    {
+      "id": "py:lending.library#BranchLibrary.branch",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "branch",
+      "parent": "py:lending.library#BranchLibrary",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 105,
+        "endLine": 105
+      },
+      "type": {
+        "text": "str"
+      }
+    },
+    {
+      "id": "py:lending.library#Library",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Library",
+      "parent": "py:file:src/lending/library.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 44,
+        "endLine": 92
+      },
+      "doc": {
+        "raw": "Applies the lending rules to one store.\n\n.. note:: A library holds no state but its store and its loans.",
+        "format": "plain",
+        "summary": "Applies the lending rules to one store.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Applies the lending rules to one store."
+          },
+          {
+            "type": "quote",
+            "text": "Note: A library holds no state but its store and its loans."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.library#Library.__init__",
+      "kind": "constructor",
+      "languageKind": "constructor",
+      "name": "__init__",
+      "parent": "py:lending.library#Library",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 50,
+        "endLine": 53
+      },
+      "doc": {
+        "raw": "Wraps a store.",
+        "format": "plain",
+        "summary": "Wraps a store.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Wraps a store."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "store",
+            "type": "Store",
+            "refs": [
+              "py:lending.store.base#Store"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def __init__(self, store: Store) -> None"
+      }
+    },
+    {
+      "id": "py:lending.library#Library.borrow",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "borrow",
+      "parent": "py:lending.library#Library",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 56,
+        "endLine": 75
+      },
+      "doc": {
+        "raw": "Lends a book to a member.\n\n:param book_id: The book to lend.\n:param member: Who borrows it.\n:returns: The new loan.\n:raises NotAvailable: When the book sits on loan already.\n\n.. seealso:: :meth:`give_back`",
+        "format": "docstring-sphinx",
+        "summary": "Lends a book to a member.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends a book to a member."
+          }
+        ],
+        "params": {
+          "book_id": "The book to lend.",
+          "member": "Who borrows it."
+        },
+        "returns": "The new loan.",
+        "throws": [
+          {
+            "type": "NotAvailable",
+            "text": "When the book sits on loan already."
+          }
+        ],
+        "seeAlso": [
+          "[give_back](sym:py:lending.library#Library.give_back)"
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          },
+          {
+            "name": "member",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "Loan",
+            "refs": [
+              "py:lending.domain#Loan"
+            ]
+          }
+        ],
+        "text": "def borrow(self, book_id: BookId, member: str) -> Loan"
+      },
+      "annotations": [
+        "@audited"
+      ]
+    },
+    {
+      "id": "py:lending.library#Library.give_back",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "give_back",
+      "parent": "py:lending.library#Library",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 77,
+        "endLine": 83
+      },
+      "doc": {
+        "raw": "Ends a loan and puts the book back on the shelf.",
+        "format": "plain",
+        "summary": "Ends a loan and puts the book back on the shelf.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Ends a loan and puts the book back on the shelf."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "loan",
+            "type": "Loan",
+            "refs": [
+              "py:lending.domain#Loan"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def give_back(self, loan: Loan) -> None"
+      }
+    },
+    {
+      "id": "py:lending.library#Library.held_by",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "held_by",
+      "parent": "py:lending.library#Library",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 85,
+        "endLine": 87
+      },
+      "doc": {
+        "raw": "Lists the loans of one member.",
+        "format": "plain",
+        "summary": "Lists the loans of one member.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lists the loans of one member."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "member",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "list[Loan]",
+            "refs": [
+              "py:lending.domain#Loan"
+            ]
+          }
+        ],
+        "text": "def held_by(self, member: str) -> list[Loan]"
+      }
+    },
+    {
+      "id": "py:lending.library#Library.loans",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "loans",
+      "parent": "py:lending.library#Library",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 53,
+        "endLine": 53
+      },
+      "type": {
+        "text": "list[Loan]",
+        "refs": [
+          "py:lending.domain#Loan"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.library#Library.size",
+      "kind": "property",
+      "languageKind": "property",
+      "name": "size",
+      "parent": "py:lending.library#Library",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 90,
+        "endLine": 92
+      },
+      "doc": {
+        "raw": "Counts the loans.",
+        "format": "plain",
+        "summary": "Counts the loans.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Counts the loans."
+          }
+        ]
+      },
+      "type": {
+        "text": "int"
+      },
+      "annotations": [
+        "@property"
+      ]
+    },
+    {
+      "id": "py:lending.library#Library.store",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "store",
+      "parent": "py:lending.library#Library",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 52,
+        "endLine": 52
+      },
+      "type": {
+        "text": "Store",
+        "refs": [
+          "py:lending.store.base#Store"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.library#audited",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "audited",
+      "parent": "py:file:src/lending/library.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 32,
+        "endLine": 41
+      },
+      "doc": {
+        "raw": "Logs each call of a lending operation.",
+        "format": "plain",
+        "summary": "Logs each call of a lending operation.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Logs each call of a lending operation."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "fn",
+            "type": "Callable"
+          }
+        ],
+        "results": [
+          {
+            "type": "Callable"
+          }
+        ],
+        "text": "def audited(fn: Callable) -> Callable"
+      }
+    },
+    {
+      "id": "py:lending.library#log",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "log",
+      "parent": "py:file:src/lending/library.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 29,
+        "endLine": 29
+      }
+    },
+    {
+      "id": "py:lending.library#renew",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "renew",
+      "parent": "py:file:src/lending/library.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 114,
+        "endLine": 116
+      },
+      "doc": {
+        "raw": "Renews a loan; the store's type stays unknown here.",
+        "format": "plain",
+        "summary": "Renews a loan; the store's type stays unknown here.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Renews a loan; the store's type stays unknown here."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "store",
+            "type": ""
+          },
+          {
+            "name": "book_id",
+            "type": ""
+          }
+        ],
+        "results": [],
+        "text": "def renew(store, book_id)"
+      }
+    },
+    {
+      "id": "py:lending.library#shelve",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "shelve",
+      "parent": "py:file:src/lending/library.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/library.py",
+        "line": 119,
+        "endLine": 121
+      },
+      "doc": {
+        "raw": "Sorts books by title.",
+        "format": "plain",
+        "summary": "Sorts books by title.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sorts books by title."
+          }
+        ]
+      },
+      "typeParams": "[T: Book]",
+      "signature": {
+        "params": [
+          {
+            "name": "books",
+            "type": "list[T]"
+          }
+        ],
+        "results": [
+          {
+            "type": "list[T]"
+          }
+        ],
+        "text": "def shelve[T: Book](books: list[T]) -> list[T]"
+      }
+    },
+    {
+      "id": "py:lending.plugins.extra#late_fee",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "late_fee",
+      "parent": "py:file:src/lending/plugins/extra.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/plugins/extra.py",
+        "line": 6,
+        "endLine": 8
+      },
+      "doc": {
+        "raw": "Charges one coin per late day.",
+        "format": "plain",
+        "summary": "Charges one coin per late day.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Charges one coin per late day."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "lib",
+            "type": "Library",
+            "refs": [
+              "py:lending.library#Library"
+            ]
+          },
+          {
+            "name": "days",
+            "type": "int"
+          }
+        ],
+        "results": [
+          {
+            "type": "int"
+          }
+        ],
+        "text": "def late_fee(lib: Library, days: int) -> int"
+      }
+    },
+    {
+      "id": "py:lending.report#__main__",
+      "kind": "function",
+      "languageKind": "main guard",
+      "name": "__main__",
+      "parent": "py:file:src/lending/report.py",
+      "language": "py",
+      "exported": false,
+      "location": {
+        "path": "src/lending/report.py",
+        "line": 13,
+        "endLine": 14
+      }
+    },
+    {
+      "id": "py:lending.report#main",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "main",
+      "parent": "py:file:src/lending/report.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/report.py",
+        "line": 7,
+        "endLine": 10
+      },
+      "doc": {
+        "raw": "Prints how many books sit on loan.",
+        "format": "plain",
+        "summary": "Prints how many books sit on loan.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Prints how many books sit on loan."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def main() -> None"
+      }
+    },
+    {
+      "id": "py:lending.store.base#Readable",
+      "kind": "interface",
+      "languageKind": "protocol",
+      "name": "Readable",
+      "parent": "py:file:src/lending/store/base.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/base.py",
+        "line": 9,
+        "endLine": 14
+      },
+      "doc": {
+        "raw": "Finds books; the library needs no more for a report.",
+        "format": "plain",
+        "summary": "Finds books; the library needs no more for a report.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Finds books; the library needs no more for a report."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.store.base#Readable.find",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "find",
+      "parent": "py:lending.store.base#Readable",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/base.py",
+        "line": 12,
+        "endLine": 14
+      },
+      "doc": {
+        "raw": "Returns the book with this number, or None.",
+        "format": "plain",
+        "summary": "Returns the book with this number, or None.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns the book with this number, or None."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Optional[Book]",
+            "refs": [
+              "py:lending.domain#Book"
+            ]
+          }
+        ],
+        "text": "def find(self, book_id: BookId) -> Optional[Book]"
+      }
+    },
+    {
+      "id": "py:lending.store.base#Store",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Store",
+      "parent": "py:file:src/lending/store/base.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/base.py",
+        "line": 17,
+        "endLine": 36
+      },
+      "doc": {
+        "raw": "Saves and finds books.\n\n:ivar name: A name for messages.",
+        "format": "docstring-sphinx",
+        "summary": "Saves and finds books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Saves and finds books."
+          }
+        ],
+        "tags": [
+          {
+            "name": "ivar",
+            "text": "name: A name for messages."
+          }
+        ]
+      },
+      "modifiers": [
+        "abstract"
+      ],
+      "satisfies": [
+        "abc.ABC"
+      ]
+    },
+    {
+      "id": "py:lending.store.base#Store.find",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "find",
+      "parent": "py:lending.store.base#Store",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/base.py",
+        "line": 26,
+        "endLine": 32
+      },
+      "doc": {
+        "raw": "Finds one book.\n\n:param book_id: The catalogue number.\n:returns: The book, or None when the store holds no such book.\n:raises KeyError: When the number has the wrong form.",
+        "format": "docstring-sphinx",
+        "summary": "Finds one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Finds one book."
+          }
+        ],
+        "params": {
+          "book_id": "The catalogue number."
+        },
+        "returns": "The book, or None when the store holds no such book.",
+        "throws": [
+          {
+            "type": "KeyError",
+            "text": "When the number has the wrong form."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Optional[Book]",
+            "refs": [
+              "py:lending.domain#Book"
+            ]
+          }
+        ],
+        "text": "def find(self, book_id: BookId) -> Optional[Book]"
+      },
+      "modifiers": [
+        "abstract"
+      ],
+      "annotations": [
+        "@abstractmethod"
+      ]
+    },
+    {
+      "id": "py:lending.store.base#Store.name",
+      "kind": "field",
+      "languageKind": "class attribute",
+      "name": "name",
+      "parent": "py:lending.store.base#Store",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/base.py",
+        "line": 23,
+        "endLine": 23
+      },
+      "type": {
+        "text": "str"
+      }
+    },
+    {
+      "id": "py:lending.store.base#Store.save",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "save",
+      "parent": "py:lending.store.base#Store",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/base.py",
+        "line": 35,
+        "endLine": 36
+      },
+      "doc": {
+        "raw": "Saves one book, replacing an older copy.",
+        "format": "plain",
+        "summary": "Saves one book, replacing an older copy.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Saves one book, replacing an older copy."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book",
+            "type": "Book",
+            "refs": [
+              "py:lending.domain#Book"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def save(self, book: Book) -> None"
+      },
+      "modifiers": [
+        "abstract"
+      ],
+      "annotations": [
+        "@abstractmethod"
+      ]
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "MemoryStore",
+      "parent": "py:file:src/lending/store/memory.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 9,
+        "endLine": 77
+      },
+      "doc": {
+        "raw": "Keeps books in memory, for tests and small runs.\n\nAttributes:\n    books: The books by number.",
+        "format": "docstring-google",
+        "summary": "Keeps books in memory, for tests and small runs.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Keeps books in memory, for tests and small runs."
+          },
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "Attributes"
+          },
+          {
+            "type": "paragraph",
+            "text": "books: The books by number."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.__init__",
+      "kind": "constructor",
+      "languageKind": "constructor",
+      "name": "__init__",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 16,
+        "endLine": 23
+      },
+      "doc": {
+        "raw": "Starts with the given books, or with none.\n\nArgs:\n    books (Catalog): The books to start with.",
+        "format": "docstring-google",
+        "summary": "Starts with the given books, or with none.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Starts with the given books, or with none."
+          }
+        ],
+        "params": {
+          "books": "The books to start with."
+        }
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "books",
+            "type": "Catalog | None",
+            "refs": [
+              "py:lending.domain#Catalog"
+            ],
+            "optional": true,
+            "default": "None"
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def __init__(self, books: Catalog | None = None) -> None"
+      }
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.books",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "books",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 22,
+        "endLine": 22
+      },
+      "type": {
+        "text": "Catalog",
+        "refs": [
+          "py:lending.domain#Catalog"
+        ]
+      }
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.count",
+      "kind": "property",
+      "languageKind": "property",
+      "name": "count",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 46,
+        "endLine": 48
+      },
+      "doc": {
+        "raw": "Counts the books.",
+        "format": "plain",
+        "summary": "Counts the books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Counts the books."
+          }
+        ]
+      },
+      "type": {
+        "text": "int"
+      },
+      "annotations": [
+        "@property"
+      ]
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.empty",
+      "kind": "method",
+      "languageKind": "class method",
+      "name": "empty",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 56,
+        "endLine": 58
+      },
+      "doc": {
+        "raw": "Makes a store with no books.",
+        "format": "plain",
+        "summary": "Makes a store with no books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Makes a store with no books."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Self"
+          }
+        ],
+        "text": "def empty(cls) -> Self"
+      },
+      "modifiers": [
+        "classmethod"
+      ],
+      "annotations": [
+        "@classmethod"
+      ]
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.find",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "find",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 25,
+        "endLine": 35
+      },
+      "doc": {
+        "raw": "Finds one book by its number.\n\nArgs:\n    book_id: The catalogue number.\n\nReturns:\n    Book: The book, or None.",
+        "format": "docstring-google",
+        "summary": "Finds one book by its number.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Finds one book by its number."
+          }
+        ],
+        "params": {
+          "book_id": "The catalogue number."
+        },
+        "returns": "The book, or None."
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Optional[Book]",
+            "refs": [
+              "py:lending.domain#Book"
+            ]
+          }
+        ],
+        "text": "def find(self, book_id: BookId) -> Optional[Book]"
+      }
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.get",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "get",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 73,
+        "endLine": 77
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "key",
+            "type": ""
+          }
+        ],
+        "results": [],
+        "text": "def get(self, key)"
+      },
+      "modifiers": [
+        "overload"
+      ]
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.key",
+      "kind": "method",
+      "languageKind": "static method",
+      "name": "key",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 51,
+        "endLine": 53
+      },
+      "doc": {
+        "raw": "Normalises a catalogue number.",
+        "format": "plain",
+        "summary": "Normalises a catalogue number.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Normalises a catalogue number."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          }
+        ],
+        "text": "def key(book_id: BookId) -> BookId"
+      },
+      "modifiers": [
+        "staticmethod"
+      ],
+      "annotations": [
+        "@staticmethod"
+      ]
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.load",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "load",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 65,
+        "endLine": 67
+      },
+      "doc": {
+        "raw": "Loads books from a file and counts them.",
+        "format": "plain",
+        "summary": "Loads books from a file and counts them.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Loads books from a file and counts them."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "path",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "int"
+          }
+        ],
+        "text": "async def load(self, path: str) -> int"
+      },
+      "modifiers": [
+        "async"
+      ]
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.reads",
+      "kind": "field",
+      "languageKind": "instance attribute",
+      "name": "reads",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 23,
+        "endLine": 23
+      }
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.renewal",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "renewal",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 41,
+        "endLine": 43
+      },
+      "doc": {
+        "raw": "Returns how many more days a renewal grants.",
+        "format": "plain",
+        "summary": "Returns how many more days a renewal grants.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Returns how many more days a renewal grants."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "BookId",
+            "refs": [
+              "py:lending.domain#BookId"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "int"
+          }
+        ],
+        "text": "def renewal(self, book_id: BookId) -> int"
+      }
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.save",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "save",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 37,
+        "endLine": 39
+      },
+      "doc": {
+        "raw": "Saves one book.",
+        "format": "plain",
+        "summary": "Saves one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Saves one book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book",
+            "type": "Book",
+            "refs": [
+              "py:lending.domain#Book"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def save(self, book: Book) -> None"
+      }
+    },
+    {
+      "id": "py:lending.store.memory#MemoryStore.titles",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "titles",
+      "parent": "py:lending.store.memory#MemoryStore",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/store/memory.py",
+        "line": 60,
+        "endLine": 63
+      },
+      "doc": {
+        "raw": "Yields each title, in no set order.",
+        "format": "plain",
+        "summary": "Yields each title, in no set order.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Yields each title, in no set order."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "Iterator[str]"
+          }
+        ],
+        "text": "def titles(self) -> Iterator[str]"
+      },
+      "modifiers": [
+        "generator"
+      ]
+    },
+    {
+      "id": "py:lending.web.api_urls#urlpatterns",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "urlpatterns",
+      "parent": "py:file:src/lending/web/api_urls.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/api_urls.py",
+        "line": 7,
+        "endLine": 7
+      }
+    },
+    {
+      "id": "py:lending.web.fastapi_app#app",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "app",
+      "parent": "py:file:src/lending/web/fastapi_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 9,
+        "endLine": 9
+      }
+    },
+    {
+      "id": "py:lending.web.fastapi_app#borrow",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "borrow",
+      "parent": "py:file:src/lending/web/fastapi_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 21,
+        "endLine": 23
+      },
+      "doc": {
+        "raw": "Lends a book.",
+        "format": "plain",
+        "summary": "Lends a book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lends a book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "str"
+          },
+          {
+            "name": "member",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "Loan",
+            "refs": [
+              "py:lending.domain#Loan"
+            ]
+          }
+        ],
+        "text": "async def borrow(book_id: str, member: str) -> Loan"
+      },
+      "modifiers": [
+        "async"
+      ],
+      "annotations": [
+        "@loans.post(\"\")"
+      ]
+    },
+    {
+      "id": "py:lending.web.fastapi_app#library",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "library",
+      "parent": "py:file:src/lending/web/fastapi_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 11,
+        "endLine": 11
+      }
+    },
+    {
+      "id": "py:lending.web.fastapi_app#list_loans",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "list_loans",
+      "parent": "py:file:src/lending/web/fastapi_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 15,
+        "endLine": 17
+      },
+      "doc": {
+        "raw": "Lists one member's loans.",
+        "format": "plain",
+        "summary": "Lists one member's loans.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lists one member's loans."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "member",
+            "type": "str"
+          }
+        ],
+        "results": [
+          {
+            "type": "list[Loan]",
+            "refs": [
+              "py:lending.domain#Loan"
+            ]
+          }
+        ],
+        "text": "async def list_loans(member: str) -> list[Loan]"
+      },
+      "modifiers": [
+        "async"
+      ],
+      "annotations": [
+        "@loans.get(\"/{member}\")"
+      ]
+    },
+    {
+      "id": "py:lending.web.fastapi_app#loans",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "loans",
+      "parent": "py:file:src/lending/web/fastapi_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 10,
+        "endLine": 10
+      }
+    },
+    {
+      "id": "py:lending.web.fastapi_app#ping",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "ping",
+      "parent": "py:file:src/lending/web/fastapi_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 27,
+        "endLine": 29
+      },
+      "doc": {
+        "raw": "Answers a health check.",
+        "format": "plain",
+        "summary": "Answers a health check.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Answers a health check."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "str"
+          }
+        ],
+        "text": "def ping() -> str"
+      },
+      "annotations": [
+        "@app.api_route(\"/ping\", methods=[\"GET\", \"HEAD\"])"
+      ]
+    },
+    {
+      "id": "py:lending.web.flask_app#about",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "about",
+      "parent": "py:file:src/lending/web/flask_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 22,
+        "endLine": 24
+      },
+      "doc": {
+        "raw": "Says what the service does.",
+        "format": "plain",
+        "summary": "Says what the service does.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Says what the service does."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "def about()"
+      }
+    },
+    {
+      "id": "py:lending.web.flask_app#add",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "add",
+      "parent": "py:file:src/lending/web/flask_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 17,
+        "endLine": 19
+      },
+      "doc": {
+        "raw": "Adds a book.",
+        "format": "plain",
+        "summary": "Adds a book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Adds a book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [],
+        "text": "def add()"
+      },
+      "annotations": [
+        "@books.route(\"/\", methods=[\"POST\"])"
+      ]
+    },
+    {
+      "id": "py:lending.web.flask_app#books",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "books",
+      "parent": "py:file:src/lending/web/flask_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 7,
+        "endLine": 7
+      }
+    },
+    {
+      "id": "py:lending.web.flask_app#create_app",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "create_app",
+      "parent": "py:file:src/lending/web/flask_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 27,
+        "endLine": 38
+      },
+      "doc": {
+        "raw": "Builds the app and mounts the book routes under /api.",
+        "format": "plain",
+        "summary": "Builds the app and mounts the book routes under /api.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Builds the app and mounts the book routes under /api."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "lib",
+            "type": "Library",
+            "refs": [
+              "py:lending.library#Library"
+            ]
+          }
+        ],
+        "results": [
+          {
+            "type": "Flask"
+          }
+        ],
+        "text": "def create_app(lib: Library) -> Flask"
+      }
+    },
+    {
+      "id": "py:lending.web.flask_app#show",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "show",
+      "parent": "py:file:src/lending/web/flask_app.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 11,
+        "endLine": 13
+      },
+      "doc": {
+        "raw": "Shows one book.",
+        "format": "plain",
+        "summary": "Shows one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Shows one book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "book_id",
+            "type": "str"
+          }
+        ],
+        "results": [],
+        "text": "def show(book_id: str)"
+      },
+      "annotations": [
+        "@books.route(\"/<book_id>\")"
+      ]
+    },
+    {
+      "id": "py:lending.web.settings#ROOT_URLCONF",
+      "kind": "constant",
+      "languageKind": "constant",
+      "name": "ROOT_URLCONF",
+      "parent": "py:file:src/lending/web/settings.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/settings.py",
+        "line": 3,
+        "endLine": 3
+      },
+      "value": "\"lending.web.urls\""
+    },
+    {
+      "id": "py:lending.web.urls#urlpatterns",
+      "kind": "variable",
+      "languageKind": "variable",
+      "name": "urlpatterns",
+      "parent": "py:file:src/lending/web/urls.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/urls.py",
+        "line": 7,
+        "endLine": 11
+      }
+    },
+    {
+      "id": "py:lending.web.views#BookView",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "BookView",
+      "parent": "py:file:src/lending/web/views.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/views.py",
+        "line": 17,
+        "endLine": 26
+      },
+      "doc": {
+        "raw": "Shows or changes one book.",
+        "format": "plain",
+        "summary": "Shows or changes one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Shows or changes one book."
+          }
+        ]
+      },
+      "satisfies": [
+        "django.views.View"
+      ]
+    },
+    {
+      "id": "py:lending.web.views#BookView.get",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "get",
+      "parent": "py:lending.web.views#BookView",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/views.py",
+        "line": 20,
+        "endLine": 22
+      },
+      "doc": {
+        "raw": "Shows one book.",
+        "format": "plain",
+        "summary": "Shows one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Shows one book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "request",
+            "type": ""
+          },
+          {
+            "name": "pk",
+            "type": "int"
+          }
+        ],
+        "results": [],
+        "text": "def get(self, request, pk: int)"
+      }
+    },
+    {
+      "id": "py:lending.web.views#BookView.post",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "post",
+      "parent": "py:lending.web.views#BookView",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/views.py",
+        "line": 24,
+        "endLine": 26
+      },
+      "doc": {
+        "raw": "Changes one book.",
+        "format": "plain",
+        "summary": "Changes one book.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Changes one book."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "request",
+            "type": ""
+          },
+          {
+            "name": "pk",
+            "type": "int"
+          }
+        ],
+        "results": [],
+        "text": "def post(self, request, pk: int)"
+      }
+    },
+    {
+      "id": "py:lending.web.views#book_list",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "book_list",
+      "parent": "py:file:src/lending/web/views.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/views.py",
+        "line": 7,
+        "endLine": 9
+      },
+      "doc": {
+        "raw": "Lists the books.",
+        "format": "plain",
+        "summary": "Lists the books.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lists the books."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "request",
+            "type": ""
+          }
+        ],
+        "results": [],
+        "text": "def book_list(request)"
+      }
+    },
+    {
+      "id": "py:lending.web.views#loan_list",
+      "kind": "function",
+      "languageKind": "function",
+      "name": "loan_list",
+      "parent": "py:file:src/lending/web/views.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/web/views.py",
+        "line": 12,
+        "endLine": 14
+      },
+      "doc": {
+        "raw": "Lists the loans.",
+        "format": "plain",
+        "summary": "Lists the loans.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Lists the loans."
+          }
+        ]
+      },
+      "signature": {
+        "params": [
+          {
+            "name": "request",
+            "type": ""
+          }
+        ],
+        "results": [],
+        "text": "def loan_list(request)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "py:lending#open_library",
+      "to": "py:lending.library#Library.__init__",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 19
+    },
+    {
+      "from": "py:lending#open_library",
+      "to": "py:lending.store.memory#MemoryStore.empty",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 19
+    },
+    {
+      "from": "py:lending#open_library",
+      "to": "py:lending.library#Library",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 17
+    },
+    {
+      "from": "py:lending.carriers#AirFleet",
+      "to": "py:lending.carriers#Fleet",
+      "kind": "extends",
+      "confidence": "exact",
+      "line": 171
+    },
+    {
+      "from": "py:lending.carriers#Station.go",
+      "to": "py:lending.carriers#Courier.run",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 244
+    },
+    {
+      "from": "py:lending.carriers#send_fixed",
+      "to": "py:lending.carriers#Courier.run",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 71
+    },
+    {
+      "from": "py:lending.carriers#send_local",
+      "to": "py:lending.carriers#Courier.run",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 209
+    },
+    {
+      "from": "py:lending.cli.main#borrow",
+      "to": "py:lending#open_library",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 18
+    },
+    {
+      "from": "py:lending.cli.main#borrow",
+      "to": "py:lending.library#Library.borrow",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 18
+    },
+    {
+      "from": "py:lending.cli.main#count_cmd",
+      "to": "py:lending#open_library",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 29
+    },
+    {
+      "from": "py:lending.compat#fetch_book",
+      "to": "py:lending.domain#Book",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 13
+    },
+    {
+      "from": "py:lending.domain#Book.id",
+      "to": "py:lending.domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact",
+      "line": 51
+    },
+    {
+      "from": "py:lending.domain#Book.status",
+      "to": "py:lending.domain#Status",
+      "kind": "field_type",
+      "confidence": "exact",
+      "line": 53
+    },
+    {
+      "from": "py:lending.domain#Loan.book",
+      "to": "py:lending.domain#BookId",
+      "kind": "field_type",
+      "confidence": "exact",
+      "line": 60
+    },
+    {
+      "from": "py:lending.domain#MemberRecord.loans",
+      "to": "py:lending.domain#Loan",
+      "kind": "field_type",
+      "confidence": "exact",
+      "line": 69
+    },
+    {
+      "from": "py:lending.domain#NotAvailable",
+      "to": "py:lending.domain#LendingError",
+      "kind": "extends",
+      "confidence": "exact",
+      "line": 84
+    },
+    {
+      "from": "py:lending.library#BranchLibrary",
+      "to": "py:lending.library#Library",
+      "kind": "extends",
+      "confidence": "exact",
+      "line": 95
+    },
+    {
+      "from": "py:lending.library#BranchLibrary.__init__",
+      "to": "py:lending.library#Library.__init__",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 104
+    },
+    {
+      "from": "py:lending.library#BranchLibrary.__init__",
+      "to": "py:lending.store.memory#MemoryStore",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 102
+    },
+    {
+      "from": "py:lending.library#BranchLibrary.borrow",
+      "to": "py:lending.library#Library.borrow",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 109
+    },
+    {
+      "from": "py:lending.library#BranchLibrary.borrow",
+      "to": "py:lending.library#Library.borrow",
+      "kind": "overrides",
+      "confidence": "exact",
+      "line": 107
+    },
+    {
+      "from": "py:lending.library#BranchLibrary.borrow",
+      "to": "py:lending.domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 107
+    },
+    {
+      "from": "py:lending.library#BranchLibrary.borrow",
+      "to": "py:lending.domain#Loan",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 107
+    },
+    {
+      "from": "py:lending.library#Library.__init__",
+      "to": "py:lending.store.base#Store",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 50
+    },
+    {
+      "from": "py:lending.library#Library.borrow",
+      "to": "py:lending.library#audited",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 55
+    },
+    {
+      "from": "py:lending.library#Library.borrow",
+      "to": "py:lending.store.base#Store.find",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 66
+    },
+    {
+      "from": "py:lending.library#Library.borrow",
+      "to": "py:lending.library#Library.held_by",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 69
+    },
+    {
+      "from": "py:lending.library#Library.borrow",
+      "to": "py:lending.store.base#Store.save",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 72
+    },
+    {
+      "from": "py:lending.library#Library.borrow",
+      "to": "py:lending.domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 56
+    },
+    {
+      "from": "py:lending.library#Library.borrow",
+      "to": "py:lending.domain#Loan",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 56
+    },
+    {
+      "from": "py:lending.library#Library.give_back",
+      "to": "py:lending.store.base#Store.find",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 79
+    },
+    {
+      "from": "py:lending.library#Library.give_back",
+      "to": "py:lending.store.base#Store.save",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 82
+    },
+    {
+      "from": "py:lending.library#Library.give_back",
+      "to": "py:lending.domain#Loan",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 77
+    },
+    {
+      "from": "py:lending.library#Library.held_by",
+      "to": "py:lending.domain#Loan",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 85
+    },
+    {
+      "from": "py:lending.library#Library.loans",
+      "to": "py:lending.domain#Loan",
+      "kind": "field_type",
+      "confidence": "exact",
+      "line": 53
+    },
+    {
+      "from": "py:lending.library#Library.store",
+      "to": "py:lending.store.base#Store",
+      "kind": "field_type",
+      "confidence": "exact",
+      "line": 52
+    },
+    {
+      "from": "py:lending.library#renew",
+      "to": "py:lending.store.memory#MemoryStore.renewal",
+      "kind": "calls",
+      "confidence": "heuristic",
+      "line": 116
+    },
+    {
+      "from": "py:lending.plugins.extra#late_fee",
+      "to": "py:lending.library#Library",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 6
+    },
+    {
+      "from": "py:lending.report#__main__",
+      "to": "py:lending.report#main",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 14
+    },
+    {
+      "from": "py:lending.report#main",
+      "to": "py:lending#open_library",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 9
+    },
+    {
+      "from": "py:lending.store.base#Readable.find",
+      "to": "py:lending.domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 12
+    },
+    {
+      "from": "py:lending.store.base#Readable.find",
+      "to": "py:lending.domain#Book",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 12
+    },
+    {
+      "from": "py:lending.store.base#Store.find",
+      "to": "py:lending.domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 26
+    },
+    {
+      "from": "py:lending.store.base#Store.find",
+      "to": "py:lending.domain#Book",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 26
+    },
+    {
+      "from": "py:lending.store.base#Store.save",
+      "to": "py:lending.domain#Book",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 35
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore",
+      "to": "py:lending.store.base#Store",
+      "kind": "extends",
+      "confidence": "exact",
+      "line": 9
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore",
+      "to": "py:lending.store.base#Readable",
+      "kind": "implements",
+      "confidence": "exact",
+      "line": 9
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.__init__",
+      "to": "py:lending.domain#Catalog",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 16
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.books",
+      "to": "py:lending.domain#Catalog",
+      "kind": "field_type",
+      "confidence": "exact",
+      "line": 22
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.empty",
+      "to": "py:lending.store.memory#MemoryStore.__init__",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 58
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.find",
+      "to": "py:lending.store.memory#MemoryStore.key",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 35
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.find",
+      "to": "py:lending.store.base#Store.find",
+      "kind": "overrides",
+      "confidence": "exact",
+      "line": 25
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.find",
+      "to": "py:lending.domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 25
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.find",
+      "to": "py:lending.domain#Book",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 25
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.get",
+      "to": "py:lending.store.memory#MemoryStore.find",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 77
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.key",
+      "to": "py:lending.domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 51
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.key",
+      "to": "py:lending.domain#BookId",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 51
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.renewal",
+      "to": "py:lending.domain#BookId",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 41
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.save",
+      "to": "py:lending.store.base#Store.save",
+      "kind": "overrides",
+      "confidence": "exact",
+      "line": 37
+    },
+    {
+      "from": "py:lending.store.memory#MemoryStore.save",
+      "to": "py:lending.domain#Book",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 37
+    },
+    {
+      "from": "py:lending.web.fastapi_app#borrow",
+      "to": "py:lending.library#Library.borrow",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 23
+    },
+    {
+      "from": "py:lending.web.fastapi_app#borrow",
+      "to": "py:lending.domain#Loan",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 21
+    },
+    {
+      "from": "py:lending.web.fastapi_app#list_loans",
+      "to": "py:lending.library#Library.held_by",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 17
+    },
+    {
+      "from": "py:lending.web.fastapi_app#list_loans",
+      "to": "py:lending.domain#Loan",
+      "kind": "return_type",
+      "confidence": "exact",
+      "line": 15
+    },
+    {
+      "from": "py:lending.web.flask_app#create_app",
+      "to": "py:lending.library#Library",
+      "kind": "param_type",
+      "confidence": "exact",
+      "line": 27
+    },
+    {
+      "from": "py:pkg:lending",
+      "to": "py:pkg:lending.cli",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "py:pkg:lending",
+      "to": "py:pkg:lending.store",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 3
+    },
+    {
+      "from": "py:pkg:lending.cli",
+      "to": "py:pkg:lending",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "py:pkg:lending.plugins",
+      "to": "py:pkg:lending",
+      "kind": "imports",
+      "confidence": "exact"
+    },
+    {
+      "from": "py:pkg:lending.store",
+      "to": "py:pkg:lending",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 5
+    },
+    {
+      "from": "py:pkg:lending.web",
+      "to": "py:pkg:lending",
+      "kind": "imports",
+      "confidence": "exact",
+      "count": 3
+    },
+    {
+      "from": "py:pkg:lending.web",
+      "to": "py:pkg:lending.store",
+      "kind": "imports",
+      "confidence": "exact"
+    }
+  ],
+  "entryPoints": [
+    {
+      "id": "cli:lend-report",
+      "kind": "cli",
+      "name": "lend-report",
+      "handler": "py:lending.report#main",
+      "registeredAt": {
+        "path": "pyproject.toml",
+        "line": 11
+      },
+      "plugin": "python-main"
+    },
+    {
+      "id": "cli:lendctl sync-all",
+      "kind": "cli",
+      "name": "lendctl sync-all",
+      "handler": "py:lending.cli.admin#sync_all",
+      "registeredAt": {
+        "path": "src/lending/cli/admin.py",
+        "line": 9
+      },
+      "plugin": "typer"
+    },
+    {
+      "id": "cli:lendctl users add",
+      "kind": "cli",
+      "name": "lendctl users add",
+      "handler": "py:lending.cli.admin#add_user",
+      "registeredAt": {
+        "path": "src/lending/cli/admin.py",
+        "line": 14
+      },
+      "plugin": "typer"
+    },
+    {
+      "id": "cli:lendd borrow",
+      "kind": "cli",
+      "name": "lendd borrow",
+      "handler": "py:lending.cli.main#borrow",
+      "registeredAt": {
+        "path": "src/lending/cli/main.py",
+        "line": 13
+      },
+      "plugin": "click"
+    },
+    {
+      "id": "cli:lendd import",
+      "kind": "cli",
+      "name": "lendd import",
+      "handler": "py:lending.cli.main#import_command",
+      "registeredAt": {
+        "path": "src/lending/cli/main.py",
+        "line": 32
+      },
+      "plugin": "click"
+    },
+    {
+      "id": "cli:lendd report count",
+      "kind": "cli",
+      "name": "lendd report count",
+      "handler": "py:lending.cli.main#count_cmd",
+      "registeredAt": {
+        "path": "src/lending/cli/main.py",
+        "line": 26
+      },
+      "plugin": "click"
+    },
+    {
+      "id": "cli:python -m lending",
+      "kind": "cli",
+      "name": "python -m lending",
+      "handler": "py:lending.cli.main#cli",
+      "registeredAt": {
+        "path": "src/lending/__main__.py",
+        "line": 5
+      },
+      "plugin": "python-main"
+    },
+    {
+      "id": "cli:python -m lending.report",
+      "kind": "cli",
+      "name": "python -m lending.report",
+      "handler": "py:lending.report#main",
+      "registeredAt": {
+        "path": "src/lending/report.py",
+        "line": 13
+      },
+      "plugin": "python-main"
+    },
+    {
+      "id": "http:ANY /api/loans/",
+      "kind": "http",
+      "name": "ANY /api/loans/",
+      "method": "ANY",
+      "path": "/api/loans/",
+      "handler": "py:lending.web.views#loan_list",
+      "registeredAt": {
+        "path": "src/lending/web/api_urls.py",
+        "line": 7
+      },
+      "plugin": "django"
+    },
+    {
+      "id": "http:ANY /books/",
+      "kind": "http",
+      "name": "ANY /books/",
+      "method": "ANY",
+      "path": "/books/",
+      "handler": "py:lending.web.views#book_list",
+      "registeredAt": {
+        "path": "src/lending/web/urls.py",
+        "line": 8
+      },
+      "plugin": "django"
+    },
+    {
+      "id": "http:GET /about",
+      "kind": "http",
+      "name": "GET /about",
+      "method": "GET",
+      "path": "/about",
+      "handler": "py:lending.web.flask_app#about",
+      "registeredAt": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 31
+      },
+      "plugin": "flask"
+    },
+    {
+      "id": "http:GET /api/books/<book_id>",
+      "kind": "http",
+      "name": "GET /api/books/<book_id>",
+      "method": "GET",
+      "path": "/api/books/<book_id>",
+      "handler": "py:lending.web.flask_app#show",
+      "registeredAt": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 10
+      },
+      "plugin": "flask"
+    },
+    {
+      "id": "http:GET /books/<int:pk>/",
+      "kind": "http",
+      "name": "GET /books/<int:pk>/",
+      "method": "GET",
+      "path": "/books/<int:pk>/",
+      "handler": "py:lending.web.views#BookView.get",
+      "registeredAt": {
+        "path": "src/lending/web/urls.py",
+        "line": 9
+      },
+      "plugin": "django"
+    },
+    {
+      "id": "http:GET /health",
+      "kind": "http",
+      "name": "GET /health",
+      "method": "GET",
+      "path": "/health",
+      "handler": "py:lending.web.flask_app#create_app",
+      "inline": true,
+      "registeredAt": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 33
+      },
+      "plugin": "flask"
+    },
+    {
+      "id": "http:GET /ping",
+      "kind": "http",
+      "name": "GET /ping",
+      "method": "GET",
+      "path": "/ping",
+      "handler": "py:lending.web.fastapi_app#ping",
+      "registeredAt": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 26
+      },
+      "plugin": "fastapi"
+    },
+    {
+      "id": "http:GET /v1/loans/{member}",
+      "kind": "http",
+      "name": "GET /v1/loans/{member}",
+      "method": "GET",
+      "path": "/v1/loans/{member}",
+      "handler": "py:lending.web.fastapi_app#list_loans",
+      "registeredAt": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 14
+      },
+      "plugin": "fastapi"
+    },
+    {
+      "id": "http:HEAD /ping",
+      "kind": "http",
+      "name": "HEAD /ping",
+      "method": "HEAD",
+      "path": "/ping",
+      "handler": "py:lending.web.fastapi_app#ping",
+      "registeredAt": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 26
+      },
+      "plugin": "fastapi"
+    },
+    {
+      "id": "http:POST /api/books/",
+      "kind": "http",
+      "name": "POST /api/books/",
+      "method": "POST",
+      "path": "/api/books/",
+      "handler": "py:lending.web.flask_app#add",
+      "registeredAt": {
+        "path": "src/lending/web/flask_app.py",
+        "line": 16
+      },
+      "plugin": "flask"
+    },
+    {
+      "id": "http:POST /books/<int:pk>/",
+      "kind": "http",
+      "name": "POST /books/<int:pk>/",
+      "method": "POST",
+      "path": "/books/<int:pk>/",
+      "handler": "py:lending.web.views#BookView.post",
+      "registeredAt": {
+        "path": "src/lending/web/urls.py",
+        "line": 9
+      },
+      "plugin": "django"
+    },
+    {
+      "id": "http:POST /v1/loans",
+      "kind": "http",
+      "name": "POST /v1/loans",
+      "method": "POST",
+      "path": "/v1/loans",
+      "handler": "py:lending.web.fastapi_app#borrow",
+      "registeredAt": {
+        "path": "src/lending/web/fastapi_app.py",
+        "line": 20
+      },
+      "plugin": "fastapi"
+    }
+  ],
+  "tests": {
+    "py:lending.domain#Book": [
+      {
+        "name": "tests/test_library.py::test_borrow_lends_a_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 12
+        }
+      }
+    ],
+    "py:lending.domain#BookId": [
+      {
+        "name": "tests/test_library.py::test_borrow_lends_a_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 12
+        }
+      },
+      {
+        "name": "tests/test_library.py::TestStore::test_finds_nothing_in_an_empty_store",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 20
+        }
+      },
+      {
+        "name": "tests/test_library.py::GiveBackCase::test_refuses_a_missing_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 28
+        }
+      }
+    ],
+    "py:lending.domain#NotAvailable": [
+      {
+        "name": "tests/test_library.py::GiveBackCase::test_refuses_a_missing_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 28
+        }
+      }
+    ],
+    "py:lending.library#Library": [
+      {
+        "name": "tests/test_library.py::test_borrow_lends_a_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 12
+        }
+      }
+    ],
+    "py:lending.library#Library.borrow": [
+      {
+        "name": "tests/test_library.py::test_borrow_lends_a_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 12
+        }
+      },
+      {
+        "name": "tests/test_library.py::GiveBackCase::test_refuses_a_missing_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 28
+        }
+      }
+    ],
+    "py:lending.store.memory#MemoryStore": [
+      {
+        "name": "tests/test_library.py::test_borrow_lends_a_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 12
+        }
+      },
+      {
+        "name": "tests/test_library.py::TestStore::test_finds_nothing_in_an_empty_store",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 20
+        }
+      }
+    ],
+    "py:lending.store.memory#MemoryStore.empty": [
+      {
+        "name": "tests/test_library.py::TestStore::test_finds_nothing_in_an_empty_store",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 20
+        }
+      }
+    ],
+    "py:lending.store.memory#MemoryStore.find": [
+      {
+        "name": "tests/test_library.py::TestStore::test_finds_nothing_in_an_empty_store",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 20
+        }
+      }
+    ],
+    "py:lending.store.memory#MemoryStore.save": [
+      {
+        "name": "tests/test_library.py::test_borrow_lends_a_book",
+        "location": {
+          "path": "tests/test_library.py",
+          "line": 12
+        }
+      }
+    ]
+  }
+}

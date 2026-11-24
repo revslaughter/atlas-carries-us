@@ -1,0 +1,11 @@
+# An invented lending library: the Python adapter's test fixture. It never
+# runs; the frameworks it names stay uninstalled.
+[project]
+name = "lending"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[project.scripts]
+lendd = "lending.cli.main:cli"
+lendctl = "lending.cli.admin:app"
+lend-report = "lending.report:main"

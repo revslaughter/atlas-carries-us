@@ -69,7 +69,9 @@ finds its adapters beside itself, the `acu-adapter-typescript/` folder
 included, which it runs with Node. You need no `PATH` setup for them. They
 need the same tools at run time as the image holds, on every system: Go for
 the Go adapter, Node for the TypeScript adapter, and the pinned nightly for
-the Rust adapter.
+the Rust adapter. The folder leaves out the Python adapter. To map Python
+with these programs, set `PYTHONPATH` to `adapters/python` in a checkout,
+and `ACU_ADAPTER_PYTHON` to `python3 -m acu_adapter_python`.
 
 The Linux programs need glibc 2.28 or later; `acu-adapter-go` runs on any
 Linux. The macOS programs need macOS 12 or later. Nothing signs them. A local

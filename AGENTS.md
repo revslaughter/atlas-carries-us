@@ -16,6 +16,7 @@ map.
 | `adapters/go/` | Go | Reads Go code with the type checker; writes the data format. |
 | `adapters/typescript/` | TypeScript | Reads TypeScript and JavaScript with the compiler API; writes the data format. |
 | `adapters/rust/` | Rust | Reads Rust with rustdoc JSON and rust-analyzer's SCIP index; writes the data format. |
+| `adapters/python/` | Python | Reads Python with `ast` and its own resolver; writes the data format. Standard library only. |
 | `cli/` | Rust | `acu`: runs adapters, applies `atlas.yaml`, builds and serves the site. |
 | `viewer/` | TypeScript | The static viewer: one canvas and a docs panel. |
 | `examples/`, `corpus/` | YAML, submodules | Configs, and public projects for tests. |
@@ -39,6 +40,8 @@ Read `docs/schema.md` before a change that touches data. Read
 | Viewer type check, tests, build | `npm run check -w viewer && npm test -w viewer && npm run build -w viewer` |
 | Rust adapter tests | `cargo test -p acu-adapter-rust` (needs the pinned nightly; see `adapters/rust/src/toolchain.rs`) |
 | Rewrite the Rust golden file | `UPDATE_GOLDEN=1 cargo test -p acu-adapter-rust`, then read the diff |
+| Python adapter tests | `python3 -m unittest discover -s adapters/python/tests` |
+| Rewrite the Python golden file | `UPDATE_GOLDEN=1 python3 -m unittest discover -s adapters/python/tests`, then read the diff |
 | Format TypeScript and friends | `npm run format` |
 | acu and Rust adapter checks | `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace` |
 | Map an example | `cargo run -- extract -c examples/chi/atlas.yaml -o out/chi.json` |
@@ -131,3 +134,5 @@ Ask the maintainer before you:
 4. The Rust adapter needs cargo, rustdoc and rust-analyzer from its pinned
    nightly at run time. rustdoc builds each crate's dependencies, so cargo
    fetches them from crates.io on a first run.
+5. The Python adapter needs only `python3` (3.12 or later; the image pins 3.13)
+   at run time. It makes no network call and installs nothing.

@@ -17,7 +17,7 @@ quick=false
 # In CI the checkout belongs to another user than the container's. Trust the
 # workspace and the corpus checkouts for this script's git calls only, so
 # acu can read the commit for its source links.
-export GIT_CONFIG_COUNT=10 \
+export GIT_CONFIG_COUNT=11 \
   GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$root" \
   GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$root/corpus/go/chi" \
   GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$root/corpus/go/cobra" \
@@ -27,7 +27,8 @@ export GIT_CONFIG_COUNT=10 \
   GIT_CONFIG_KEY_6=safe.directory GIT_CONFIG_VALUE_6="$root/corpus/svelte/svelte-changelog" \
   GIT_CONFIG_KEY_7=safe.directory GIT_CONFIG_VALUE_7="$root/corpus/rust/ripgrep" \
   GIT_CONFIG_KEY_8=safe.directory GIT_CONFIG_VALUE_8="$root/corpus/rust/axum" \
-  GIT_CONFIG_KEY_9=safe.directory GIT_CONFIG_VALUE_9="$root/corpus/javascript/commander"
+  GIT_CONFIG_KEY_9=safe.directory GIT_CONFIG_VALUE_9="$root/corpus/javascript/commander" \
+  GIT_CONFIG_KEY_10=safe.directory GIT_CONFIG_VALUE_10="$root/corpus/python/flask"
 [[ "${1:-}" == "--quick" ]] && quick=true
 
 step() { printf '\n== %s\n' "$*"; }
@@ -37,6 +38,7 @@ scripts/check-pins.sh
 go version
 node --version
 cargo --version
+python3 --version
 nightly=$(sed -nE 's/^pub const NIGHTLY: &str = "([^"]+)";$/\1/p' adapters/rust/src/toolchain.rs)
 rustup run "$nightly" rustdoc --version
 rustup run "$nightly" rust-analyzer --version
@@ -49,6 +51,10 @@ step "Go adapter: format, vet, tests"
   go vet ./...
   go test ./...
 )
+
+step "Python adapter: compile, tests (golden file, schema, facts)"
+python3 -m compileall -q adapters/python/acu_adapter_python adapters/python/tests
+python3 -W error -m unittest discover -s adapters/python/tests
 
 step "Node workspace: install, format"
 npm ci --no-audit --no-fund
@@ -78,13 +84,13 @@ fi
 step "End to end: each example"
 git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra corpus/typescript/immer corpus/typescript/hono \
   corpus/svelte/realworld corpus/svelte/svelte-changelog corpus/rust/ripgrep corpus/rust/axum \
-  corpus/javascript/commander
+  corpus/javascript/commander corpus/python/flask
 (cd adapters/go && go install ./cmd/acu-adapter-go)
 # acu runs the TypeScript adapter from its build in this checkout, and the
 # Rust adapter from beside itself in target/release.
 mkdir -p out
 for ex in lending chi cobra immer hono realworld svelte-changelog mixed lending-rust ripgrep axum \
-  commander lending-js; do
+  commander lending-js lending-python flask; do
   echo "-- $ex"
   ./target/release/acu extract -c "examples/$ex/atlas.yaml" -o "out/$ex.json"
   node tests/e2e/counts.mjs "out/$ex.json" "examples/$ex/counts.json"

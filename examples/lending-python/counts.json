@@ -1,0 +1,35 @@
+{
+  "containers": {
+    "file": 21,
+    "package": 6
+  },
+  "symbols": {
+    "class": 18,
+    "constant": 5,
+    "constructor": 6,
+    "enum": 1,
+    "field": 22,
+    "function": 42,
+    "interface": 1,
+    "method": 30,
+    "property": 2,
+    "struct": 2,
+    "type": 1,
+    "type_alias": 2,
+    "variable": 21
+  },
+  "edges": {
+    "calls": 24,
+    "extends": 4,
+    "field_type": 7,
+    "implements": 1,
+    "imports": 7,
+    "overrides": 3,
+    "param_type": 15,
+    "return_type": 11
+  },
+  "entryPoints": 20,
+  "symbolsWithTests": 9,
+  "regions": 3,
+  "tourSteps": 4
+}

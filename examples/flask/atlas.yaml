@@ -1,0 +1,72 @@
+# Config for pallets/flask at 3.1.3, the Python adapter's public corpus
+# project: the flask package, and the tutorial app that the docs build step
+# by step. The tour text cites the source; a person checks it before the
+# drafted marks go.
+version: 1
+project:
+  name: Flask 3.1.3
+  repo: pallets/flask
+  links: github
+  descriptionDrafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+  description: |
+    Flask, a small framework for web applications in Python, and flaskr,
+    the blog app of its tutorial. The flask package turns each request into
+    a call of a view function. The flask command, built with click, runs the
+    development server and other tasks.
+languages:
+  - adapter: python
+    root: ../../corpus/python/flask
+    include: ["src/**", "examples/tutorial/**"]
+    exclude: ["examples/tutorial/tests/**"]
+    options:
+      sourceRoots: ["src", "examples/tutorial"]
+entryPoints:
+  - plugin: flask
+  - plugin: click
+  - plugin: python-main
+regions:
+  - id: app
+    name: The application and its requests
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    paths: ["src/flask", "src/flask/sansio"]
+    description: The Flask class, blueprints, request contexts, sessions and the command line.
+  - id: json
+    name: JSON
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    paths: ["src/flask/json"]
+    description: The JSON provider and the tagged serializer behind sessions.
+  - id: tutorial
+    name: Tutorial app
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    paths: ["examples/tutorial/flaskr"]
+    description: flaskr, a small blog with users, built on blueprints.
+layout:
+  rows:
+    - [tutorial]
+    - [app, json]
+tour:
+  - title: A framework and an app
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: overview }
+    text: >-
+      The tutorial app sits on top and uses the framework below it.
+  - title: One request
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: trace, symbol: "py:flask.app#Flask.wsgi_app" }
+    text: >-
+      The WSGI server calls the app; __call__ hands over to wsgi_app, which
+      calls full_dispatch_request, which calls dispatch_request, which runs
+      the view function for the request's URL.
+  - title: A route of the tutorial
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: trace, entryPoint: "POST /auth/register" }
+    text: >-
+      The auth blueprint declares the prefix /auth. create_app registers the
+      blueprint, so register answers at /auth/register for GET and POST.
+  - title: The flask command
+    drafted: { by: Claude Code, at: "2026-11-24T12:00:00Z" }
+    open: { view: trace, entryPoint: "flask run" }
+    text: >-
+      FlaskGroup adds run, shell and routes to each group it builds, unless
+      its caller turns the default commands off. cli, the group named flask,
+      keeps them, and main runs it.

@@ -9,6 +9,7 @@
 #   Playwright  Dockerfile PLAYWRIGHT_VERSION = tests/e2e/package.json = package-lock.json
 #   TypeScript  viewer/package.json = adapters/typescript/package.json = package-lock.json
 #   Svelte      adapters/typescript/package.json = package-lock.json (svelte, svelte2tsx)
+#   Python      Dockerfile PYTHON_IMAGE tag  = .python-version
 #   Nightly     Dockerfile RUST_NIGHTLY      = NIGHTLY in adapters/rust/src/toolchain.rs
 #   rustdoc-types  adapters/rust/Cargo.toml (exact) = Cargo.lock
 #   zig         Dockerfile ZIG_VERSION       = ziglang==<version> in CONTRIBUTING.md
@@ -37,8 +38,9 @@ image_arg() { grep -E "^ARG $1=" Dockerfile | head -1 | sed -E 's/^ARG [A-Z_]+=/
 go_image=$(image_arg GO_IMAGE)
 node_image=$(image_arg NODE_IMAGE)
 rust_image=$(image_arg RUST_IMAGE)
+python_image=$(image_arg PYTHON_IMAGE)
 
-for img in "$go_image" "$node_image" "$rust_image"; do
+for img in "$go_image" "$node_image" "$rust_image" "$python_image"; do
   if [[ "$img" != *@sha256:* ]]; then echo "pins: the base image $img has no digest"; fail=1; fi
 done
 
@@ -55,6 +57,10 @@ agree Node \
 agree Rust \
   "Dockerfile RUST_IMAGE" "$(tag_version "$rust_image")" \
   "rust-toolchain.toml" "$(sed -nE 's/^channel *= *"([^"]+)".*$/\1/p' rust-toolchain.toml)"
+
+agree Python \
+  "Dockerfile PYTHON_IMAGE" "$(tag_version "$python_image")" \
+  ".python-version" "$(tr -d ' \n' < .python-version)"
 
 agree Playwright \
   "Dockerfile PLAYWRIGHT_VERSION" "$(sed -nE 's/^ARG PLAYWRIGHT_VERSION=(.+)$/\1/p' Dockerfile)" \
