@@ -11,9 +11,12 @@
 #   Svelte      adapters/typescript/package.json = package-lock.json (svelte, svelte2tsx)
 #   Nightly     Dockerfile RUST_NIGHTLY      = NIGHTLY in adapters/rust/src/toolchain.rs
 #   rustdoc-types  adapters/rust/Cargo.toml (exact) = Cargo.lock
+#   zig         Dockerfile ZIG_VERSION       = ziglang==<version> in CONTRIBUTING.md
+#   cargo-zigbuild  Dockerfile CARGO_ZIGBUILD_VERSION = cargo-zigbuild@<version> in CONTRIBUTING.md
 #
-# It also checks that each base image carries a digest, and that TypeScript
-# stays on major version 6, whose API the adapters and the Svelte tools use.
+# It also checks that each base image carries a digest, that each zig
+# archive carries a SHA-256 sum, and that TypeScript stays on major version
+# 6, whose API the adapters and the Svelte tools use.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -86,6 +89,21 @@ agree "Rust nightly" \
 agree rustdoc-types \
   "adapters/rust/Cargo.toml" "$(sed -nE 's/^rustdoc-types = "=([^"]+)"$/\1/p' adapters/rust/Cargo.toml)" \
   "Cargo.lock" "$(awk '/^name = "rustdoc-types"$/{getline; gsub(/version = |"/, ""); print}' Cargo.lock)"
+
+agree zig \
+  "Dockerfile ZIG_VERSION" "$(sed -nE 's/^ARG ZIG_VERSION=(.+)$/\1/p' Dockerfile)" \
+  "CONTRIBUTING.md" "$(sed -nE 's/^.*ziglang==([0-9][0-9.]*).*$/\1/p' CONTRIBUTING.md | head -1)"
+
+for arch in AMD64 ARM64; do
+  if ! grep -qE "^ARG ZIG_SHA256_${arch}=[0-9a-f]{64}$" Dockerfile; then
+    echo "pins: the Dockerfile gives no SHA-256 sum in ZIG_SHA256_${arch}"
+    fail=1
+  fi
+done
+
+agree cargo-zigbuild \
+  "Dockerfile CARGO_ZIGBUILD_VERSION" "$(sed -nE 's/^ARG CARGO_ZIGBUILD_VERSION=(.+)$/\1/p' Dockerfile)" \
+  "CONTRIBUTING.md" "$(sed -nE 's/^.*cargo-zigbuild@([0-9][0-9.]*).*$/\1/p' CONTRIBUTING.md | head -1)"
 
 if ((fail)); then
   echo "pins: change every file in a group together (see CONTRIBUTING.md, \"Versions\")."

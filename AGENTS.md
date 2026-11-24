@@ -46,6 +46,7 @@ Read `docs/schema.md` before a change that touches data. Read
 | Map this project | `cargo run -- extract -c atlas.yaml -o out/self.json`, then `cargo run -- serve -d out/self.json` |
 | Find missing docs | `node tests/e2e/docs.mjs out/self.json` |
 | Screenshots of every view | `node tests/e2e/smoke.mjs out/site out/shot` (add `--light` for the light theme) |
+| Write acu and its adapters to a folder | `scripts/docker-export.sh` (add `--platform darwin/arm64`, `windows/amd64` or another `os/arch` for that system) |
 
 Build the viewer (`npm run build -w viewer`) before `cargo build`; `acu`
 embeds `viewer/dist` at compile time. Build the TypeScript adapter before an

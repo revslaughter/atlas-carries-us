@@ -68,7 +68,9 @@ pub fn source(config_dir: &Path, lang: &Language) -> Result<Source> {
 /// Picks the program that runs an adapter, in this order: the config's
 /// `command`, the ACU_ADAPTER_<NAME> variable, acu-adapter-<name> on PATH,
 /// acu-adapter-<name> beside acu itself, and, inside this repository, the
-/// adapter's source.
+/// adapter's source. Beside acu, acu-adapter-<name> can be a program or a
+/// folder that holds a Node package; acu runs a package with `node` and the
+/// entry point that the package names (see [`beside_acu`]).
 fn command_for(lang: &Language) -> Result<Command> {
     if let Some(cmd) = &lang.command {
         if cmd.is_empty() {
@@ -97,13 +99,15 @@ fn command_for(lang: &Language) -> Result<Command> {
     if on_path(&exe) {
         return Ok(Command::new(exe));
     }
-    // `cargo build --workspace` puts the Rust adapter beside acu.
-    if let Some(beside) = std::env::current_exe()
+    // `cargo build --workspace` puts the Rust adapter beside acu. The Docker
+    // `export` stage puts every adapter there, the TypeScript one as a folder.
+    if let Some(dir) = std::env::current_exe()
         .ok()
-        .and_then(|p| p.parent().map(|d| d.join(&exe)))
-        .filter(|p| p.is_file() || p.with_extension("exe").is_file())
+        .and_then(|p| p.parent().map(Path::to_path_buf))
     {
-        return Ok(Command::new(beside));
+        if let Some(c) = beside_acu(&dir, &lang.adapter)? {
+            return Ok(c);
+        }
     }
     let dev = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
@@ -146,6 +150,59 @@ fn command_for(lang: &Language) -> Result<Command> {
         name = lang.adapter,
         hint = install_hint(&lang.adapter),
     )
+}
+
+/// Finds the program for an adapter in the folder that holds acu. It returns
+/// `None` when nothing named acu-adapter-<name> sits there. A file runs as
+/// a program. A folder must hold a Node package: acu runs `node` with the
+/// entry point from the package's `bin` field, or with `dist/src/main.js`
+/// when `bin` names none. It fails when the folder holds no package.json or
+/// no entry point.
+fn beside_acu(acu_dir: &Path, adapter: &str) -> Result<Option<Command>> {
+    let exe = format!("acu-adapter-{adapter}");
+    let path = acu_dir.join(&exe);
+    if path.is_file() || path.with_extension("exe").is_file() {
+        return Ok(Some(Command::new(path)));
+    }
+    if !path.is_dir() {
+        return Ok(None);
+    }
+    let manifest = path.join("package.json");
+    if !manifest.is_file() {
+        bail!(
+            "the folder {} holds no package.json; put the {adapter} adapter's package there or remove the folder, then run acu again",
+            path.display()
+        );
+    }
+    let text = std::fs::read_to_string(&manifest)
+        .with_context(|| format!("read {}", manifest.display()))?;
+    let package: Value = serde_json::from_str(&text)
+        .with_context(|| format!("read {} as JSON", manifest.display()))?;
+    let main = path.join(package_bin(&package, &exe).unwrap_or("dist/src/main.js"));
+    if !main.is_file() {
+        bail!(
+            "the {adapter} adapter in {} has no entry point {}; copy the adapter's build (dist/src) into the folder, then run acu again",
+            path.display(),
+            main.display()
+        );
+    }
+    let mut c = Command::new("node");
+    c.arg(main);
+    Ok(Some(c))
+}
+
+/// Reads the entry point for a program from a package's `bin` field. The
+/// field holds one path, or a map from program name to path; a map without
+/// the program's name gives its only entry, if it has one.
+fn package_bin<'a>(package: &'a Value, exe: &str) -> Option<&'a str> {
+    match package.get("bin")? {
+        Value::String(s) => Some(s),
+        Value::Object(map) => map
+            .get(exe)
+            .or_else(|| (map.len() == 1).then(|| map.values().next()).flatten())
+            .and_then(Value::as_str),
+        _ => None,
+    }
 }
 
 /// How to install the program of a built-in adapter.
@@ -218,5 +275,107 @@ mod tests {
         assert_eq!(plugin_adapter("axum"), Some("rust"));
         assert_eq!(plugin_adapter("clap"), Some("rust"));
         assert_eq!(plugin_adapter("rails"), None);
+    }
+
+    /// Makes an empty folder for one test; it goes away when dropped.
+    fn folder() -> tempfile::TempDir {
+        tempfile::tempdir().expect("make a temporary folder")
+    }
+
+    /// Writes a file and the folders above it.
+    fn write(path: &Path, text: &str) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    }
+
+    /// Lists a command's program and arguments as strings.
+    fn parts(c: &Command) -> Vec<String> {
+        std::iter::once(c.get_program())
+            .chain(c.get_args())
+            .map(|s| s.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn a_program_beside_acu_runs_itself() {
+        let dir = folder();
+        let exe = dir.path().join("acu-adapter-go");
+        write(&exe, "");
+        let c = beside_acu(dir.path(), "go").unwrap().unwrap();
+        assert_eq!(parts(&c), vec![exe.display().to_string()]);
+    }
+
+    #[test]
+    fn a_package_beside_acu_runs_its_bin_with_node() {
+        let dir = folder();
+        let pkg = dir.path().join("acu-adapter-typescript");
+        write(
+            &pkg.join("package.json"),
+            r#"{"bin": {"acu-adapter-typescript": "lib/run.js"}}"#,
+        );
+        write(&pkg.join("lib/run.js"), "");
+        let c = beside_acu(dir.path(), "typescript").unwrap().unwrap();
+        assert_eq!(
+            parts(&c),
+            vec![
+                "node".to_string(),
+                pkg.join("lib/run.js").display().to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn a_package_without_bin_runs_dist_src_main() {
+        let dir = folder();
+        let pkg = dir.path().join("acu-adapter-typescript");
+        write(&pkg.join("package.json"), r#"{"name": "x"}"#);
+        write(&pkg.join("dist/src/main.js"), "");
+        let c = beside_acu(dir.path(), "typescript").unwrap().unwrap();
+        assert_eq!(
+            parts(&c),
+            vec![
+                "node".to_string(),
+                pkg.join("dist/src/main.js").display().to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn a_package_without_an_entry_point_fails() {
+        let dir = folder();
+        let pkg = dir.path().join("acu-adapter-typescript");
+        write(
+            &pkg.join("package.json"),
+            r#"{"bin": {"acu-adapter-typescript": "dist/src/main.js"}}"#,
+        );
+        let err = beside_acu(dir.path(), "typescript").unwrap_err();
+        assert!(err.to_string().contains("has no entry point"), "{err}");
+    }
+
+    #[test]
+    fn a_folder_without_a_package_fails() {
+        let dir = folder();
+        std::fs::create_dir(dir.path().join("acu-adapter-typescript")).unwrap();
+        let err = beside_acu(dir.path(), "typescript").unwrap_err();
+        assert!(err.to_string().contains("holds no package.json"), "{err}");
+    }
+
+    #[test]
+    fn nothing_beside_acu_gives_none() {
+        let dir = folder();
+        assert!(beside_acu(dir.path(), "typescript").unwrap().is_none());
+    }
+
+    #[test]
+    fn bin_reads_a_path_or_a_map() {
+        let exe = "acu-adapter-typescript";
+        assert_eq!(package_bin(&json!({"bin": "a.js"}), exe), Some("a.js"));
+        let both = json!({"bin": {"acu-adapter-typescript": "b.js", "other": "c.js"}});
+        assert_eq!(package_bin(&both, exe), Some("b.js"));
+        let one = json!({"bin": {"other": "c.js"}});
+        assert_eq!(package_bin(&one, exe), Some("c.js"));
+        let two = json!({"bin": {"one": "c.js", "two": "d.js"}});
+        assert_eq!(package_bin(&two, exe), None);
+        assert_eq!(package_bin(&json!({}), exe), None);
     }
 }
