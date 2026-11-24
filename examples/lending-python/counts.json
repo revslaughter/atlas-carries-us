@@ -9,7 +9,7 @@
     "constructor": 6,
     "enum": 1,
     "field": 19,
-    "function": 38,
+    "function": 42,
     "interface": 1,
     "method": 26,
     "property": 2,
@@ -19,7 +19,7 @@
     "variable": 21
   },
   "edges": {
-    "calls": 22,
+    "calls": 23,
     "extends": 4,
     "field_type": 7,
     "implements": 1,
