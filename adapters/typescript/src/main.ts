@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 /**
- * The TypeScript adapter: acu-adapter-typescript reads a TypeScript project
- * with the TypeScript compiler API and writes an Atlas Carries Us document
- * (data format version 1) as JSON.
+ * The TypeScript adapter: acu-adapter-typescript reads a TypeScript or
+ * JavaScript project with the TypeScript compiler API and writes an Atlas
+ * Carries Us document (data format version 1) as JSON. A project without
+ * TypeScript files runs in the JavaScript mode, whose IDs start with "js:".
  *
  * The acu command runs it with a request on standard input (protocol 1, see
  * [docs/adapters.md](https://github.com/revslaughter/atlas-carries-us/blob/main/docs/adapters.md)).
  * {@link run} reads the project in four passes: declarations, entry points,
- * relations, then docs and tests. The type checker resolves every edge, so
- * every edge counts as exact, except the layout edges of the sveltekit
- * plugin. Svelte components join the program through svelte2tsx.
+ * relations, then docs and tests. The type checker resolves every edge. In
+ * TypeScript every edge counts as exact, except the layout edges of the
+ * sveltekit plugin; in JavaScript, a call through a receiver whose type the
+ * checker infers counts as heuristic. Svelte components join the program through svelte2tsx.
  *
  * For a run by hand, pass flags instead:
  *
@@ -26,13 +28,15 @@ import { parseArgs } from "node:util";
 import { ADAPTER_VERSION, type Request, run } from "./extract.js";
 
 /** The text that --help prints: every flag and the limits of a run. */
-const HELP = `acu-adapter-typescript ${ADAPTER_VERSION}: reads a TypeScript project and writes Atlas Carries Us data.
+const HELP = `acu-adapter-typescript ${ADAPTER_VERSION}: reads a TypeScript or JavaScript project and writes Atlas Carries Us data.
 
 Without --root, the request comes as JSON on standard input (protocol 1).
 
   --root <dir>        folder to read
   --repo-root <dir>   repository root that file paths are relative to (default: --root)
-  --tsconfig <file>   tsconfig file, relative to --root (default: tsconfig.json)
+  --tsconfig <file>   tsconfig file, relative to --root (default: tsconfig.json, else jsconfig.json)
+  --language <tag>    js or ts (default: js when the map holds no TypeScript file and the root no .svelte file)
+  --module-resolution <name>  without a config: bundler (default), node16, nodenext or node10
   --include <glob>    folder to keep (repeatable)
   --exclude <glob>    folder to leave out (repeatable)
   --tests <glob>      files that hold tests (repeatable; default: **/*.test.*, **/*.spec.*, **/__tests__/**)
@@ -43,6 +47,14 @@ Without --root, the request comes as JSON on standard input (protocol 1).
 
 The map leaves out these limits; the output's meta.adapters[].notes lists them:
 calls through function values and callbacks, and declaration files (.d.ts).
+
+In JavaScript, the types come from JSDoc (@param, @returns, @type, @typedef,
+@callback, @template) or from inference. CommonJS exports, constructor
+functions and their prototypes, and object literals that act as modules make
+symbols. A call through a receiver whose type the checker infers counts as
+heuristic. The map leaves out calls through values of unknown type, members that
+mixins or other run-time prototype changes add, properties that code adds
+outside a constructor, and exports under a computed name.
 
 A project with .svelte files reads its components through svelte2tsx. The map
 leaves out renders of a component that a variable holds and of a snippet that
@@ -69,6 +81,8 @@ function main() {
       root: { type: "string" },
       "repo-root": { type: "string" },
       tsconfig: { type: "string" },
+      language: { type: "string" },
+      "module-resolution": { type: "string" },
       include: { type: "string", multiple: true },
       exclude: { type: "string", multiple: true },
       tests: { type: "string", multiple: true },
@@ -107,7 +121,11 @@ function main() {
       include: values.include,
       exclude: values.exclude,
       tests: values.tests,
-      options: values.tsconfig ? { tsconfig: values.tsconfig } : {},
+      options: {
+        ...(values.tsconfig ? { tsconfig: values.tsconfig } : {}),
+        ...(values.language ? { language: values.language } : {}),
+        ...(values["module-resolution"] ? { moduleResolution: values["module-resolution"] } : {}),
+      },
       entryPoints: (values.plugin ?? []).map(plugin => ({ plugin })),
     };
   }

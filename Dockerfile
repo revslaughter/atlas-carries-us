@@ -155,7 +155,8 @@ RUN cd adapters/go && go mod download
 COPY . .
 # The viewer and the TypeScript adapter: the same on every platform. The
 # TypeScript adapter needs its compiled source and its run-time dependencies
-# from /deps, and nothing else at run time.
+# from /deps, and nothing else at run time. It reads JavaScript too, so
+# JavaScript needs no toolchain of its own.
 RUN npm run build -w viewer \
  && npm run build -w adapters/typescript \
  && mkdir -p /out/acu-adapter-typescript/dist \

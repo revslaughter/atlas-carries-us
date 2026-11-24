@@ -14,7 +14,7 @@ map.
 | --- | --- | --- |
 | `schema/` | JSON Schema | The data format (the contract) and the config format. |
 | `adapters/go/` | Go | Reads Go code with the type checker; writes the data format. |
-| `adapters/typescript/` | TypeScript | Reads TypeScript with the compiler API; writes the data format. |
+| `adapters/typescript/` | TypeScript | Reads TypeScript and JavaScript with the compiler API; writes the data format. |
 | `adapters/rust/` | Rust | Reads Rust with rustdoc JSON and rust-analyzer's SCIP index; writes the data format. |
 | `cli/` | Rust | `acu`: runs adapters, applies `atlas.yaml`, builds and serves the site. |
 | `viewer/` | TypeScript | The static viewer: one canvas and a docs panel. |

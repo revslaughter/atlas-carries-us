@@ -15,6 +15,7 @@ use crate::config::{EntryPointPlugin, Language};
 pub fn plugin_adapter(plugin: &str) -> Option<&'static str> {
     match plugin {
         "go-chi" | "go-nethttp" | "cobra" => Some("go"),
+        // The TypeScript adapter reads JavaScript too, so these serve both.
         "express" | "hono" | "sveltekit" => Some("typescript"),
         "axum" | "clap" => Some("rust"),
         _ => None,

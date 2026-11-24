@@ -17,7 +17,7 @@ quick=false
 # In CI the checkout belongs to another user than the container's. Trust the
 # workspace and the corpus checkouts for this script's git calls only, so
 # acu can read the commit for its source links.
-export GIT_CONFIG_COUNT=9 \
+export GIT_CONFIG_COUNT=10 \
   GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$root" \
   GIT_CONFIG_KEY_1=safe.directory GIT_CONFIG_VALUE_1="$root/corpus/go/chi" \
   GIT_CONFIG_KEY_2=safe.directory GIT_CONFIG_VALUE_2="$root/corpus/go/cobra" \
@@ -26,7 +26,8 @@ export GIT_CONFIG_COUNT=9 \
   GIT_CONFIG_KEY_5=safe.directory GIT_CONFIG_VALUE_5="$root/corpus/svelte/realworld" \
   GIT_CONFIG_KEY_6=safe.directory GIT_CONFIG_VALUE_6="$root/corpus/svelte/svelte-changelog" \
   GIT_CONFIG_KEY_7=safe.directory GIT_CONFIG_VALUE_7="$root/corpus/rust/ripgrep" \
-  GIT_CONFIG_KEY_8=safe.directory GIT_CONFIG_VALUE_8="$root/corpus/rust/axum"
+  GIT_CONFIG_KEY_8=safe.directory GIT_CONFIG_VALUE_8="$root/corpus/rust/axum" \
+  GIT_CONFIG_KEY_9=safe.directory GIT_CONFIG_VALUE_9="$root/corpus/javascript/commander"
 [[ "${1:-}" == "--quick" ]] && quick=true
 
 step() { printf '\n== %s\n' "$*"; }
@@ -76,12 +77,14 @@ fi
 
 step "End to end: each example"
 git submodule update --init --checkout --depth 1 corpus/go/chi corpus/go/cobra corpus/typescript/immer corpus/typescript/hono \
-  corpus/svelte/realworld corpus/svelte/svelte-changelog corpus/rust/ripgrep corpus/rust/axum
+  corpus/svelte/realworld corpus/svelte/svelte-changelog corpus/rust/ripgrep corpus/rust/axum \
+  corpus/javascript/commander
 (cd adapters/go && go install ./cmd/acu-adapter-go)
 # acu runs the TypeScript adapter from its build in this checkout, and the
 # Rust adapter from beside itself in target/release.
 mkdir -p out
-for ex in lending chi cobra immer hono realworld svelte-changelog mixed lending-rust ripgrep axum; do
+for ex in lending chi cobra immer hono realworld svelte-changelog mixed lending-rust ripgrep axum \
+  commander lending-js; do
   echo "-- $ex"
   ./target/release/acu extract -c "examples/$ex/atlas.yaml" -o "out/$ex.json"
   node tests/e2e/counts.mjs "out/$ex.json" "examples/$ex/counts.json"
