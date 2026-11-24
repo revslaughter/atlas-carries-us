@@ -107,11 +107,15 @@ The TypeScript table holds, with these additions:
    as exported, as TypeScript reads it. Everything in a script counts as
    exported, because a script's names are global.
 2. A member counts as exported unless JSDoc marks it `@private` or
-   `@protected`, or its name starts with `#`. The compiler reads those tags
-   as modifiers in a JavaScript file.
-3. `this.x = …` makes a member only in a constructor, or in the constructor
+   `@protected`, or its name starts with `#` or `_`. A leading `_` marks a
+   private member by convention in JavaScript; commander alone holds dozens
+   of such fields. (The build added the `_` rule.)
+3. `const x = require("x")` declares no symbol, as an import statement
+   declares none. Nor does `@typedef {import("./x").Y} Y`, which only
+   imports a type; it resolves to `Y`. (The build added this rule.)
+4. `this.x = …` makes a member only in a constructor, or in the constructor
    of an ES class. A class that declares the field keeps that declaration.
-4. A mixin (`Object.assign(F.prototype, mixin)`) adds no members; the limits
+5. A mixin (`Object.assign(F.prototype, mixin)`) adds no members; the limits
    list it.
 
 ## Types
@@ -208,6 +212,20 @@ tool enters. CI runs `scripts/check.sh`, so the example joins CI there.
    appear.
 5. Globals that the project does not declare, such as `window` in a project
    without the DOM library, resolve to nothing.
+6. The checker binds a member that an assignment adds to a non-empty object
+   literal only inside that file, so calls to it from elsewhere do not
+   resolve. (Found in the build.)
+7. A package whose `package.json` names `types` resolves to those
+   declarations for code that imports it by package path. Commander's tests
+   import `../` and so reach `typings/index.d.ts`, which stays out of the
+   map. (Found in the build.)
+
+## Checks
+
+1. `checkJs` on and off: the fixture and commander give the same bytes, and
+   commander takes about 2 seconds either way.
+2. The TypeScript and Svelte golden files stay byte for byte the same.
+3. `examples/lending-js` maps the fixture in CI's runtime image job too.
 
 ## Risks
 

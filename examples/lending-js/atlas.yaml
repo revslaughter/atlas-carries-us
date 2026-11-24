@@ -1,0 +1,42 @@
+# Config for the JavaScript fixture of the TypeScript adapter: an invented
+# lending library in JavaScript. The end-to-end tests build the viewer from
+# it, and CI maps it with the runtime image.
+version: 1
+project:
+  name: Lending library in JavaScript (fixture)
+  repo: revslaughter/atlas-carries-us
+  links: github
+  description: |
+    An invented lending library that exercises the JavaScript mode of the
+    TypeScript adapter: CommonJS and ES modules, a constructor function, an
+    ES class, an object literal that acts as a module, JSDoc types, and an
+    Express app with a mounted router.
+languages:
+  - adapter: typescript
+    root: ../../adapters/typescript/testdata/javascript
+entryPoints:
+  - plugin: express
+regions:
+  - id: web
+    name: HTTP API
+    paths: ["lib/web"]
+    description: The Express app and the books router that it mounts.
+  - id: domain
+    name: Books and loans
+    paths: ["lib/domain"]
+    description: Shelves, loans and the lending rules.
+  - id: front
+    name: Front door and screens
+    paths: ["lib", "lib/ui"]
+    description: The object that the library exports, and the cards that show books.
+layout:
+  rows:
+    - [web, front]
+    - [domain]
+tour:
+  - title: The shape of the library
+    open: { view: overview }
+    text: A request enters through the HTTP API, and the rules live in the domain folder.
+  - title: A shelf
+    open: { view: symbol, name: Shelf }
+    text: Shelf is a constructor function. Its methods live on its prototype.
