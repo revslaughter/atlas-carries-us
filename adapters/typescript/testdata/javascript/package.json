@@ -1,0 +1,7 @@
+{
+  "name": "lending-js",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An invented lending library in JavaScript: the fixture of the TypeScript adapter's JavaScript mode.",
+  "type": "commonjs"
+}

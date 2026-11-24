@@ -86,8 +86,9 @@ The TypeScript adapter, `adapters/typescript`, runs in Node and reads the
 project with the TypeScript compiler API, pinned to TypeScript 6.0.3.
 TypeScript 7, the native port, offers its programmatic API only as "unstable"
 so far; the adapter will move once that API settles. The checker resolves
-every edge, so every edge counts as `exact`; only the layout edges of the
-`sveltekit` plugin, below, count as `heuristic`. On immer v11.2.9 and Hono
+every edge, so in TypeScript every edge counts as `exact`; only the layout
+edges of the `sveltekit` plugin, below, count as `heuristic`. JavaScript
+marks some calls `heuristic`; see "JavaScript" below. On immer v11.2.9 and Hono
 v4.13.17 the counts sit in `examples/immer/counts.json` and
 `examples/hono/counts.json`.
 
@@ -96,7 +97,8 @@ v4.13.17 the counts sit in `examples/immer/counts.json` and
 1. The program comes from `tsconfig.json` in the root, or from the file that
    `options.tsconfig` names. A solution-style tsconfig (no files, only
    `references`) gives the files of every project it references. Without a
-   tsconfig, the adapter reads every `.ts` and `.tsx` file under the root.
+   tsconfig, it reads `jsconfig.json`; without either, it reads every
+   TypeScript and JavaScript file under the root.
 2. The map holds the program's own source files under the root. Declaration
    files (`.d.ts`), `node_modules` and test files stay out.
 3. Test files match the request's `tests` globs, by default `**/*.test.*`,
@@ -401,6 +403,137 @@ The output's notes list these limits, and the help text repeats them:
    SvelteKit's file conventions, not a checker.
 4. Without an install and `svelte-kit sync`, `./$types`, `$app/*` and
    `$env/*` resolve to nothing, so the types they bring count as unknown.
+
+### JavaScript (done)
+
+JavaScript runs as a mode of the TypeScript adapter, not as an adapter of
+its own. The compiler API binds JavaScript by itself: with `allowJs` it reads
+CommonJS exports, `require` calls, prototype assignments, `this.x = …`
+properties and the JSDoc type tags, and the checker resolves calls through
+all of them. `adapters/typescript/src/javascript.ts` adds the symbols that
+JavaScript writes as assignments and in JSDoc. The config keeps
+`adapter: typescript`, so `express` and `hono` serve both languages.
+`docs/plans/phase-5-javascript.md` records the design; issue #25 holds the
+discussion. On commander.js v14.0.3 the counts sit in
+`examples/commander/counts.json`; the fixture's sit in
+`examples/lending-js/counts.json`.
+
+#### The mode
+
+1. A run reads JavaScript when its map holds no TypeScript file and its root
+   holds no `.svelte` file. The option `language` (`js` or `ts`) picks the
+   mode by hand.
+2. In the JavaScript mode, every ID and container carries the tag `js`:
+   `js:lending-js/lib/domain/book#Shelf.add`. `meta.languages` holds
+   `["js"]`.
+3. A mixed project makes one run in the TypeScript mode. Its IDs start with
+   `ts:`. Each file container of a `.js`, `.jsx`, `.mjs` or `.cjs` file
+   carries `language: "js"`, and `meta.languages` lists both tags. The
+   JavaScript rules below hold for those files too.
+4. `checkJs` stays off. It only asks the compiler to report errors; binding
+   and inference stay the same. On the fixture and on commander, a run with
+   `checkJs` on writes the same bytes in the same time.
+5. Without a config, module resolution follows `Bundler`: it reads
+   `require` and `import`, paths without extensions, `index` files and the
+   `exports` of `package.json`, so it covers Node, bundlers and Bun. The
+   option `moduleResolution` (`bundler`, `node16`, `nodenext` or `node10`)
+   picks another one. A config's own setting wins.
+
+#### Files
+
+| File | `languageKind` |
+| --- | --- |
+| A file with an `import` or `export` statement | "module" |
+| A file that uses `require`, `module.exports` or `exports` alone | "CommonJS module" |
+| Any other file | "script" |
+
+#### Symbols
+
+The TypeScript table holds, with these additions:
+
+| JavaScript | `kind` | `languageKind` |
+| --- | --- | --- |
+| A function that `@constructor`, `this.x = …` or a prototype assignment marks as a class | `class` | "constructor function" |
+| Its body, which `new` reaches | `constructor`, member | "constructor" |
+| `F.prototype.m = function …`, or a method of `F.prototype = { … }` | `method`, member | "method" |
+| `F.m = function …` | `method`, member, `static` | "function" |
+| `this.x = …` in a constructor, `F.x = …` with another value | `property`, member | "property" |
+| A `const` object literal that holds a function | `namespace` | "object" |
+| A function of such an object | `method`, member | "method", "function" or "arrow function" |
+| `exports.f = function …`, or a function in `module.exports = { … }` | `function` | "function" or "arrow function" |
+| `module.exports = function …` | `function`, named after the function, else `default` | "function" |
+| `exports.x = …` with another value | `variable` | "export" |
+| `@typedef`, and each of its `@property` tags | `type_alias`, and `property` members | "typedef", "property" |
+| `@callback` | `type_alias`, with a signature | "callback" |
+
+1. `const x = require("x")` imports, as an `import` statement does, so it
+   declares no symbol. Nor does `@typedef {import("./x").Y} Y`: it resolves
+   to `Y`.
+2. A declaration counts as exported when the module exports it in any form:
+   `export`, `exports.x = x`, `module.exports = x`, or a name in
+   `module.exports = { x }`.
+3. A member counts as exported unless JSDoc marks it `@private` or
+   `@protected`, or its name starts with `#` or `_`. A leading `_` marks a
+   private member by convention in JavaScript.
+4. `this.x = …` adds a member only in a constructor, unless the class
+   already declares that name.
+5. In a project with `.svelte` files, an object literal keeps the
+   TypeScript rule and stays a constant. SvelteKit writes form actions as
+   `export const actions = { … }`, and the `sveltekit` plugin names an
+   inline action after its route.
+
+#### Types and edges
+
+1. Types come from JSDoc, as written: `@param {T}`, `@returns {T}`,
+   `@type {T}`, `@template T`, and the tags of `@typedef` and `@callback`.
+   `[name]` and `T=` mark a parameter optional; `...T` marks it rest.
+   Without a tag, the checker infers the type.
+2. `field_type`, `param_type` and `return_type` edges follow from those
+   types. `import("./x").T` and `@import` resolve too.
+3. `require("x")` and `import("x")` with a literal add `imports` edges, or
+   go to `externalImports`, from anywhere in a file.
+4. `new F()` and `F()` on a constructor function call `F.constructor`.
+5. `extends` comes from an ES class's clause, and from `@augments` (or
+   `@extends`) and `@implements` tags.
+6. The adapter never matches names: a call that the checker cannot resolve
+   adds no edge, and a note counts the calls that name a symbol of the map
+   but resolve to nothing. A call that the checker resolves counts as
+   `exact` when declarations fix its callee: a declared function or an
+   import, `new`, `this` or `super`, or a method on a receiver whose type a
+   class, a `const`, a JSDoc type, an import or a declared result fixes.
+   Otherwise it counts as `heuristic`. JavaScript lets a variable take a
+   value of another type later, so a callee that the checker finds through
+   an inferred type may not be the one that runs: in
+   `let x = new A(); if (f) x = new B(); x.m()`, the map shows only
+   `A.m`, as `heuristic`. Every other edge counts as `exact`.
+7. The `express` and `hono` plugins follow `require`: `const express =
+   require("express")` marks `express()` as an app, and
+   `app.use("/books", require("./books"))` mounts the router that
+   `books.js` exports with `module.exports = router`.
+
+#### Limits
+
+The output's notes list these limits, and the help text repeats them:
+
+1. A call through a value of unknown type does not appear. In JavaScript
+   without JSDoc, a parameter's type often stays unknown.
+2. Mixins, `util.inherits`, `Object.create` and other prototype changes at
+   run time add no members and no edges.
+3. A property that code adds outside a constructor does not appear, and
+   neither does an export under a computed name (`exports[name] = …`).
+4. The checker binds a member that an assignment adds to a non-empty object
+   literal (`rules.mayBorrow = function …`) only as a property of that
+   literal's file. The map shows the member, but calls to it from elsewhere
+   do not resolve.
+5. A call through a receiver whose type the checker infers counts as
+   `heuristic`, and points at one callee only.
+6. A call through a receiver of a union type, such as `@param {A|B} x`,
+   points at one member of the union only, as in TypeScript. JSDoc unions
+   turn up often in JavaScript.
+7. A package whose `package.json` names `types` resolves, for code that
+   imports it by package path, to those declarations. Commander's tests
+   import `../`, so their uses reach `typings/index.d.ts`, which stays out of
+   the map; the test index holds few of them.
 
 ### Rust (done)
 

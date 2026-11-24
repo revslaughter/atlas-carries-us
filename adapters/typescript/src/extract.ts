@@ -1,5 +1,7 @@
-// Reads a TypeScript project with the compiler API and builds an Atlas Carries
-// Us document (schema version 1) from it.
+// Reads a TypeScript or JavaScript project with the compiler API and builds an
+// Atlas Carries Us document (schema version 1) from it. A project without
+// TypeScript files runs in the JavaScript mode: its IDs start with "js:", and
+// javascript.ts adds the rules for CommonJS, prototypes and JSDoc types.
 //
 // The extraction runs in four passes:
 //
@@ -21,6 +23,7 @@ import { Plugins, type PluginConfig } from "./plugins.js";
 import type * as S from "./schema.js";
 import { VERSION } from "./schema.js";
 import { Svelte } from "./svelte.js";
+import { declareJavaScript, isRequire, jsDocTypeNode, objectNamespace, requireSpec } from "./javascript.js";
 import { indexTests } from "./tests.js";
 
 /** This adapter's release. */
@@ -48,9 +51,24 @@ export interface Request {
 
 /** The settings that only the TypeScript adapter reads. */
 export interface Options {
-  /** The tsconfig file, relative to the root. The default is tsconfig.json. */
+  /** The tsconfig file, relative to the root. The default is tsconfig.json, else jsconfig.json. */
   tsconfig?: string;
+  /** The language of the run: "js" or "ts". The default is "js" when the map holds no TypeScript file and the root no .svelte file. */
+  language?: string;
+  /** The module resolution without a config: "bundler" (the default), "node16", "nodenext" or "node10". */
+  moduleResolution?: string;
 }
+
+/** The module resolutions that options.moduleResolution may name, with the module kind that each one needs. */
+const RESOLUTIONS: Record<string, [ts.ModuleResolutionKind, ts.ModuleKind]> = {
+  bundler: [ts.ModuleResolutionKind.Bundler, ts.ModuleKind.ESNext],
+  node16: [ts.ModuleResolutionKind.Node16, ts.ModuleKind.Node16],
+  nodenext: [ts.ModuleResolutionKind.NodeNext, ts.ModuleKind.NodeNext],
+  node10: [ts.ModuleResolutionKind.Node10, ts.ModuleKind.CommonJS],
+};
+
+/** Matches the files that hold JavaScript. */
+export const JS_FILE = /\.[cm]?jsx?$/;
 
 /** The globs that mark test files when the request names none. */
 export const DEFAULT_TESTS = ["**/*.test.*", "**/*.spec.*", "**/__tests__/**"];
@@ -190,6 +208,14 @@ export class Extractor {
   private tests: Globs;
   /** The imports of outside packages that resolved to nothing, for a note. */
   private unresolved = 0;
+  /** The language tag of the run, which starts every ID: "ts", or "js" in the JavaScript mode. */
+  tag: "ts" | "js" = "ts";
+  /** The calls in JavaScript files that name a symbol of the map but resolve to nothing, for a note. */
+  unresolvedCalls = 0;
+  /** The names of the symbols under each parent ID, for a quick check of a name that a member already takes. */
+  readonly childNames = new Map<string, Set<string>>();
+  /** Constructor functions to their constructor members: a call of the function, or new, reaches the member. */
+  readonly ctorOf = new Map<ts.Node, string>();
   /** The Svelte components of the run; undefined when the root holds no .svelte file. */
   svelte: Svelte | undefined;
   /** The files whose IDs keep their extension, because a component already takes the module name without it. */
@@ -232,10 +258,17 @@ export class Extractor {
     const all = walk(this.root, r => this.exclude.match(r));
     const components = all.filter(f => f.endsWith(".svelte"));
     if (components.length) this.svelte = new Svelte(components, f => this.rel(f));
-    // A project with components may hold its config in jsconfig.json, as
-    // svelte-check allows.
+    // A project may hold its config in jsconfig.json, as editors and
+    // svelte-check allow.
     const jsconfig = path.join(this.root, "jsconfig.json");
-    if (this.svelte && !opt.tsconfig && !fs.existsSync(configPath) && fs.existsSync(jsconfig)) configPath = jsconfig;
+    if (!opt.tsconfig && !fs.existsSync(configPath) && fs.existsSync(jsconfig)) configPath = jsconfig;
+    if (opt.language !== undefined && opt.language !== "js" && opt.language !== "ts")
+      throw new Error(`options.language names ${opt.language}; use js or ts in atlas.yaml`);
+    const resolution = opt.moduleResolution === undefined ? undefined : RESOLUTIONS[opt.moduleResolution.toLowerCase()];
+    if (opt.moduleResolution !== undefined && !resolution)
+      throw new Error(
+        `options.moduleResolution names ${opt.moduleResolution}; use one of ${Object.keys(RESOLUTIONS).join(", ")} in atlas.yaml`,
+      );
     let options: ts.CompilerOptions;
     let rootNames: string[];
     if (fs.existsSync(configPath)) {
@@ -261,16 +294,9 @@ export class Extractor {
         `the tsconfig ${opt.tsconfig} does not exist under ${this.root}; fix options.tsconfig in atlas.yaml`,
       );
     } else {
-      options = {
-        target: ts.ScriptTarget.ES2022,
-        module: ts.ModuleKind.ESNext,
-        moduleResolution: ts.ModuleResolutionKind.Bundler,
-        jsx: ts.JsxEmit.Preserve,
-        strict: true,
-      };
-      // A project with components reads its JavaScript too, as svelte-check does.
-      const source = this.svelte ? /\.[cm]?[jt]sx?$/ : /\.[cm]?tsx?$/;
-      rootNames = all.filter(f => source.test(f) && !/\.d\.[cm]?ts$/.test(f));
+      const [moduleResolution, module] = resolution ?? RESOLUTIONS.bundler;
+      options = { target: ts.ScriptTarget.ES2022, module, moduleResolution, jsx: ts.JsxEmit.Preserve, strict: true };
+      rootNames = all.filter(f => SCRIPT.test(f) && !/\.d\.[cm]?ts$/.test(f));
     }
     options = {
       ...options,
@@ -314,8 +340,12 @@ export class Extractor {
     }
     if (!keep.length)
       throw new Error(
-        `no TypeScript source files found under ${this.root}; check the root, include and exclude in atlas.yaml`,
+        `no TypeScript or JavaScript source files found under ${this.root}; check the root, include and exclude in atlas.yaml`,
       );
+    // The run reads JavaScript when no file of its map holds TypeScript. A
+    // project with components keeps the TypeScript mode, and its IDs.
+    if (opt.language) this.tag = opt.language as "js" | "ts";
+    else if (!this.svelte && keep.every(sf => this.isJs(sf))) this.tag = "js";
     keep.sort((a, b) => cmp(this.rel(a.fileName), this.rel(b.fileName)));
     for (const sf of keep) {
       this.files.push(sf);
@@ -391,6 +421,11 @@ export class Extractor {
     return sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
   }
 
+  /** Reports whether a file holds JavaScript, by the extension of its real path: a component never does. */
+  isJs(sf: ts.SourceFile): boolean {
+    return JS_FILE.test(this.relRoot(sf.fileName));
+  }
+
   /** The module part of a file's IDs: the package name and the file's path without its extension. A .svelte file keeps its whole name. */
   private moduleKey(sf: ts.SourceFile): string {
     const r = this.relRoot(sf.fileName);
@@ -400,25 +435,33 @@ export class Extractor {
 
   /** The ID of a symbol in a file: the module path, "#", and the symbol's path in the module. */
   symId(sf: ts.SourceFile, p: string): string {
-    return `ts:${this.moduleKey(sf)}#${p}`;
+    return `${this.tag}:${this.moduleKey(sf)}#${p}`;
   }
 
   /** The ID of a file's container. */
   fileId(sf: ts.SourceFile): string {
-    return `ts:file:${this.pkgName ? this.pkgName + "/" : ""}${this.relRoot(sf.fileName)}`;
+    return `${this.tag}:file:${this.pkgName ? this.pkgName + "/" : ""}${this.relRoot(sf.fileName)}`;
   }
 
   /** The ID of the folder that holds a file: its unit. */
   dirIdOf(sf: ts.SourceFile): string {
     const d = path.posix.dirname(this.relRoot(sf.fileName));
     const key = this.pkgName ? (d === "." ? this.pkgName : `${this.pkgName}/${d}`) : d;
-    return `ts:dir:${key}`;
+    return `${this.tag}:dir:${key}`;
+  }
+
+  /** The path of a symbol inside its module, such as "Immer.produce", by its ID. */
+  pathOfId(id: string): string | undefined {
+    return this.pathOf.get(id);
   }
 
   /** Adds a symbol. A second symbol with the same ID gains a suffix: "@file:line". */
   addSym(s: S.Symbol, p: string): S.Symbol {
     if (this.syms.has(s.id)) s.id = `${s.id}@${path.posix.basename(s.location.path)}:${s.location.line}`;
     this.syms.set(s.id, s);
+    let names = this.childNames.get(s.parent);
+    if (!names) this.childNames.set(s.parent, (names = new Set()));
+    names.add(s.name);
     this.pathOf.set(s.id, p);
     this.names.add(s.name);
     return s;
@@ -472,14 +515,15 @@ export class Extractor {
     const dRoot = path.posix.dirname(r);
     const dirAbs = path.dirname(sf.fileName);
     const dirId = this.dirIdOf(sf);
-    if (this.pkgName && !this.conts.has(`ts:pkg:${this.pkgName}`)) {
-      this.conts.set(`ts:pkg:${this.pkgName}`, {
-        id: `ts:pkg:${this.pkgName}`,
+    const pkgId = `${this.tag}:pkg:${this.pkgName}`;
+    if (this.pkgName && !this.conts.has(pkgId)) {
+      this.conts.set(pkgId, {
+        id: pkgId,
         kind: "package",
         languageKind: "package",
         name: this.pkgName,
         path: this.rel(this.root),
-        language: "ts",
+        language: this.tag,
       });
     }
     if (!this.conts.has(dirId)) {
@@ -489,26 +533,28 @@ export class Extractor {
         languageKind: "folder",
         name: dRoot === "." ? (this.pkgName ?? path.basename(this.root)) : dRoot,
         path: this.rel(dirAbs),
-        language: "ts",
+        language: this.tag,
         unit: true,
       };
-      if (this.pkgName) c.parent = `ts:pkg:${this.pkgName}`;
+      if (this.pkgName) c.parent = pkgId;
       this.conts.set(dirId, c);
     }
+    const js = this.isJs(sf);
     const fc: S.Container = {
       id: this.fileId(sf),
       kind: "file",
-      languageKind: ts.isExternalModule(sf) ? "module" : "script",
+      languageKind: js ? jsFileKind(sf) : ts.isExternalModule(sf) ? "module" : "script",
       name: path.posix.basename(r),
       path: this.rel(sf.fileName),
       parent: dirId,
-      language: "ts",
+      language: js ? "js" : "ts",
     };
     this.conts.set(fc.id, fc);
     const fd = this.svelte?.has(sf.fileName) ? undefined : this.fileDoc(sf);
     if (fd) this.fileDocs.set(fc.id, fd);
     if (this.svelte?.has(sf.fileName)) this.svelte.declare(this, sf, fc.id);
     else this.statements(sf, sf.statements, fc.id, "", undefined);
+    if (js) declareJavaScript(this, sf, fc.id);
   }
 
   /** Finds the comment that describes a whole file: the first comment that no declaration owns. */
@@ -569,14 +615,44 @@ export class Extractor {
     }
   }
 
-  private exportedDecls(sf: ts.SourceFile): Set<ts.Node> | null {
+  /** The declarations that a module exports, or null for a script. In JavaScript, it follows a CommonJS export to the declaration that it names: exports.f = f, module.exports = f, module.exports = { f }. */
+  exportedDecls(sf: ts.SourceFile): Set<ts.Node> | null {
     if (this.exportsOf.has(sf)) return this.exportsOf.get(sf)!;
     const ms = this.checker.getSymbolAtLocation(sf);
     let set: Set<ts.Node> | null = null;
     if (ms) {
       set = new Set();
-      for (const e of this.checker.getExportsOfModule(ms)) {
-        for (const d of e.declarations ?? []) set.add(d);
+      const named = (e: ts.Expression | undefined) => {
+        const x = e && unwrap(e);
+        const s = x && ts.isIdentifier(x) ? this.checker.getSymbolAtLocation(x) : undefined;
+        for (const d of s?.declarations ?? []) set!.add(d);
+      };
+      const js = this.isJs(sf);
+      const list = [...this.checker.getExportsOfModule(ms)];
+      const eq = js ? ms.exports?.get(ts.InternalSymbolName.ExportEquals) : undefined;
+      if (eq) list.push(eq);
+      for (const e of list) {
+        for (const d of e.declarations ?? []) {
+          set.add(d);
+          if (!js) continue;
+          if (ts.isShorthandPropertyAssignment(d)) {
+            const v = this.checker.getShorthandAssignmentValueSymbol(d);
+            for (const x of v?.declarations ?? []) set.add(x);
+          } else if (ts.isPropertyAssignment(d)) named(d.initializer);
+          else if (ts.isBinaryExpression(d)) {
+            // module.exports = { a, b: c } exports the names inside the literal.
+            let r = unwrap(d.right);
+            while (ts.isBinaryExpression(r) && r.operatorToken.kind === ts.SyntaxKind.EqualsToken) r = unwrap(r.right);
+            if (ts.isObjectLiteralExpression(r))
+              for (const m of r.properties) {
+                if (ts.isShorthandPropertyAssignment(m)) {
+                  const v = this.checker.getShorthandAssignmentValueSymbol(m);
+                  for (const x of v?.declarations ?? []) set.add(x);
+                } else if (ts.isPropertyAssignment(m)) named(m.initializer);
+              }
+            else named(r);
+          } else if (ts.isBinaryExpression(d.parent) && (d.parent.left as ts.Node) === d) named(d.parent.right);
+        }
         if (e.flags & ts.SymbolFlags.Alias) {
           try {
             for (const d of this.checker.getAliasedSymbol(e).declarations ?? []) set.add(d);
@@ -591,7 +667,7 @@ export class Extractor {
   }
 
   /** Reports whether code outside the module may use a top-level declaration. A script's declarations are global. */
-  private isExported(sf: ts.SourceFile, decl: ts.Node, ns: boolean | undefined): boolean {
+  isExported(sf: ts.SourceFile, decl: ts.Node, ns: boolean | undefined): boolean {
     if (ns !== undefined)
       return ns && !!(ts.getCombinedModifierFlags(decl as ts.Declaration) & ts.ModifierFlags.Export);
     const set = this.exportedDecls(sf);
@@ -604,7 +680,7 @@ export class Extractor {
   }
 
   /** Returns the symbol for a declaration, merging declarations of one compiler symbol that belong together (overloads, interface merges). */
-  private topSymbol(
+  topSymbol(
     sf: ts.SourceFile,
     decl: ts.Declaration,
     category: string,
@@ -626,7 +702,8 @@ export class Extractor {
     return { s, fresh: true };
   }
 
-  private loc(sf: ts.SourceFile, node: ts.Node, end = true): S.Location {
+  /** The location of a node: its file, its first line and, unless end is false, its last line. */
+  loc(sf: ts.SourceFile, node: ts.Node, end = true): S.Location {
     const l: S.Location = { path: this.rel(sf.fileName), line: this.line(node, sf) };
     if (end) l.endLine = this.endLine(node, sf);
     return l;
@@ -820,6 +897,17 @@ export class Extractor {
           ? ns && !!(ts.getCombinedModifierFlags(d) & ts.ModifierFlags.Export)
           : this.isExported(sf, d, undefined);
       let s: S.Symbol;
+      // const x = require("x") imports, as an import statement does; it declares nothing new.
+      if (init && this.isJs(sf) && requireSpec(init) !== undefined) continue;
+      // In a project with components, an object keeps the TypeScript rule, so
+      // that the sveltekit plugin's inline actions keep their route names.
+      if (isConst && init && ts.isObjectLiteralExpression(init) && this.isJs(sf) && !this.svelte) {
+        const ns = objectNamespace(this, sf, d, init, parent, p, exported, st);
+        if (ns) {
+          this.queueDecl(d, sf, ns);
+          continue;
+        }
+      }
       if (isFunctionLike(init)) {
         s = this.topSymbol(sf, d, "variable", p, () => ({
           id: this.symId(sf, p),
@@ -859,9 +947,10 @@ export class Extractor {
   }
 
   /** Builds the symbol of a class, interface, type alias or enum. */
-  private typeSymbol(
+  typeSymbol(
     sf: ts.SourceFile,
-    node: ts.ClassDeclaration | ts.InterfaceDeclaration | ts.TypeAliasDeclaration | ts.EnumDeclaration,
+    node:
+      ts.ClassDeclaration | ts.ClassExpression | ts.InterfaceDeclaration | ts.TypeAliasDeclaration | ts.EnumDeclaration,
     p: string,
     name: string,
     parent: string,
@@ -885,7 +974,8 @@ export class Extractor {
     return s;
   }
 
-  private modifiers(node: ts.Node): string[] {
+  /** The modifier words of a declaration, such as static or async, in a fixed order. */
+  modifiers(node: ts.Node): string[] {
     const f = ts.canHaveModifiers(node) ? ts.getCombinedModifierFlags(node as ts.Declaration) : 0;
     const out: string[] = [];
     const add = (flag: ts.ModifierFlags, word: string) => {
@@ -909,7 +999,8 @@ export class Extractor {
     return out;
   }
 
-  private decorators(node: ts.Node): string[] {
+  /** The decorators of a declaration, as written. */
+  decorators(node: ts.Node): string[] {
     if (!ts.canHaveDecorators(node)) return [];
     return (ts.getDecorators(node) ?? []).map(d => collapse(d.getText()));
   }
@@ -923,12 +1014,7 @@ export class Extractor {
   }
 
   /** Declares the members of a class, interface or object type. */
-  private members(
-    sf: ts.SourceFile,
-    owner: S.Symbol,
-    ownerPath: string,
-    list: readonly (ts.ClassElement | ts.TypeElement)[],
-  ) {
+  members(sf: ts.SourceFile, owner: S.Symbol, ownerPath: string, list: readonly (ts.ClassElement | ts.TypeElement)[]) {
     const seen = new Map<ts.Symbol, S.Symbol>();
     for (const m of list) {
       if (ts.isIndexSignatureDeclaration(m) || ts.isClassStaticBlockDeclaration(m) || ts.isSemicolonClassElement(m))
@@ -1039,9 +1125,21 @@ export class Extractor {
 
   /** The type of a declaration: as written when it has an annotation, as the checker infers it otherwise. */
   typeOf(sf: ts.SourceFile, decl: ts.Node, node: ts.TypeNode | undefined): S.TypeText {
+    // JavaScript writes its types in JSDoc: @param {T}, @type {T}, @returns {T}.
+    if (!node && this.isJs(sf)) node = jsDocTypeNode(decl);
     if (node) return { text: collapse(node.getText(sf)), refs: this.refsLater(() => this.typeNodeRefs(node)) };
-    const t = this.checker.getTypeAtLocation(decl);
+    // A member that an assignment declares (this.x = …) takes the type of its symbol: the union of what the code assigns.
+    const member =
+      (ts.isPropertyAccessExpression(decl) || ts.isElementAccessExpression(decl)) && this.isJs(sf)
+        ? this.checker.getSymbolAtLocation(ts.isPropertyAccessExpression(decl) ? decl.name : decl.argumentExpression)
+        : undefined;
+    const t = member ? this.checker.getTypeOfSymbol(member) : this.checker.getTypeAtLocation(decl);
     return { text: this.typeText(t, decl), refs: this.refsLater(() => this.typeRefs(t)) };
+  }
+
+  /** Runs work once every symbol exists, at the start of the relations pass, before the refs of types fill. */
+  afterDeclarations(fn: () => void) {
+    this.later.unshift(fn);
   }
 
   /** Returns a list that fills with refs once every symbol exists. */
@@ -1128,21 +1226,28 @@ export class Extractor {
   /** Builds the signature of a callable: its parameters and results with their types, and the text as the code writes it. `how` names the form ("function", "arrow", "constructor", "property" or "method"). */
   signature(sf: ts.SourceFile, fn: ts.SignatureDeclaration, how: string, name: string): S.Signature {
     const params: S.Param[] = [];
+    const js = this.isJs(sf);
     for (const prm of fn.parameters) {
       const pn = ts.isIdentifier(prm.name) ? prm.name.text : shorten(collapse(prm.name.getText(sf)), 40);
       if (pn === "this") continue;
       const t = this.typeOf(sf, prm, prm.type);
-      const p: S.Param = { name: pn, type: (prm.dotDotDotToken ? "..." : "") + t.text, refs: t.refs };
-      if (prm.questionToken || prm.initializer) p.optional = true;
-      if (prm.dotDotDotToken) p.rest = true;
+      // In JSDoc, [name] and T= mark an optional parameter, and ...T a rest one.
+      const tag = js && !prm.type ? ts.getJSDocParameterTags(prm)[0] : undefined;
+      const jt = tag?.typeExpression?.type;
+      const rest = !!prm.dotDotDotToken || (!!jt && ts.isJSDocVariadicType(jt));
+      const p: S.Param = { name: pn, type: (rest ? "..." : "") + t.text, refs: t.refs };
+      if (prm.questionToken || prm.initializer || tag?.isBracketed || (jt && ts.isJSDocOptionalType(jt)))
+        p.optional = true;
+      if (rest) p.rest = true;
       if (prm.initializer) p.default = shorten(collapse(prm.initializer.getText(sf)), 40);
       params.push(p);
     }
     const results: S.Param[] = [];
-    if (!ts.isConstructorDeclaration(fn) && !ts.isSetAccessor(fn)) {
-      if (fn.type) {
-        if (fn.type.kind !== ts.SyntaxKind.VoidKeyword) {
-          const node = fn.type;
+    if (!ts.isConstructorDeclaration(fn) && !ts.isSetAccessor(fn) && how !== "constructor") {
+      const written = fn.type ?? (js ? ts.getJSDocReturnType(fn) : undefined);
+      if (written) {
+        if (written.kind !== ts.SyntaxKind.VoidKeyword) {
+          const node = written;
           results.push({ type: collapse(node.getText(sf)), refs: this.refsLater(() => this.typeNodeRefs(node)) });
         }
       } else {
@@ -1154,9 +1259,8 @@ export class Extractor {
       }
     }
     const s: S.Signature = { params, results };
-    const tps = fn.typeParameters?.length
-      ? "<" + fn.typeParameters.map(t => collapse(t.getText(sf))).join(", ") + ">"
-      : "";
+    const typeParams = js ? ts.getEffectiveTypeParameterDeclarations(fn) : (fn.typeParameters ?? []);
+    const tps = typeParams.length ? "<" + typeParams.map(t => collapse(t.getText(sf))).join(", ") + ">" : "";
     if (tps) s.typeParams = tps;
     const ps = fn.parameters.map(p => collapse(p.getText(sf))).join(", ");
     const ret = fn.type ? ": " + collapse(fn.type.getText(sf)) : "";
@@ -1247,6 +1351,7 @@ export class Extractor {
         this.addEdge(id, target, kind, 0);
       }
     }
+    if (this.isJs(node.getSourceFile())) this.jsDocHeritage(id, node);
     if (!ts.isClassDeclaration(node)) return;
     const type = this.checker.getTypeAtLocation(node);
     const bases = type.isClassOrInterface() ? this.checker.getBaseTypes(type) : [];
@@ -1271,6 +1376,18 @@ export class Extractor {
     }
   }
 
+  /** Records the extends and implements edges that JSDoc tags write: @augments (or @extends) and @implements. A constructor function takes them too. */
+  jsDocHeritage(id: string, node: ts.Node) {
+    const tags: [ts.ExpressionWithTypeArguments, S.EdgeKind][] = [];
+    const aug = ts.getJSDocAugmentsTag(node);
+    if (aug) tags.push([aug.class, "extends"]);
+    for (const t of ts.getJSDocImplementsTags(node)) tags.push([t.class, "implements"]);
+    for (const [t, kind] of tags) {
+      const target = this.idOfSymbol(this.checker.getSymbolAtLocation(t.expression));
+      if (target) this.addEdge(id, target, kind, 0);
+    }
+  }
+
   /** Records which folders a file's folder imports, and the outside packages it imports. */
   private imports(sf: ts.SourceFile) {
     const dir = this.dirIdOf(sf);
@@ -1290,6 +1407,20 @@ export class Extractor {
         ts.isStringLiteralLike(st.moduleReference.expression)
       )
         specs.push(st.moduleReference.expression);
+    }
+    // JavaScript also imports with require("x") and import("x"), anywhere in a file.
+    if (this.isJs(sf)) {
+      const visit = (n: ts.Node) => {
+        if (
+          ts.isCallExpression(n) &&
+          (isRequire(n) || (n as ts.CallExpression).expression.kind === ts.SyntaxKind.ImportKeyword) &&
+          n.arguments.length === 1 &&
+          ts.isStringLiteralLike(n.arguments[0])
+        )
+          specs.push(n.arguments[0]);
+        ts.forEachChild(n, visit);
+      };
+      visit(sf);
     }
     for (const spec of specs) {
       const sym = this.checker.getSymbolAtLocation(spec);
@@ -1345,6 +1476,7 @@ export class Extractor {
   private walkCalls(sf: ts.SourceFile) {
     const aliases = this.aliases(sf);
     const component = this.svelte?.has(sf.fileName);
+    const js = this.isJs(sf);
     this.walkWithCaller(sf, (n, caller) => {
       if (!caller) return;
       if (component) {
@@ -1367,9 +1499,76 @@ export class Extractor {
       if (name !== "super" && (!name || (!this.names.has(name) && !aliases.has(name)))) return;
       const sig = this.checker.getResolvedSignature(n);
       const decl = sig?.declaration;
-      const callee = decl && this.idOfNode.get(decl);
-      if (callee && this.syms.has(callee)) this.addEdge(caller, callee, "calls", this.line(n, sf));
+      const callee = decl && (this.ctorOf.get(decl) ?? this.idOfNode.get(decl));
+      if (callee && this.syms.has(callee))
+        this.addEdge(caller, callee, "calls", this.line(n, sf), js && !this.declaredCallee(n) ? "heuristic" : "exact");
+      else if (!decl && js && name !== "super" && this.names.has(name!)) this.unresolvedCalls++;
     });
+  }
+
+  /**
+   * Reports whether a call in a JavaScript file reaches its callee through
+   * declared types alone. JavaScript lets a variable take a value of another
+   * type later, so a callee that the checker finds through an inferred type
+   * may not be the one that runs. A call counts as declared when it names a
+   * declared function or an import, uses new, this or super, or calls a
+   * method on a receiver whose type a declaration fixes: a class, a const, a
+   * JSDoc or TypeScript type, an import, or the declared result of a call.
+   */
+  private declaredCallee(n: ts.Node): boolean {
+    if (!ts.isCallExpression(n)) return true;
+    const e = unwrap(n.expression);
+    if (ts.isIdentifier(e)) return this.declaredValue(e);
+    if (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e))
+      return this.declaredReceiver(e.expression, 0);
+    return e.kind === ts.SyntaxKind.SuperKeyword;
+  }
+
+  /** Reports whether the type of a receiver comes from a declaration rather than from inference. */
+  private declaredReceiver(r: ts.Expression, depth: number): boolean {
+    r = unwrap(r);
+    if (depth > 6) return false;
+    if (r.kind === ts.SyntaxKind.ThisKeyword || r.kind === ts.SyntaxKind.SuperKeyword || ts.isNewExpression(r))
+      return true;
+    if (ts.isIdentifier(r)) return this.declaredValue(r);
+    if (ts.isPropertyAccessExpression(r)) return this.declaredValue(r.name);
+    if (ts.isCallExpression(r)) {
+      const d = this.checker.getResolvedSignature(r)?.declaration;
+      return (
+        !!d && !ts.isJSDocSignature(d) && (!!d.type || !!ts.getJSDocReturnType(d) || !this.isJs(d.getSourceFile()))
+      );
+    }
+    return false;
+  }
+
+  /** Reports whether a name's type comes from a declaration: a class, function, enum, namespace, module, import, const, or a declaration with a written type. */
+  private declaredValue(id: ts.Identifier | ts.PrivateIdentifier): boolean {
+    const sym = this.checker.getSymbolAtLocation(id);
+    if (!sym) return false;
+    if (sym.flags & ts.SymbolFlags.Alias) return true;
+    for (const d of sym.declarations ?? []) {
+      if (!this.isJs(d.getSourceFile())) return true;
+      if (
+        ts.isClassLike(d) ||
+        ts.isFunctionLike(d) ||
+        ts.isEnumDeclaration(d) ||
+        ts.isModuleDeclaration(d) ||
+        ts.isSourceFile(d) ||
+        ts.isJSDocTypedefTag(d) ||
+        ts.isJSDocPropertyLikeTag(d)
+      )
+        return true;
+      if (ts.isVariableDeclaration(d) && ts.getCombinedNodeFlags(d) & ts.NodeFlags.Const) return true;
+      if ((d as { type?: ts.TypeNode }).type || jsDocTypeNode(d)) return true;
+      // A member whose value is a function, such as F.prototype.m = function …
+      if (
+        ts.isPropertyAccessExpression(d) &&
+        ts.isBinaryExpression(d.parent) &&
+        ts.isFunctionLike(unwrap(d.parent.right))
+      )
+        return true;
+    }
+    return false;
   }
 
   /* Pass 4: docs. */
@@ -1377,7 +1576,11 @@ export class Extractor {
   /** Queues the doc comment above a declaration as the doc of its symbol. A symbol takes the first doc that it meets, so an overload's second comment never wins. */
   queueDecl(node: ts.Node, sf: ts.SourceFile, s: S.Symbol) {
     if (this.docQueued.has(s.id)) return;
-    const jsdocs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
+    // A comment that declares a @typedef or @callback documents that type, not the code below it.
+    const jsdocs = ts
+      .getJSDocCommentsAndTags(node)
+      .filter(ts.isJSDoc)
+      .filter(j => !j.tags?.some(t => ts.isJSDocTypedefTag(t) || ts.isJSDocCallbackTag(t)));
     const last = jsdocs[jsdocs.length - 1];
     if (!last) return;
     const raw = commentText(sf.text.slice(last.pos, last.end));
@@ -1487,8 +1690,22 @@ export class Extractor {
         `${this.unresolved} imports of outside packages did not resolve, so the types they bring count as unknown.`,
       );
     if (this.svelte) notes.push(...this.svelte.limits());
+    const languages = new Set([this.tag]);
+    for (const c of this.conts.values()) if (c.language) languages.add(c.language as "js" | "ts");
+    if (languages.has("js"))
+      notes.push(
+        "In JavaScript, a call through a value of unknown type does not appear: the map holds only the calls that the checker resolves.",
+        "In JavaScript, a call through a receiver whose type the checker infers counts as heuristic: a variable may hold a value of another type later.",
+        "A call through a receiver of a union type, such as a JSDoc {A|B}, points at one member of the union only.",
+        "Mixins, util.inherits, Object.create and other prototype changes at run time add no members and no edges.",
+        "A property that code adds outside a constructor, and an export under a computed name, do not appear.",
+      );
+    if (this.unresolvedCalls)
+      notes.push(
+        `${this.unresolvedCalls} calls in JavaScript files name a symbol of the map but resolve to nothing, so they do not appear.`,
+      );
     notes.push(...this.notes);
-    const info: S.AdapterInfo = { name: "typescript", version: ADAPTER_VERSION, language: "ts" };
+    const info: S.AdapterInfo = { name: "typescript", version: ADAPTER_VERSION, language: this.tag };
     const r = this.rel(this.root);
     if (r !== ".") info.root = r;
     info.notes = notes;
@@ -1498,7 +1715,7 @@ export class Extractor {
         schemaVersion: VERSION,
         tool: { name: "acu-adapter-typescript", version: ADAPTER_VERSION },
         generated: "",
-        languages: ["ts"],
+        languages: [...languages].sort(cmp),
         adapters: [info],
       },
       containers: [...this.conts.values()].sort((a, b) => cmp(a.id, b.id)),
@@ -1565,6 +1782,20 @@ function calleeName(n: ts.Node): string | undefined {
   if (ts.isPropertyAccessExpression(e)) return e.name.text;
   if (ts.isElementAccessExpression(e) && ts.isStringLiteralLike(e.argumentExpression)) return e.argumentExpression.text;
   return undefined;
+}
+
+/** The word for a JavaScript file: "module" with an import or export statement, "CommonJS module" with require or module.exports alone, else "script". */
+function jsFileKind(sf: ts.SourceFile): string {
+  const esm = sf.statements.some(
+    st =>
+      ts.isImportDeclaration(st) ||
+      ts.isExportDeclaration(st) ||
+      ts.isExportAssignment(st) ||
+      (ts.canHaveModifiers(st) && ts.getModifiers(st)?.some(m => m.kind === ts.SyntaxKind.ExportKeyword)),
+  );
+  if (esm) return "module";
+  if ((sf as { commonJsModuleIndicator?: ts.Node }).commonJsModuleIndicator) return "CommonJS module";
+  return ts.isExternalModule(sf) ? "module" : "script";
 }
 
 /** Reads and parses a tsconfig file, with its extends chain, or throws with a message that names the file. `extra` overrides the file's own options. */

@@ -109,7 +109,8 @@ RUN npm run build -w viewer \
  && cp target/release/acu target/release/acu-adapter-rust /out/ \
  && (cd adapters/go && CGO_ENABLED=0 go build -trimpath -o /out/acu-adapter-go ./cmd/acu-adapter-go)
 # The TypeScript adapter: its compiled source, and its run-time dependencies
-# from /deps. It needs nothing else at run time.
+# from /deps. It needs nothing else at run time. It reads JavaScript too, so
+# JavaScript needs no toolchain of its own.
 RUN npm run build -w adapters/typescript \
  && mkdir -p /out/acu-adapter-typescript/dist \
  && cp adapters/typescript/package.json /out/acu-adapter-typescript/ \

@@ -63,3 +63,5 @@ jobs:
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/mixed.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending-rust/atlas.yaml -o out/lending-rust.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending-rust.json
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending-js/atlas.yaml -o out/lending-js.json
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending-js.json
