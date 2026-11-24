@@ -164,7 +164,8 @@ by digest. Three places use it:
    docker run --rm -v "$PWD:/workspace" acu-toolchain scripts/check.sh
    ```
 
-3. **CI**, which runs the same `scripts/check.sh` in the same container.
+3. **CI**, which runs the same `scripts/check.sh` in the same container. It
+   skips draft pull requests and changes to docs alone.
 
 `scripts/check.sh` runs every check: formatting, lints, unit tests, golden
 files, count snapshots and the smoke test. `scripts/check.sh --quick` skips the
