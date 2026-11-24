@@ -856,7 +856,9 @@ function's `@overload` stubs and its implementation.
      comprehension included, and each binding in a nested function or
      class that declares the name `nonlocal`;
    - for a field: each binding of `self.x` in the methods of the class, of
-     its bases and of its subclasses, nested functions included;
+     its bases and of its subclasses, nested functions included; each
+     binding of `cls.x` in their class methods; and each binding of
+     `Store.x`, through the class's own name, in the class's module;
    - for a module variable: each binding at module level, main guard
      included, and each binding inside a function that declares the name
      `global`.
@@ -968,9 +970,10 @@ The output's notes list these limits, and the help text repeats them:
    guard.
 6. Type stubs (`.pyi`) do not appear: they describe code that lives
    elsewhere. The adapter reads one distribution per root.
-7. A write to an attribute through another reference
-   (`def poke(h: Holder): h.x = B()`), or through `setattr`, stays unseen,
-   so the attribute may keep a type that such a write breaks.
+7. A write to an attribute through another reference, such as a parameter
+   (`def poke(h: Holder): h.x = B()`) or the class's name in another
+   module, or through `setattr`, stays unseen, so the attribute may keep a
+   type that such a write breaks.
 8. The resolver ignores the order of statements. A name that `del`
    removes counts as unknown everywhere, even before the `del`; a read
    after the `del` would raise at run time.

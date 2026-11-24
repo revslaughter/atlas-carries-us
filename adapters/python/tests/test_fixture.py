@@ -192,6 +192,18 @@ class Facts(unittest.TestCase):
         """send_local calls Courier.run through a local that nothing rebinds."""
         self.assertTrue(has_edge("calls", L + "carriers#send_local", L + "carriers#Courier.run"))
 
+    def test_a_class_method_write_unsettles_a_class_attribute(self) -> None:
+        """Depot.modernize writes cls.carrier = Drone(), so Depot.go gets no exact edge to Courier.run."""
+        self.assertFalse(has_edge("calls", L + "carriers#Depot.go", L + "carriers#Courier.run"))
+
+    def test_a_write_through_the_class_name_unsettles_a_class_attribute(self) -> None:
+        """Module code writes Hub.carrier = Drone(), so Hub.go gets no exact edge to Courier.run."""
+        self.assertFalse(has_edge("calls", L + "carriers#Hub.go", L + "carriers#Courier.run"))
+
+    def test_an_agreeing_write_through_the_class_name_keeps_the_exact_call(self) -> None:
+        """Module code writes Station.carrier = Courier() again, so Station.go keeps its exact edge to Courier.run."""
+        self.assertTrue(has_edge("calls", L + "carriers#Station.go", L + "carriers#Courier.run"))
+
     def test_kinds_follow_the_bases(self) -> None:
         """Status is an enum, Readable a protocol, Loan a named tuple, NotAvailable an exception."""
         self.assertEqual(symbol(L + "domain#Status")["kind"], "enum")

@@ -262,6 +262,28 @@ class Indexer:
                     visit(child, cls)
 
         visit(mod.tree, None)
+        self.class_name_writes()
+
+    def class_name_writes(self) -> None:
+        """Adds each write of a class attribute through the class's own name, such as ``Store.limit = 5``.
+
+        Only writes in this module count. A write at module level keeps its
+        value; a write inside a function adds an opaque write. Each write
+        also joins ``self_writes``, so that the class's bases and subclasses
+        share it.
+        """
+        for target, value, _stmt, nested in bindings(self.mod.tree.body, deep=True):
+            if not (isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name)):
+                continue
+            b = self.mod.scope.get(target.value.id)
+            if b is None or b.kind != "symbol" or b.symbol is None or b.symbol.kind != "class":
+                continue
+            cls = b.symbol
+            write = (None if nested else value, None, None)
+            cls.self_writes.setdefault(target.attr, []).append(write)
+            member = cls.members.get(target.attr)
+            if member is not None and member.kind == "field":
+                member.writes.append(write)
 
     def rebind(self, target: ast.expr, value: Optional[ast.expr], stmt: ast.AST, names: Optional[set[str]], fn: Optional[ast.AST], cls: Optional[Sym]) -> None:
         """Adds one write to the module variable that ``target`` names, if any.
@@ -491,16 +513,19 @@ class Indexer:
 
         A plain assignment in a method's own body makes the field. Every other
         binding of ``self.x`` (``+=``, a ``for`` or ``with`` target, ``del``,
-        a write inside a nested function) adds an opaque write. All writes go
-        to ``cls.self_writes`` too, so that a subclass can share them.
+        a write inside a nested function) adds an opaque write. A class
+        method's ``cls.x = …`` counts as a write too, but makes no field. All
+        writes go to ``cls.self_writes`` too, so that a subclass can share
+        them.
         """
         methods = [s for s in node.body if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef))]
         methods.sort(key=lambda f: (f.name != "__init__", f.lineno))
         found: dict[str, list[tuple]] = {}
         for fn in methods:
             names = [_decorator_name(d) for d in fn.decorator_list]
-            if "staticmethod" in names or "classmethod" in names:
+            if "staticmethod" in names:
                 continue
+            creates = "classmethod" not in names
             args = fn.args.posonlyargs + fn.args.args
             if not args:
                 continue
@@ -510,7 +535,7 @@ class Indexer:
                     continue
                 plain = isinstance(stmt, (ast.Assign, ast.AnnAssign)) and not nested and value is not None
                 ann = stmt.annotation if isinstance(stmt, ast.AnnAssign) and stmt.target is target else None
-                found.setdefault(target.attr, []).append((fn, stmt, value if plain else None, ann, plain))
+                found.setdefault(target.attr, []).append((fn, stmt, value if plain else None, ann, plain and creates))
         for name, writes in found.items():
             cls.self_writes[name] = [(v, fn, cls) for fn, _stmt, v, _ann, _plain in writes]
             member = cls.members.get(name)

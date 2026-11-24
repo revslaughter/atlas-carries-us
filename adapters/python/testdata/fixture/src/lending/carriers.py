@@ -207,3 +207,42 @@ def send_local() -> None:
     """Sends books with a local carrier that nothing rebinds."""
     van = Courier()
     van.run()
+
+
+class Depot:
+    """Holds a carrier as a class attribute that a class method swaps."""
+
+    carrier = Courier()
+
+    @classmethod
+    def modernize(cls) -> None:
+        """Swaps the depot's carrier for a drone."""
+        cls.carrier = Drone()
+
+    def go(self) -> None:
+        """Sends the books with the depot's carrier."""
+        self.carrier.run()
+
+
+class Hub:
+    """Holds a carrier as a class attribute that module code replaces."""
+
+    carrier = Courier()
+
+    def go(self) -> None:
+        """Sends the books with the hub's carrier."""
+        self.carrier.run()
+
+
+class Station:
+    """Holds a carrier as a class attribute that module code sets again to the same class."""
+
+    carrier = Courier()
+
+    def go(self) -> None:
+        """Sends the books with the station's carrier."""
+        self.carrier.run()
+
+
+Hub.carrier = Drone()
+Station.carrier = Courier()

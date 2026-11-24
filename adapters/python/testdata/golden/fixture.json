@@ -23,9 +23,9 @@
           "A decorator that changes a signature leaves the signature as the def writes it; metaclasses and class decorators add no members.",
           "Code at module level, outside functions, makes no calls on the map, except inside a main guard.",
           "Type stubs (.pyi) do not appear; the adapter reads one distribution per root.",
-          "A write to an attribute through another reference, or through setattr, stays unseen, so the attribute may keep a type that such a write breaks.",
+          "A write to an attribute through another reference, such as a parameter or the class's name in another module, or through setattr, stays unseen, so the attribute may keep a type that such a write breaks.",
           "The resolver ignores the order of statements: a name that del removes counts as unknown everywhere.",
-          "Of 91 call sites, 40 resolved to code on the map, 28 to outside code or built-ins, 1 by a unique method name (heuristic), and 22 to nothing.",
+          "Of 95 call sites, 42 resolved to code on the map, 28 to outside code or built-ins, 1 by a unique method name (heuristic), and 24 to nothing.",
           "Units import 6 outside packages; the adapter installs nothing, so their types count as unknown."
         ]
       }
@@ -793,6 +793,119 @@
       }
     },
     {
+      "id": "py:lending.carriers#Depot",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Depot",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 212,
+        "endLine": 224
+      },
+      "doc": {
+        "raw": "Holds a carrier as a class attribute that a class method swaps.",
+        "format": "plain",
+        "summary": "Holds a carrier as a class attribute that a class method swaps.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier as a class attribute that a class method swaps."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Depot.carrier",
+      "kind": "field",
+      "languageKind": "class attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Depot",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 215,
+        "endLine": 215
+      }
+    },
+    {
+      "id": "py:lending.carriers#Depot.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Depot",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 222,
+        "endLine": 224
+      },
+      "doc": {
+        "raw": "Sends the books with the depot's carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the depot's carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the depot's carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Depot.modernize",
+      "kind": "method",
+      "languageKind": "class method",
+      "name": "modernize",
+      "parent": "py:lending.carriers#Depot",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 218,
+        "endLine": 220
+      },
+      "doc": {
+        "raw": "Swaps the depot's carrier for a drone.",
+        "format": "plain",
+        "summary": "Swaps the depot's carrier for a drone.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Swaps the depot's carrier for a drone."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def modernize(cls) -> None"
+      },
+      "modifiers": [
+        "classmethod"
+      ],
+      "annotations": [
+        "@classmethod"
+      ]
+    },
+    {
       "id": "py:lending.carriers#Dispatch",
       "kind": "class",
       "languageKind": "class",
@@ -1086,6 +1199,152 @@
           {
             "type": "paragraph",
             "text": "Sends the books with the current carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Hub",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Hub",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 227,
+        "endLine": 234
+      },
+      "doc": {
+        "raw": "Holds a carrier as a class attribute that module code replaces.",
+        "format": "plain",
+        "summary": "Holds a carrier as a class attribute that module code replaces.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier as a class attribute that module code replaces."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Hub.carrier",
+      "kind": "field",
+      "languageKind": "class attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Hub",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 230,
+        "endLine": 230
+      }
+    },
+    {
+      "id": "py:lending.carriers#Hub.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Hub",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 232,
+        "endLine": 234
+      },
+      "doc": {
+        "raw": "Sends the books with the hub's carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the hub's carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the hub's carrier."
+          }
+        ]
+      },
+      "signature": {
+        "params": [],
+        "results": [
+          {
+            "type": "None"
+          }
+        ],
+        "text": "def go(self) -> None"
+      }
+    },
+    {
+      "id": "py:lending.carriers#Station",
+      "kind": "class",
+      "languageKind": "class",
+      "name": "Station",
+      "parent": "py:file:src/lending/carriers.py",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 237,
+        "endLine": 244
+      },
+      "doc": {
+        "raw": "Holds a carrier as a class attribute that module code sets again to the same class.",
+        "format": "plain",
+        "summary": "Holds a carrier as a class attribute that module code sets again to the same class.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Holds a carrier as a class attribute that module code sets again to the same class."
+          }
+        ]
+      }
+    },
+    {
+      "id": "py:lending.carriers#Station.carrier",
+      "kind": "field",
+      "languageKind": "class attribute",
+      "name": "carrier",
+      "parent": "py:lending.carriers#Station",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 240,
+        "endLine": 240
+      }
+    },
+    {
+      "id": "py:lending.carriers#Station.go",
+      "kind": "method",
+      "languageKind": "method",
+      "name": "go",
+      "parent": "py:lending.carriers#Station",
+      "language": "py",
+      "exported": true,
+      "location": {
+        "path": "src/lending/carriers.py",
+        "line": 242,
+        "endLine": 244
+      },
+      "doc": {
+        "raw": "Sends the books with the station's carrier.",
+        "format": "plain",
+        "summary": "Sends the books with the station's carrier.",
+        "description": [
+          {
+            "type": "paragraph",
+            "text": "Sends the books with the station's carrier."
           }
         ]
       },
@@ -4880,6 +5139,13 @@
       "kind": "extends",
       "confidence": "exact",
       "line": 171
+    },
+    {
+      "from": "py:lending.carriers#Station.go",
+      "to": "py:lending.carriers#Courier.run",
+      "kind": "calls",
+      "confidence": "exact",
+      "line": 244
     },
     {
       "from": "py:lending.carriers#send_fixed",

@@ -30,7 +30,7 @@ LIMITS = [
     "A decorator that changes a signature leaves the signature as the def writes it; metaclasses and class decorators add no members.",
     "Code at module level, outside functions, makes no calls on the map, except inside a main guard.",
     "Type stubs (.pyi) do not appear; the adapter reads one distribution per root.",
-    "A write to an attribute through another reference, or through setattr, stays unseen, so the attribute may keep a type that such a write breaks.",
+    "A write to an attribute through another reference, such as a parameter or the class's name in another module, or through setattr, stays unseen, so the attribute may keep a type that such a write breaks.",
     "The resolver ignores the order of statements: a name that del removes counts as unknown everywhere.",
 ]
 
