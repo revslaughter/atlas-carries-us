@@ -38,3 +38,8 @@
 	url = https://github.com/tokio-rs/axum
 	shallow = true
 	update = none
+[submodule "corpus/javascript/commander"]
+	path = corpus/javascript/commander
+	url = https://github.com/tj/commander.js
+	shallow = true
+	update = none

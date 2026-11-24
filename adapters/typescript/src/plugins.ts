@@ -17,6 +17,7 @@
 import ts from "typescript";
 
 import { collapse, type Extractor, shorten, unwrap } from "./extract.js";
+import { isRequire, requireSpec } from "./javascript.js";
 import { SvelteKit } from "./sveltekit.js";
 
 /** Switches on one entry-point plugin. */
@@ -323,8 +324,13 @@ function initPrefix(ex: Extractor, key: ts.Symbol): string {
   return init ? chain(ex, init).prefix : "";
 }
 
-/** The symbol that names a receiver (a variable or a property), through imports. */
+/** The symbol that names a receiver (a variable or a property), through imports. A require() of a project file gives what that file exports: the router in module.exports = router. */
 function receiverSymbol(ex: Extractor, e: ts.Expression): ts.Symbol | undefined {
+  if (isRequire(e)) {
+    const m = ex.checker.getSymbolAtLocation(e.arguments[0]);
+    const eq = m?.exports?.get(ts.InternalSymbolName.ExportEquals);
+    return eq && eq.flags & ts.SymbolFlags.Alias ? ex.checker.getAliasedSymbol(eq) : eq;
+  }
   const at = ts.isPropertyAccessExpression(e) ? e.name : ts.isIdentifier(e) ? e : undefined;
   let s = at && ex.checker.getSymbolAtLocation(at);
   if (s && s.flags & ts.SymbolFlags.Alias) s = ex.checker.getAliasedSymbol(s);
@@ -335,6 +341,8 @@ function receiverSymbol(ex: Extractor, e: ts.Expression): ts.Symbol | undefined 
 function originModule(ex: Extractor, e: ts.Expression, depth: number): string | undefined {
   if (depth > 6) return undefined;
   e = unwrap(e);
+  const req = requireSpec(e);
+  if (req !== undefined) return req;
   if (ts.isNewExpression(e) || ts.isCallExpression(e)) return originModule(ex, e.expression, depth + 1);
   if (ts.isPropertyAccessExpression(e)) {
     const s = ex.checker.getSymbolAtLocation(e.name);
@@ -350,7 +358,13 @@ function originModule(ex: Extractor, e: ts.Expression, depth: number): string | 
     const td = target.valueDeclaration;
     if (td && ts.isVariableDeclaration(td) && td.initializer && !td.getSourceFile().isDeclarationFile)
       return originModule(ex, td.initializer, depth + 1);
+    // In JavaScript, const express = require("express") binds an alias too.
     let n: ts.Node | undefined = s.declarations?.[0];
+    if (n && ts.isBindingElement(n)) n = n.parent.parent;
+    if (n && ts.isVariableDeclaration(n)) {
+      const r = requireSpec(n.initializer);
+      if (r !== undefined) return r;
+    }
     while (n && !ts.isImportDeclaration(n) && !ts.isImportEqualsDeclaration(n)) n = n.parent;
     if (n && ts.isImportDeclaration(n) && ts.isStringLiteralLike(n.moduleSpecifier)) return n.moduleSpecifier.text;
     if (n && ts.isImportEqualsDeclaration(n) && ts.isExternalModuleReference(n.moduleReference)) {
