@@ -1,0 +1,162 @@
+# The Atlas Carries Us action: maps a repository with acu and writes the map
+# as a static site, and can hand that site to GitHub Pages.
+#
+#   - uses: revslaughter/atlas-carries-us@v0.1.0
+#     with:
+#       publish: true
+#
+# It runs acu from the runtime image that release.yml publishes to the
+# GitHub Container Registry. The image holds acu and its four adapters, with
+# Go, Node, CPython and the pinned Rust nightly, so a workflow needs no setup
+# step for any language. docs/github-action.md describes every input, the
+# reasons for the image, and a workflow that publishes to Pages.
+name: Atlas Carries Us
+description: Map a repository and its doc comments with acu, write the map as a static site, and optionally upload it for GitHub Pages.
+author: Atlas Carries Us
+branding:
+  icon: map
+  color: blue
+
+inputs:
+  config:
+    description: The path of atlas.yaml, relative to the repository root.
+    required: false
+    default: atlas.yaml
+  data:
+    description: The path of the atlas.json that acu extract writes, relative to the repository root.
+    required: false
+    default: atlas.json
+  output:
+    description: The folder that acu build writes the site to, relative to the repository root.
+    required: false
+    default: site
+  version:
+    description: The acu release to run, such as 0.2.0 (a leading v counts too), or latest. It names a tag of the image. Empty takes the version in the Cargo.toml of the action's own commit, so uses ...@v0.2.0, or a commit SHA, runs the release that commit names.
+    required: false
+    default: ""
+  image:
+    description: The image to run acu from, without a tag. Change it for a fork or a mirror.
+    required: false
+    default: ghcr.io/revslaughter/atlas-carries-us
+  publish:
+    description: true uploads the site as the Pages artifact (actions/upload-pages-artifact); a later job with actions/deploy-pages publishes it.
+    required: false
+    default: "false"
+
+outputs:
+  data:
+    description: The path of atlas.json, relative to the repository root.
+    value: ${{ inputs.data }}
+  site:
+    description: The path of the site folder, relative to the repository root.
+    value: ${{ inputs.output }}
+  image:
+    description: The image and tag that ran acu.
+    value: ${{ steps.image.outputs.ref }}
+
+runs:
+  using: composite
+  steps:
+    - name: Pick the acu image
+      id: image
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        VERSION: ${{ inputs.version }}
+        CONFIG: ${{ inputs.config }}
+        DATA: ${{ inputs.data }}
+        OUTPUT: ${{ inputs.output }}
+        PUBLISH: ${{ inputs.publish }}
+      run: |
+        if [ "$RUNNER_OS" != Linux ]; then
+          echo "acu-action: the acu image runs on Linux runners only, not on $RUNNER_OS; choose runs-on: ubuntu-latest." >&2
+          exit 1
+        fi
+        # acu runs in a container that sees the repository at /work, so every
+        # path must stay inside the repository.
+        for p in "$CONFIG" "$DATA" "$OUTPUT"; do
+          if [ -z "$p" ]; then
+            echo "acu-action: config, data and output each need a path; give one relative to the repository root." >&2
+            exit 1
+          fi
+          case "/$p/" in
+            //* | */../*)
+              echo "acu-action: the path $p leaves the repository; give a path relative to the repository root." >&2
+              exit 1
+              ;;
+          esac
+        done
+        case "$PUBLISH" in
+          true | false) ;;
+          *)
+            echo "acu-action: publish takes true or false, not $PUBLISH." >&2
+            exit 1
+            ;;
+        esac
+        tag=${VERSION#v}
+        if [ -z "$tag" ]; then
+          # The version of acu in the action's own checkout. release.yml
+          # checks that each release tag names this version.
+          tag=$(sed -nE '/^\[workspace\.package\]$/,/^\[/s/^version = "([^"]+)"$/\1/p' "$GITHUB_ACTION_PATH/Cargo.toml" 2>/dev/null || true)
+          if [ -z "$tag" ]; then
+            echo "acu-action: $GITHUB_ACTION_PATH/Cargo.toml names no version, so the action runs the image tagged latest; give version to choose one." >&2
+            tag=latest
+          fi
+        fi
+        echo "ref=$IMAGE:$tag" >>"$GITHUB_OUTPUT"
+    - name: Pull the acu image
+      shell: bash
+      env:
+        REF: ${{ steps.image.outputs.ref }}
+      run: |
+        # An image that the job built or pulled before needs no pull.
+        if ! docker image inspect "$REF" >/dev/null 2>&1; then
+          docker pull --quiet "$REF" || {
+            echo "acu-action: the image $REF could not be pulled; check that a release of that version exists, or give version." >&2
+            exit 1
+          }
+        fi
+        docker run --rm "$REF" --version
+    - name: Run acu extract
+      shell: bash
+      env:
+        REF: ${{ steps.image.outputs.ref }}
+        CONFIG: ${{ inputs.config }}
+        DATA: ${{ inputs.data }}
+      # cargo writes its build output for the Rust adapter to /tmp in the
+      # container, not to the repository.
+      run: docker run --rm -v "$GITHUB_WORKSPACE:/work" -e CARGO_TARGET_DIR=/tmp/acu-target "$REF" extract -c "$CONFIG" -o "$DATA"
+    - name: Run acu build
+      shell: bash
+      env:
+        REF: ${{ steps.image.outputs.ref }}
+        DATA: ${{ inputs.data }}
+        OUTPUT: ${{ inputs.output }}
+      run: docker run --rm -v "$GITHUB_WORKSPACE:/work" -e CARGO_TARGET_DIR=/tmp/acu-target "$REF" build -d "$DATA" -o "$OUTPUT"
+    - name: Change the owner of the files to the runner's user
+      if: always()
+      shell: bash
+      env:
+        REF: ${{ steps.image.outputs.ref }}
+        DATA: ${{ inputs.data }}
+        OUTPUT: ${{ inputs.output }}
+      run: |
+        # The container runs as root, so its files belong to root. Later
+        # steps of the job run as the runner's user and may need to change
+        # them. acu also makes the folders above the data and the site, so
+        # the step changes the owner from the first part of each path down.
+        [ -n "$REF" ] || exit 0
+        targets=()
+        for p in "$DATA" "$OUTPUT"; do
+          while [[ "$p" == ./* ]]; do p=${p#./}; done
+          top=${p%%/*}
+          if [ -n "$top" ] && [ -e "$GITHUB_WORKSPACE/$top" ]; then targets+=("$top"); fi
+        done
+        if ((${#targets[@]})); then
+          docker run --rm -v "$GITHUB_WORKSPACE:/work" --entrypoint chown "$REF" -R "$(id -u):$(id -g)" -- "${targets[@]}"
+        fi
+    - name: Upload the site for GitHub Pages
+      if: inputs.publish == 'true'
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ${{ inputs.output }}

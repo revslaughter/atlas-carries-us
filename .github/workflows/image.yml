@@ -6,12 +6,12 @@ name: Image
 # private repository. So a pull request runs them only when it changes what
 # goes into the image or the programs: the Dockerfile, acu, the adapters, the
 # pinned toolchains and dependencies, the release packing (release-pack.sh),
-# or this file. Every push to main that changes
+# the action (action.yml), or this file. Every push to main that changes
 # more than docs runs them, which catches what a pull request skipped.
 #
 # This workflow packs three of the six release platforms with
-# release-pack.sh, as release.yml does, and runs those archives. It does not
-# build the arm64
+# release-pack.sh, as release.yml does, and runs those archives; it also runs
+# the action against the image that it builds. It does not build the arm64
 # image or push anything. release.yml makes a full dry run of its own when a
 # pull request changes it.
 #
@@ -44,6 +44,7 @@ on:
       - ".python-version"
       - "scripts/docker-export.sh"
       - "scripts/release-pack.sh"
+      - "action.yml"
       - ".github/workflows/image.yml"
 
 permissions:
@@ -95,6 +96,22 @@ jobs:
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending-python.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending-js/atlas.yaml -o out/lending-js.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending-js.json
+      # The repository's own action (action.yml), with the image that this
+      # job just built in place of a published one.
+      - name: Map a fixture with the action
+        uses: ./
+        with:
+          image: acu
+          version: ci
+          config: examples/lending/atlas.yaml
+          data: out/action/lending.json
+          output: out/action/site
+      - name: Check the action's output
+        run: |
+          test -s out/action/lending.json
+          test -s out/action/site/index.html
+          # The action changes the owner of its files to the runner's user.
+          test -O out/action/site/index.html
       # The export stage writes the same programs to a folder on the runner.
       # Its build stage already sits in this builder's cache from the step
       # above. Then acu runs outside any container, with the runner's own Go
