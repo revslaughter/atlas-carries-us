@@ -142,6 +142,7 @@ cargo zigbuild --release --locked --target aarch64-apple-darwin -p atlas-carries
 | Viewer | The TypeScript type check, unit tests (including the language-word test), and the build. |
 | `acu` and the Rust adapter | `cargo fmt`, `cargo clippy` with warnings as errors, the tests (for the Rust adapter: golden file, schema validation, named facts), and a release build of the workspace. |
 | End to end | For each example: `acu extract`, the count snapshot, `acu build`, and the smoke test in both themes. |
+| MCP server | `tests/e2e/mcp.mjs`: a scripted client calls every MCP tool on chi and Cobra, then drafts a tour step over HTTP and checks the viewer's "Machine-drafted" label ([`docs/mcp.md`](docs/mcp.md)). |
 | This project's map | `acu extract -c atlas.yaml`, the doc check (`tests/e2e/docs.mjs`), `acu build`, and the smoke test in both themes. |
 
 ## 4. Conventions that hold everywhere

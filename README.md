@@ -14,6 +14,7 @@ to run it. Other files hold the details:
 | Every `atlas.yaml` field | [`docs/config.md`](docs/config.md) |
 | The adapters and their plugins | [`docs/adapters.md`](docs/adapters.md) |
 | The data format | [`docs/schema.md`](docs/schema.md) |
+| The MCP server for language models | [`docs/mcp.md`](docs/mcp.md) |
 | The workflow and the conventions | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 ## How it works
@@ -297,12 +298,13 @@ check when it loads the file.
 
 ## 3. Run it
 
-### The four commands
+### The five commands
 
 | Command | What it does |
 | --- | --- |
 | `acu extract` | Runs the adapters, applies the config, checks the result and writes `atlas.json`. |
-| `acu serve` | Serves the map on your computer. |
+| `acu serve` | Serves the map on your computer, with an MCP server at `/mcp` ([`docs/mcp.md`](docs/mcp.md)). |
+| `acu mcp` | Runs the MCP server over standard input and output, for desktop clients. |
 | `acu build` | Writes a static site (the viewer and the data) to a folder. |
 | `acu check` | Reports problems in the config and the data. It writes nothing. |
 
@@ -313,10 +315,13 @@ check when it loads the file.
 | `extract` | `-c`, `--config <file>` | `atlas.yaml` | The project config. |
 | `extract` | `-o`, `--out <file>` | `atlas.json` | The data file to write. |
 | `extract` | `--pretty` | off | Indent the JSON. |
-| `serve`, `build`, `check` | `-c`, `--config <file>` | `atlas.yaml` | Extract from this config first. |
-| `serve`, `build`, `check` | `-d`, `--data <file>` | none | Use a finished `atlas.json`. Cannot combine with `-c`. |
+| `serve`, `mcp`, `build`, `check` | `-c`, `--config <file>` | `atlas.yaml` | Extract from this config first. |
+| `serve`, `mcp`, `build`, `check` | `-d`, `--data <file>` | none | Use a finished `atlas.json`. Cannot combine with `-c`. |
 | `build` | `-o`, `--out <folder>` | `site` | The folder to write. |
 | `serve` | `--addr <host:port>` | `127.0.0.1:4321` | The address to listen on. |
+| `serve`, `mcp` | `--read-only` | off | Turn off the MCP tools that write `atlas.yaml`. |
+| `serve`, `mcp` | `--root <folder>` | current folder | With `-d`: the mapped repository, where the MCP tool `read_source` reads files. |
+| `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. |
 
 ### Common tasks
 
