@@ -227,4 +227,6 @@ Text that a program (for example a language model) wrote carries a mark:
 ```
 
 The viewer labels such text as machine-drafted. A person who has checked the
-text removes the `drafted` line.
+text removes the `drafted` line. The write tools of the MCP server
+([`mcp.md`](mcp.md)) set this mark on every region, description and tour
+step that they draft.

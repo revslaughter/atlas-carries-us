@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { inlineHTML, inlinePlain, setTextEnv, sourceURL } from "../src/text";
+import { draftedNote, inlineHTML, inlinePlain, setTextEnv, sourceURL } from "../src/text";
 
 setTextEnv({
   project: {
@@ -54,4 +54,11 @@ test("strips markup for the canvas", () => {
 test("fills link templates", () => {
   assert.equal(sourceURL("a/b.go", 7), "https://example.com/o/r/abc/a/b.go#L7");
   assert.equal(sourceURL("a/b.go"), "https://example.com/o/r/abc/a/b.go");
+});
+
+test("labels drafted text with its model and day, as an MCP write tool marks it", () => {
+  const html = draftedNote({ by: "a <local> model", at: "2026-11-26T10:00:00Z" });
+  assert.match(html, /<b>Machine-drafted\.<\/b>/);
+  assert.match(html, /a &lt;local&gt; model wrote this text on 2026-11-26/);
+  assert.equal(draftedNote(undefined), "");
 });
