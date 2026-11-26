@@ -23,6 +23,16 @@ pub enum Change {
         /// True to insert the item before `at`, false to replace it.
         insert: bool,
     },
+    /// Set keys of the item at a position of a top-level list, and drop
+    /// the keys whose value is null. The item's other lines stay.
+    ItemKeys {
+        /// The top-level key: `regions`.
+        key: &'static str,
+        /// The item's position.
+        at: usize,
+        /// The keys and their new values.
+        values: Vec<(&'static str, Value)>,
+    },
     /// Set keys of a top-level mapping, and drop the keys whose value is
     /// null.
     Keys {
@@ -74,22 +84,36 @@ fn expected(original: &Value, change: &Change) -> Result<Value, String> {
                 return Err(format!("{key} holds {} entries", list.len()));
             }
         }
+        Change::ItemKeys { key, at, values } => {
+            let m = obj
+                .get_mut(*key)
+                .and_then(Value::as_array_mut)
+                .and_then(|l| l.get_mut(*at))
+                .and_then(Value::as_object_mut)
+                .ok_or(format!("{key} in atlas.yaml holds no entry {}", at + 1))?;
+            set_keys(m, values);
+        }
         Change::Keys { key, values } => {
             let m = obj
                 .entry(*key)
                 .or_insert_with(|| Value::Object(Map::new()))
                 .as_object_mut()
                 .ok_or(format!("{key} in atlas.yaml holds no mapping"))?;
-            for (k, val) in values {
-                if val.is_null() {
-                    m.remove(*k);
-                } else {
-                    m.insert(k.to_string(), val.clone());
-                }
-            }
+            set_keys(m, values);
         }
     }
     Ok(v)
+}
+
+/// Sets keys of a mapping, and drops the keys whose value is null.
+fn set_keys(m: &mut Map<String, Value>, values: &[(&'static str, Value)]) {
+    for (k, val) in values {
+        if val.is_null() {
+            m.remove(*k);
+        } else {
+            m.insert(k.to_string(), val.clone());
+        }
+    }
 }
 
 /// Edits the text and returns the new text and how acu edited it: "in
@@ -100,6 +124,12 @@ pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), Strin
     let want = expected(&original, change)?;
     let lines: Vec<&str> = text.lines().collect();
     let ends_nl = text.ends_with('\n') || text.is_empty();
+    // A file whose lines end in CR LF keeps that ending.
+    let nl = if text.matches("\r\n").count() * 2 > text.matches('\n').count() {
+        "\r\n"
+    } else {
+        "\n"
+    };
     let mut tries: Vec<(Option<Vec<String>>, &'static str)> = Vec::new();
     for pretty in [true, false] {
         tries.push((splice(&lines, change, &want, pretty), "in place"));
@@ -107,9 +137,9 @@ pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), Strin
     tries.push((rewrite_section(&lines, change, &want), "section"));
     for (attempt, how) in tries {
         let Some(new_lines) = attempt else { continue };
-        let mut out = new_lines.join("\n");
+        let mut out = new_lines.join(nl);
         if ends_nl || !out.is_empty() {
-            out.push('\n');
+            out.push_str(nl);
         }
         if parse(&out).ok().as_ref() == Some(&want) {
             return Ok((out, how));
@@ -224,41 +254,111 @@ fn seq_items(lines: &[&str], sec: &Section) -> Option<(usize, Vec<(usize, usize)
 /// after its last.
 type Keys = Vec<(String, usize, usize)>;
 
-/// Finds the keys of a block mapping in a section: their indent and the
-/// lines each spans.
-fn map_keys(lines: &[&str], sec: &Section) -> Option<(usize, Keys)> {
-    if !opens_block(lines[sec.start]) {
-        return None;
-    }
-    let first = (sec.start + 1..sec.end).find(|&i| !is_filler(lines[i]))?;
-    let n = indent(lines[first]);
-    if n == 0 {
-        return None;
-    }
+/// Finds the keys of a block mapping in the lines from `from` to `to`, at
+/// indent `n`. With `dash`, the first line opens a list item (`- key: …`),
+/// as in a region of `regions`. Gives `None` for any other shape.
+fn map_keys(lines: &[&str], from: usize, to: usize, n: usize, dash: bool) -> Option<Keys> {
+    let key_of = |l: &str, at: usize| -> Option<String> {
+        let rest = &l[at..];
+        if rest.starts_with(['-', '#', '[', '{']) {
+            return None;
+        }
+        let (k, _) = rest.split_once(':')?;
+        Some(k.trim().trim_matches(['"', '\'']).to_string())
+    };
     let mut starts = Vec::new();
-    for (i, &l) in lines.iter().enumerate().take(sec.end).skip(first) {
+    for (i, &l) in lines.iter().enumerate().take(to).skip(from) {
+        if dash && i == from {
+            if n < 2 || indent(l) != n - 2 || !l[n - 2..].starts_with("- ") {
+                return None;
+            }
+            starts.push((i, key_of(l, n)?));
+            continue;
+        }
         if is_filler(l) {
             continue;
         }
         if indent(l) == n {
-            let (k, _) = l[n..].split_once(':')?;
-            if l[n..].starts_with('-') {
-                return None;
-            }
-            starts.push((i, k.trim().trim_matches(['"', '\'']).to_string()));
+            starts.push((i, key_of(l, n)?));
         } else if indent(l) < n {
             return None;
         }
     }
     let mut keys = Vec::new();
     for (k, (st, key)) in starts.iter().enumerate() {
-        let mut end = starts.get(k + 1).map_or(sec.end, |s| s.0);
+        let mut end = starts.get(k + 1).map_or(to, |s| s.0);
         while end > st + 1 && is_filler(lines[end - 1]) {
             end -= 1;
         }
         keys.push((key.clone(), *st, end));
     }
-    Some((n, keys))
+    Some(keys)
+}
+
+/// The position of a key in [`KEY_ORDER`]; other keys sort last.
+fn rank(k: &str) -> usize {
+    KEY_ORDER
+        .iter()
+        .position(|o| *o == k)
+        .unwrap_or(KEY_ORDER.len())
+}
+
+/// Rewrites the lines of the given keys in a block mapping and keeps every
+/// other line, comments included. A key that the mapping lacks goes in
+/// after the nearest key that [`KEY_ORDER`] puts before it, so
+/// `descriptionDrafted` follows `description`. A key whose value `m` lacks
+/// goes away. Returns the new lines for `from` to `to`.
+#[allow(clippy::too_many_arguments)]
+fn splice_keys(
+    lines: &[&str],
+    from: usize,
+    to: usize,
+    n: usize,
+    dash: bool,
+    values: &[&str],
+    m: &Map<String, Value>,
+    pretty: bool,
+) -> Option<Vec<String>> {
+    let keys = map_keys(lines, from, to, n, dash)?;
+    if keys.is_empty() {
+        return None;
+    }
+    // Each edit replaces the lines from `st` to `end` (an empty range
+    // inserts); edits never overlap.
+    let mut edits: Vec<(usize, usize, usize, Vec<String>)> = Vec::new();
+    for k in values {
+        let new = m
+            .get(*k)
+            .map(|v| emit_key(k, v, n, pretty))
+            .unwrap_or_default();
+        match keys.iter().find(|x| x.0 == *k) {
+            Some((_, st, end)) => {
+                let mut new = new;
+                if dash && *st == from {
+                    // The first key shares its line with the item's dash.
+                    let first = new.first_mut()?;
+                    *first = format!("{}- {}", " ".repeat(n - 2), &first[n..]);
+                }
+                edits.push((*st, *end, usize::MAX, new));
+            }
+            None => {
+                let after = keys
+                    .iter()
+                    .filter(|x| rank(&x.0) <= rank(k))
+                    .max_by_key(|x| (rank(&x.0), x.1))
+                    .unwrap_or(keys.last()?);
+                edits.push((after.2, after.2, rank(k), new));
+            }
+        }
+    }
+    // Apply from the bottom up, so the line numbers above stay right; two
+    // inserts at one place land in the order of KEY_ORDER.
+    edits.sort_by(|a, b| b.0.cmp(&a.0).then(b.2.cmp(&a.2)));
+    let mut out: Vec<String> = lines[from..to].iter().map(|l| l.to_string()).collect();
+    for (st, end, _, new) in edits {
+        out.splice(st - from..end - from, new);
+    }
+    Some(out)
 }
 
 /// Writes the new lines of the one entry that changed and keeps every other
@@ -316,29 +416,33 @@ fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option
             out.extend(own(&lines[sec.end..]));
             Some(out)
         }
+        Change::ItemKeys { key, at, values } => {
+            let item = want[*key].as_array()?.get(*at)?.as_object()?;
+            let sec = secs.iter().find(|s| s.key == *key)?;
+            let (n, items) = seq_items(lines, sec)?;
+            let &(st, end) = items.get(*at)?;
+            let names: Vec<&str> = values.iter().map(|v| v.0).collect();
+            let new = splice_keys(lines, st, end, n + 2, true, &names, item, pretty)?;
+            let mut out = own(&lines[..st]);
+            out.extend(new);
+            out.extend(own(&lines[end..]));
+            Some(out)
+        }
         Change::Keys { key, values } => {
             let m = want[*key].as_object()?;
             let sec = secs.iter().find(|s| s.key == *key)?;
-            let (n, keys) = map_keys(lines, sec)?;
-            let mut out = own(&lines[..sec.end]);
-            let mut extra = Vec::new();
-            // Work from the bottom up, so the line numbers above stay right.
-            let mut edits: Vec<(usize, usize, Vec<String>)> = Vec::new();
-            for (k, _) in values {
-                let new = m
-                    .get(*k)
-                    .map(|v| emit_key(k, v, n, pretty))
-                    .unwrap_or_default();
-                match keys.iter().find(|x| x.0 == *k) {
-                    Some((_, st, end)) => edits.push((*st, *end, new)),
-                    None => extra.extend(new),
-                }
+            if !opens_block(lines[sec.start]) {
+                return None;
             }
-            edits.sort_by_key(|e| std::cmp::Reverse(e.0));
-            for (st, end, new) in edits {
-                out.splice(st..end, new);
+            let first = (sec.start + 1..sec.end).find(|&i| !is_filler(lines[i]))?;
+            let n = indent(lines[first]);
+            if n == 0 {
+                return None;
             }
-            out.extend(extra);
+            let names: Vec<&str> = values.iter().map(|v| v.0).collect();
+            let new = splice_keys(lines, first, sec.end, n, false, &names, m, pretty)?;
+            let mut out = own(&lines[..first]);
+            out.extend(new);
             out.extend(own(&lines[sec.end..]));
             Some(out)
         }
@@ -349,7 +453,7 @@ fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option
 /// every other section's lines.
 fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<String>> {
     let key = match change {
-        Change::Item { key, .. } | Change::Keys { key, .. } => *key,
+        Change::Item { key, .. } | Change::ItemKeys { key, .. } | Change::Keys { key, .. } => *key,
     };
     let secs = sections(lines);
     let mut new = vec![format!("{key}:")];
@@ -680,5 +784,83 @@ mod tests {
             .unwrap();
             assert_eq!(parse(&out).unwrap()["tour"][0], step, "{out}");
         }
+    }
+
+    #[test]
+    fn a_file_with_cr_lf_endings_keeps_them() {
+        let text = TEXT.replace('\n', "\r\n");
+        let step = json!({"title": "New", "open": {"view": "overview"}, "text": "x"});
+        let (out, how) = edit(
+            &text,
+            &Change::Item {
+                key: "tour",
+                at: 2,
+                value: step,
+                insert: true,
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert_eq!(
+            out.matches('\n').count(),
+            out.matches("\r\n").count(),
+            "{out:?}"
+        );
+        assert!(out.contains("# Top comment.\r\n"), "{out:?}");
+    }
+
+    #[test]
+    fn changing_keys_of_an_item_keeps_its_other_lines() {
+        let text = "version: 1\nproject: {name: x}\nlanguages: [{adapter: go}]\nregions:\n  - id: core # the heart\n    # Its name.\n    name: Router\n    paths: [a]\n    description: Old.\n  - id: rest\n    name: Rest\n";
+        let (out, how) = edit(
+            text,
+            &Change::ItemKeys {
+                key: "regions",
+                at: 0,
+                values: vec![
+                    ("description", json!("New.")),
+                    ("readingTip", json!("Start here.")),
+                    ("drafted", json!({"by": "m", "at": "t"})),
+                ],
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert!(
+            out.contains("  - id: core # the heart\n    # Its name.\n    name: Router\n    paths: [a]\n    description: \"New.\"\n    readingTip: \"Start here.\"\n    drafted: { by: m, at: t }\n  - id: rest\n"),
+            "{out}"
+        );
+        let (out, _) = edit(
+            text,
+            &Change::ItemKeys {
+                key: "regions",
+                at: 0,
+                values: vec![("id", json!("heart"))],
+            },
+        )
+        .unwrap();
+        assert!(out.contains("  - id: heart\n    # Its name.\n"), "{out}");
+    }
+
+    #[test]
+    fn a_new_key_follows_the_key_it_belongs_after() {
+        let text = "version: 1\nproject:\n  name: x\n  description: Old.\n  repo: o/r\nlanguages: [{adapter: go}]\n";
+        let (out, _) = edit(
+            text,
+            &Change::Keys {
+                key: "project",
+                values: vec![
+                    ("description", json!("New.")),
+                    ("descriptionDrafted", json!({"by": "m", "at": "t"})),
+                ],
+            },
+        )
+        .unwrap();
+        assert!(
+            out.contains(
+                "  description: \"New.\"\n  descriptionDrafted: { by: m, at: t }\n  repo: o/r\n"
+            ),
+            "{out}"
+        );
     }
 }

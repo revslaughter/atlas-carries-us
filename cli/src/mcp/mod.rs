@@ -109,7 +109,10 @@ pub fn tools(writable: bool) -> Vec<Tool> {
             "symbol",
             "Shows one symbol: kind, unit, region, source place, signature, docs, members, tests and entry points. A unit shows its items.",
             schema(
-                &[("id", "string", "An ID from search, or a qualified name such as Mux.Get, or a unit path.")],
+                &[
+                    ("id", "string", "An ID from search, or a qualified name such as Mux.Get, or a unit path."),
+                    ("page", "integer", "Page of a symbol's members or a unit's items, from 1. Default 1."),
+                ],
                 &["id"],
             ),
         )
@@ -281,11 +284,13 @@ pub fn call(atlas: &Atlas, name: &str, args: &JsonObject, client: &str) -> Resul
             "a model over MCP".to_string()
         }
     };
-    let snap = atlas.snapshot()?;
+    let snap = atlas.snapshot().map_err(|e| {
+        format!("acu: read the map: {e}; fix the file or restart acu, then call again")
+    })?;
     let text = match name {
         "overview" => read::overview(&snap, atlas.why_read_only()),
         "search" => read::search(&snap, &a.text("query"), &a.text("kind"), a.num("page", 1)),
-        "symbol" => read::symbol(&snap, &a.text("id")),
+        "symbol" => read::symbol(&snap, &a.text("id"), a.num("page", 1)),
         "neighbours" | "neighbors" => read::neighbours(
             &snap,
             &a.text("id"),
@@ -297,7 +302,7 @@ pub fn call(atlas: &Atlas, name: &str, args: &JsonObject, client: &str) -> Resul
         "trace" => read::trace(&snap, &a.text("start"), a.num("depth", 3), a.num("page", 1)),
         "read_source" => read::read_source(
             &snap,
-            atlas.roots(),
+            atlas.sources(),
             &a.text("path"),
             a.num("start_line", 0),
             a.num("end_line", 0),
@@ -504,5 +509,21 @@ mod tests {
         assert!(e.starts_with("acu: no tool"), "{e}");
         let e = call(&a, "symbol", json!({"id": "Nope"}).as_object().unwrap(), "").unwrap_err();
         assert!(e.contains("search"), "{e}");
+    }
+
+    #[test]
+    fn a_map_that_cannot_load_gives_a_message_with_a_next_step() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("atlas.json");
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&atlas::tests::fixture_doc()).unwrap(),
+        )
+        .unwrap();
+        let a = Atlas::from_file(&path, dir.path(), true).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        let e = call(&a, "overview", &JsonObject::new(), "").unwrap_err();
+        assert!(e.starts_with("acu: read the map: read "), "{e}");
+        assert!(e.ends_with("then call again"), "{e}");
     }
 }

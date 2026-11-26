@@ -2,14 +2,16 @@
 //! where it came from, the folders that the read tools may see, and the one
 //! path by which a write tool changes atlas.yaml.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::SystemTime;
 
 use anyhow::{bail, Context, Result};
 use serde_json::Value;
 
-use super::read::Lookup;
+use super::read::{Lookup, Sources};
 use crate::assemble::{self, Index};
 use crate::config;
 use crate::AdapterRun;
@@ -69,11 +71,14 @@ pub struct Atlas {
     origin: Origin,
     /// The current state.
     current: RwLock<Arc<Snapshot>>,
-    /// The canonical folders that the read tools may read files from.
-    roots: Vec<PathBuf>,
-    /// True when the write tools stay off.
-    read_only: bool,
-    /// Keeps two writes from editing atlas.yaml at once.
+    /// The files that the read tools may read.
+    sources: Sources,
+    /// Why the write tools stay off, or `None` when the command line lets
+    /// them work.
+    read_only: Option<&'static str>,
+    /// Keeps two writes of this process from editing atlas.yaml at once.
+    /// Another process that writes the file at the same time can still
+    /// overwrite a draft; the last rename wins.
     writing: Mutex<()>,
 }
 
@@ -87,10 +92,25 @@ pub struct Written {
     pub how: &'static str,
 }
 
+/// Why the write tools stay off under `--read-only`.
+pub const READ_ONLY: &str = "acu runs with --read-only; start it without the flag to draft text";
+
+/// Why the write tools stay off when `acu serve` listens on an address that
+/// other computers can reach.
+pub const REMOTE: &str = "acu listens on an address that other computers can reach; start it with --allow-remote-writes to draft text";
+
+/// The message of a lock that a panic in another thread left broken.
+const BROKEN: &str = "a lock broke after an earlier failure; restart acu";
+
 impl Atlas {
     /// Opens a map from the adapters' output and a config; the result must
-    /// pass the same check as `acu extract`.
-    pub fn from_config(path: &Path, run: AdapterRun, read_only: bool) -> Result<Atlas> {
+    /// pass the same check as `acu extract`. `read_only` says why the write
+    /// tools stay off, or holds `None` to let them work.
+    pub fn from_config(
+        path: &Path,
+        run: AdapterRun,
+        read_only: Option<&'static str>,
+    ) -> Result<Atlas> {
         let path = path
             .canonicalize()
             .with_context(|| format!("find {}", path.display()))?;
@@ -102,57 +122,60 @@ impl Atlas {
             .iter()
             .filter_map(|r| r.canonicalize().ok())
             .collect();
+        roots.sort();
         roots.dedup();
         Ok(Atlas {
             origin: Origin::Config { path, run },
             current: RwLock::new(Arc::new(snap)),
-            roots,
+            sources: Sources::new(roots, None),
             read_only,
             writing: Mutex::new(()),
         })
     }
 
-    /// Opens a finished atlas.json; source paths resolve against `root`, and
-    /// the write tools stay off, because no config stands behind the file.
-    pub fn from_file(path: &Path, root: &Path) -> Result<Atlas> {
+    /// Opens a finished atlas.json. Source paths resolve against `root`:
+    /// the folder that `--root` names, else the current folder, which
+    /// `root_given` false marks so that a failed read can say how to pass
+    /// `--root`. The write tools stay off, because no config stands behind
+    /// the file.
+    pub fn from_file(path: &Path, root: &Path, root_given: bool) -> Result<Atlas> {
         let (doc, stamp) = read_file(path)?;
         let root = root
             .canonicalize()
             .with_context(|| format!("find {}", root.display()))?;
+        let hint = (!root_given).then(|| {
+            format!(
+                "acu serves a finished atlas.json and reads files from the current folder, {}; start it with --root and the folder of the mapped repository",
+                root.display()
+            )
+        });
         Ok(Atlas {
             origin: Origin::File {
                 path: path.to_path_buf(),
                 stamp: Mutex::new(stamp),
             },
             current: RwLock::new(Arc::new(Snapshot::new(doc, Vec::new()))),
-            roots: vec![root],
-            read_only: true,
+            sources: Sources::new(vec![root], hint),
+            read_only: Some(
+                "acu serves a finished atlas.json, so no config stands behind it; start acu with -c atlas.yaml to draft text",
+            ),
             writing: Mutex::new(()),
         })
     }
 
-    /// Reports whether the write tools work: a config stands behind the map
-    /// and `--read-only` is off.
+    /// Reports whether the write tools work.
     pub fn writable(&self) -> bool {
-        !self.read_only && matches!(self.origin, Origin::Config { .. })
+        self.read_only.is_none()
     }
 
     /// Says why the write tools stay off, or returns `None` when they work.
     pub fn why_read_only(&self) -> Option<&'static str> {
-        match self.origin {
-            Origin::File { .. } => Some(
-                "acu serves a finished atlas.json, so no config stands behind it; start acu with -c atlas.yaml to draft text",
-            ),
-            Origin::Config { .. } if self.read_only => {
-                Some("acu runs with --read-only; start it without the flag to draft text")
-            }
-            Origin::Config { .. } => None,
-        }
+        self.read_only
     }
 
-    /// The canonical folders that the read tools may read from.
-    pub fn roots(&self) -> &[PathBuf] {
-        &self.roots
+    /// The files that the read tools may read.
+    pub fn sources(&self) -> &Sources {
+        &self.sources
     }
 
     /// Returns the current state. For a finished atlas.json, it reads the
@@ -162,22 +185,15 @@ impl Atlas {
             let now = std::fs::metadata(path)
                 .and_then(|m| m.modified())
                 .map_err(|e| format!("read {}: {e}", path.display()))?;
-            let mut held = stamp.lock().map_err(|_| "a lock broke".to_string())?;
+            let mut held = stamp.lock().map_err(|_| BROKEN.to_string())?;
             if *held != Some(now) {
                 let (doc, t) = read_file(path).map_err(|e| format!("{e:#}"))?;
-                *self
-                    .current
-                    .write()
-                    .map_err(|_| "a lock broke".to_string())? =
+                *self.current.write().map_err(|_| BROKEN.to_string())? =
                     Arc::new(Snapshot::new(doc, Vec::new()));
                 *held = t;
             }
         }
-        Ok(self
-            .current
-            .read()
-            .map_err(|_| "a lock broke".to_string())?
-            .clone())
+        Ok(self.current.read().map_err(|_| BROKEN.to_string())?.clone())
     }
 
     /// Changes atlas.yaml through `edit`, which gets the file's text and
@@ -192,27 +208,24 @@ impl Atlas {
             return Err(why.to_string());
         }
         let Origin::Config { path, run } = &self.origin else {
-            return Err("no config stands behind this map".into());
+            return Err("no config stands behind this map; start acu with -c atlas.yaml".into());
         };
-        let _guard = self
-            .writing
-            .lock()
-            .map_err(|_| "a lock broke".to_string())?;
+        let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
         // Write only the config file itself, and only inside its own folder.
         let target = path
             .canonicalize()
-            .map_err(|e| format!("find {}: {e}", path.display()))?;
+            .map_err(|e| format!("find {}: {e}; restart acu", path.display()))?;
         if &target != path {
             return Err(format!(
-                "{} now points somewhere else; acu writes only the atlas.yaml it started with",
+                "{} now points somewhere else; acu writes only the atlas.yaml it started with, so restart acu",
                 path.display()
             ));
         }
         let text = std::fs::read_to_string(&target)
-            .map_err(|e| format!("read {}: {e}", target.display()))?;
+            .map_err(|e| format!("read {}: {e}; check the file", target.display()))?;
         let (new_text, how) = edit(&text)?;
         let value: Value = serde_yaml_ng::from_str(&new_text)
-            .map_err(|e| format!("the new atlas.yaml does not parse: {e}"))?;
+            .map_err(|e| format!("the new atlas.yaml does not parse, so acu wrote nothing: {e}"))?;
         let problems =
             config::validate(&value, config::CONFIG_SCHEMA).map_err(|e| e.to_string())?;
         if !problems.is_empty() {
@@ -227,10 +240,7 @@ impl Atlas {
             .map_err(|e| format!("the draft breaks the check, so acu wrote nothing: {e}"))?;
         write_atomic(&target, &new_text)?;
         let warnings = snap.warnings.clone();
-        *self
-            .current
-            .write()
-            .map_err(|_| "a lock broke".to_string())? = Arc::new(snap);
+        *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
         Ok(Written {
             path: target,
             warnings,
@@ -268,22 +278,57 @@ fn read_file(path: &Path) -> Result<(Value, Option<SystemTime>)> {
     Ok((doc, stamp))
 }
 
-/// Writes a file through a temporary file beside it, so a reader never sees
-/// half a file.
+/// Counts the temporary files that this process makes, so their names
+/// differ.
+static DRAFTS: AtomicU64 = AtomicU64::new(0);
+
+/// Writes a file through a new temporary file beside it, so a reader never
+/// sees half a file. The temporary file gets a name of its own (process ID
+/// and a counter) and opens only when nothing sits at that name, so a
+/// second process or a symbolic link there cannot redirect the write.
 fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
     let dir = target.parent().unwrap_or(Path::new("."));
     let name = target
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "atlas.yaml".into());
-    let tmp = dir.join(format!(".{name}.acu-draft"));
-    std::fs::write(&tmp, text).map_err(|e| format!("write {}: {e}", tmp.display()))?;
+    let mut tries = 0;
+    let (tmp, mut file) = loop {
+        let n = DRAFTS.fetch_add(1, Ordering::Relaxed);
+        let tmp = dir.join(format!(".{name}.acu-draft-{}-{n}", std::process::id()));
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)
+        {
+            Ok(f) => break (tmp, f),
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && tries < 16 => tries += 1,
+            Err(e) => {
+                return Err(format!(
+                    "create a temporary file in {}: {e}; check that acu may write there",
+                    dir.display()
+                ))
+            }
+        }
+    };
+    let done = file
+        .write_all(text.as_bytes())
+        .and_then(|_| file.sync_all())
+        .map_err(|e| format!("write {}: {e}", tmp.display()));
+    drop(file);
+    if let Err(e) = done {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(e);
+    }
     if let Ok(meta) = std::fs::metadata(target) {
         let _ = std::fs::set_permissions(&tmp, meta.permissions());
     }
     std::fs::rename(&tmp, target).map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
-        format!("replace {}: {e}", target.display())
+        format!(
+            "replace {}: {e}; check that acu may write there",
+            target.display()
+        )
     })
 }
 
@@ -364,7 +409,7 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
             commit: None,
             repo_roots: vec![dir.path().to_path_buf()],
         };
-        let atlas = Atlas::from_config(&dir.path().join("atlas.yaml"), run, false).unwrap();
+        let atlas = Atlas::from_config(&dir.path().join("atlas.yaml"), run, None).unwrap();
         (dir, atlas)
     }
 
@@ -386,7 +431,7 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("atlas.json");
         std::fs::write(&path, serde_json::to_vec(&fixture_doc()).unwrap()).unwrap();
-        let atlas = Atlas::from_file(&path, dir.path()).unwrap();
+        let atlas = Atlas::from_file(&path, dir.path(), true).unwrap();
         assert!(!atlas.writable());
         assert!(atlas.why_read_only().unwrap().contains("-c atlas.yaml"));
         assert_eq!(
@@ -418,6 +463,29 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
     }
 
     #[test]
+    fn a_write_never_touches_a_file_at_its_temporary_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("atlas.yaml");
+        std::fs::write(&target, "old\n").unwrap();
+        // Something already sits at the next temporary name.
+        let n = DRAFTS.load(Ordering::Relaxed);
+        let taken = dir
+            .path()
+            .join(format!(".atlas.yaml.acu-draft-{}-{n}", std::process::id()));
+        std::fs::write(&taken, "keep me\n").unwrap();
+        write_atomic(&target, "new\n").unwrap();
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "new\n");
+        assert_eq!(std::fs::read_to_string(&taken).unwrap(), "keep me\n");
+        let left: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .filter(|n| n.contains("acu-draft") && !taken.ends_with(n))
+            .collect();
+        assert!(left.is_empty(), "{left:?}");
+    }
+
+    #[test]
     fn read_only_refuses_writes() {
         let (dir, _) = fixture();
         let run = AdapterRun {
@@ -425,7 +493,8 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
             commit: None,
             repo_roots: vec![dir.path().to_path_buf()],
         };
-        let atlas = Atlas::from_config(&dir.path().join("atlas.yaml"), run, true).unwrap();
+        let atlas =
+            Atlas::from_config(&dir.path().join("atlas.yaml"), run, Some(READ_ONLY)).unwrap();
         assert!(!atlas.writable());
         let err = atlas.write(|t| Ok((t.to_string(), "test"))).err().unwrap();
         assert!(err.contains("--read-only"), "{err}");

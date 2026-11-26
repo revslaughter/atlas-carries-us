@@ -13,7 +13,7 @@
 // check fails.
 
 import { chromium } from "playwright";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,9 +36,14 @@ function copyConfig(name, folder = name) {
   return join(dir, "atlas.yaml");
 }
 
-/** Starts `acu mcp` and returns a client that sends requests and waits for their answers. */
+/** Starts `acu mcp` on a config and returns a client that sends requests and waits for their answers. */
 function stdioClient(config, extra = []) {
-  const child = spawn(acu, ["mcp", "-c", config, ...extra], { stdio: ["pipe", "pipe", "pipe"] });
+  return stdioClientArgs(["mcp", "-c", config, ...extra]);
+}
+
+/** Starts acu with the given arguments and returns a client for its standard input and output. */
+function stdioClientArgs(args) {
+  const child = spawn(acu, args, { stdio: ["pipe", "pipe", "pipe"] });
   let buf = "";
   let stderr = "";
   const waiting = new Map();
@@ -244,6 +249,15 @@ async function httpRun(name) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const addr = `127.0.0.1:${port}`;
   const child = spawn(acu, ["serve", "-c", config, "--addr", addr], { stdio: ["ignore", "ignore", "pipe"] });
+  try {
+    await httpSession(name, child, addr);
+  } finally {
+    child.kill("SIGINT");
+  }
+}
+
+/** Waits for `acu serve` to listen, drafts a step over HTTP, and checks the viewer. */
+async function httpSession(name, child, addr) {
   let stderr = "";
   await new Promise((res, rej) => {
     const t = setTimeout(() => rej(new Error("acu serve did not start:\n" + stderr)), 120000);
@@ -327,7 +341,25 @@ async function httpRun(name) {
   check(!second.includes("Machine-drafted."), `${name} over HTTP: a step that a person wrote shows no label`, second);
   check(errors.length === 0, `${name} over HTTP: the page logs no errors`, errors.join("\n"));
   await browser.close();
-  child.kill("SIGINT");
+}
+
+/** Serves a finished atlas.json with `-d`: read_source needs `--root`, and says so without it. */
+async function dataRun(name, corpus) {
+  const data = join(work, `${name}.json`);
+  const ex = spawnSync(acu, ["extract", "-c", copyConfig(name), "-o", data], { encoding: "utf8" });
+  check(ex.status === 0, `${name}: acu extract for -d`, ex.stderr);
+  const bare = stdioClientArgs(["mcp", "-d", data]);
+  await initialize(bare);
+  await expect(bare, `${name} -d`, "read_source", { path: "mux.go", start_line: 1, end_line: 1 }, ["--root"], true);
+  await expect(bare, `${name} -d`, "overview", {}, ["Write tools: off"]);
+  await bare.close();
+  const rooted = stdioClientArgs(["mcp", "-d", data, "--root", join(repo, corpus)]);
+  await initialize(rooted);
+  await expect(rooted, `${name} -d --root`, "read_source", { path: "mux.go", start_line: 1, end_line: 1 }, [
+    "    1  package chi",
+  ]);
+  await expect(rooted, `${name} -d --root`, "read_source", { path: ".git", start_line: 1 }, ["hidden"], true);
+  await rooted.close();
 }
 
 mkdirSync(work, { recursive: true });
@@ -335,6 +367,8 @@ for (const name of ["chi", "cobra"]) {
   await stdioRun(name);
   console.log(`mcp: ${name} over standard input and output: done`);
 }
+await dataRun("chi", "corpus/go/chi");
+console.log("mcp: chi from a finished atlas.json: done");
 await httpRun("chi");
 console.log("mcp: chi over streamable HTTP and the viewer: done");
 if (failures.length) {

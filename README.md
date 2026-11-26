@@ -299,6 +299,8 @@ check when it loads the file.
 | `build` | `-o`, `--out <folder>` | `site` | The folder to write. |
 | `serve` | `--addr <host:port>` | `127.0.0.1:4321` | The address to listen on. |
 | `serve`, `mcp` | `--read-only` | off | Turn off the MCP tools that write `atlas.yaml`. |
+| `serve`, `mcp` | `--root <folder>` | current folder | With `-d`: the mapped repository, where the MCP tool `read_source` reads files. |
+| `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. |
 
 ### Common tasks
 

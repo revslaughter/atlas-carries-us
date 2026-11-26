@@ -62,17 +62,19 @@ enum Cmd {
         /// Address to listen on.
         #[arg(long, default_value = "127.0.0.1:4321")]
         addr: SocketAddr,
-        /// Turn off the MCP tools that write atlas.yaml.
+        #[command(flatten)]
+        mcp: McpArgs,
+        /// Let the MCP write tools work on an address that other computers
+        /// can reach. Without it, they work on a loopback address only.
         #[arg(long)]
-        read_only: bool,
+        allow_remote_writes: bool,
     },
     /// Run the MCP server over standard input and output, for desktop clients.
     Mcp {
         #[command(flatten)]
         input: Input,
-        /// Turn off the MCP tools that write atlas.yaml.
-        #[arg(long)]
-        read_only: bool,
+        #[command(flatten)]
+        mcp: McpArgs,
     },
     /// Check the config and the data, and report problems.
     Check {
@@ -99,6 +101,18 @@ struct Input {
     /// A finished atlas.json, used as it stands.
     #[arg(long, short)]
     data: Option<PathBuf>,
+}
+
+/// The MCP options of `serve` and `mcp`.
+#[derive(Args)]
+struct McpArgs {
+    /// Turn off the MCP tools that write atlas.yaml.
+    #[arg(long)]
+    read_only: bool,
+    /// With --data: the folder of the mapped repository, where read_source
+    /// reads files. Default: the current folder.
+    #[arg(long, requires = "data")]
+    root: Option<PathBuf>,
 }
 
 /// Parses the command line and runs it; a failure exits with status 1.
@@ -136,13 +150,19 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Serve {
             input,
             addr,
-            read_only,
+            mcp,
+            allow_remote_writes,
         } => {
-            let atlas = Arc::new(open_atlas(&input, read_only)?);
+            let why = serve_writes(mcp.read_only, addr, allow_remote_writes);
+            if why == Some(mcp::atlas::REMOTE) && input.data.is_none() {
+                eprintln!("acu: {addr} lets other computers reach the server, so the MCP write tools stay off; add --allow-remote-writes to turn them on");
+            }
+            let atlas = Arc::new(open_atlas(&input, &mcp, why)?);
             tokio::runtime::Runtime::new()?.block_on(site::serve(addr, atlas))
         }
-        Cmd::Mcp { input, read_only } => {
-            let atlas = Arc::new(open_atlas(&input, read_only)?);
+        Cmd::Mcp { input, mcp } => {
+            let why = mcp.read_only.then_some(mcp::atlas::READ_ONLY);
+            let atlas = Arc::new(open_atlas(&input, &mcp, why)?);
             tokio::runtime::Runtime::new()?.block_on(mcp::serve_stdio(atlas))
         }
         Cmd::Check { input } => {
@@ -159,6 +179,19 @@ fn run(cli: Cli) -> Result<()> {
             eprintln!("acu: no problems found");
             Ok(())
         }
+    }
+}
+
+/// Says why the MCP write tools of `serve` stay off, or `None` when they
+/// work: `--read-only` turns them off, and so does an address that other
+/// computers can reach, unless `--allow-remote-writes` lets them work there.
+fn serve_writes(read_only: bool, addr: SocketAddr, allow_remote: bool) -> Option<&'static str> {
+    if read_only {
+        Some(mcp::atlas::READ_ONLY)
+    } else if !addr.ip().is_loopback() && !allow_remote {
+        Some(mcp::atlas::REMOTE)
+    } else {
+        None
     }
 }
 
@@ -191,13 +224,22 @@ fn load_input(input: &Input) -> Result<Vec<u8>> {
 /// Opens the map that `serve` and `mcp` show: a finished atlas.json, read
 /// again whenever the file changes, or the checked result of the adapters
 /// and the config, which the MCP write tools can change.
-fn open_atlas(input: &Input, read_only: bool) -> Result<mcp::Atlas> {
+fn open_atlas(
+    input: &Input,
+    opts: &McpArgs,
+    read_only: Option<&'static str>,
+) -> Result<mcp::Atlas> {
     if let Some(d) = &input.data {
         // Report problems but serve the file anyway, as `serve -d` always
         // has: a later `acu extract` may fix it, and the page reads it again.
         assemble::check(&read_json(d)?).print();
-        let root = std::env::current_dir().context("find the current folder")?;
-        return mcp::Atlas::from_file(d, &root);
+        return match &opts.root {
+            Some(root) => mcp::Atlas::from_file(d, root, true),
+            None => {
+                let cwd = std::env::current_dir().context("find the current folder")?;
+                mcp::Atlas::from_file(d, &cwd, false)
+            }
+        };
     }
     let path = input
         .config
@@ -312,4 +354,30 @@ fn summary(doc: &Value, target: &str) {
         n("regions"),
         n("tour")
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn writes_stay_off_on_a_reachable_address_unless_allowed() {
+        let local: SocketAddr = "127.0.0.1:4321".parse().unwrap();
+        let open: SocketAddr = "0.0.0.0:4321".parse().unwrap();
+        assert_eq!(serve_writes(false, local, false), None);
+        assert_eq!(
+            serve_writes(true, local, false),
+            Some(mcp::atlas::READ_ONLY)
+        );
+        assert_eq!(serve_writes(false, open, false), Some(mcp::atlas::REMOTE));
+        assert_eq!(serve_writes(false, open, true), None);
+        assert_eq!(serve_writes(true, open, true), Some(mcp::atlas::READ_ONLY));
+    }
+
+    #[test]
+    fn root_needs_data() {
+        assert!(Cli::try_parse_from(["acu", "mcp", "--root", "x"]).is_err());
+        assert!(Cli::try_parse_from(["acu", "mcp", "-d", "a.json", "--root", "x"]).is_ok());
+        assert!(Cli::try_parse_from(["acu", "serve", "--allow-remote-writes"]).is_ok());
+    }
 }

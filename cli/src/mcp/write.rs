@@ -54,41 +54,53 @@ pub fn draft_region(atlas: &Atlas, d: RegionDraft<'_>, by: &str) -> Result<Strin
         let v = yaml::parse(text)?;
         let regions = v["regions"].as_array().cloned().unwrap_or_default();
         let at = regions.iter().position(|r| r["id"] == id);
-        let mut r: Map<String, Value> = match at {
-            Some(i) => regions[i].as_object().cloned().unwrap_or_default(),
+        // Only the fields that the draft gives change; an existing region
+        // keeps its other lines, comments included.
+        let mut set: Vec<(&'static str, Value)> = Vec::new();
+        if !d.name.trim().is_empty() {
+            set.push(("name", json!(d.name.trim())));
+        }
+        if !d.paths.is_empty() {
+            set.push(("paths", json!(d.paths)));
+        }
+        if !d.description.trim().is_empty() {
+            set.push(("description", json!(d.description.trim())));
+        }
+        if !d.reading_tip.trim().is_empty() {
+            set.push(("readingTip", json!(d.reading_tip.trim())));
+        }
+        set.push(("drafted", mark(by)));
+        match at {
+            Some(i) => yaml::edit(
+                text,
+                &Change::ItemKeys {
+                    key: "regions",
+                    at: i,
+                    values: set,
+                },
+            ),
             None => {
                 if d.name.trim().is_empty() || d.paths.is_empty() {
                     return Err(format!(
                         "acu: no region has the id {id}; a new region needs name and paths"
                     ));
                 }
-                let mut m = Map::new();
-                m.insert("id".into(), json!(id));
-                m
+                let mut r = Map::new();
+                r.insert("id".into(), json!(id));
+                for (k, v) in set {
+                    r.insert(k.into(), v);
+                }
+                yaml::edit(
+                    text,
+                    &Change::Item {
+                        key: "regions",
+                        at: regions.len(),
+                        value: Value::Object(r),
+                        insert: true,
+                    },
+                )
             }
-        };
-        if !d.name.trim().is_empty() {
-            r.insert("name".into(), json!(d.name.trim()));
         }
-        if !d.paths.is_empty() {
-            r.insert("paths".into(), json!(d.paths));
-        }
-        if !d.description.trim().is_empty() {
-            r.insert("description".into(), json!(d.description.trim()));
-        }
-        if !d.reading_tip.trim().is_empty() {
-            r.insert("readingTip".into(), json!(d.reading_tip.trim()));
-        }
-        r.insert("drafted".into(), mark(by));
-        yaml::edit(
-            text,
-            &Change::Item {
-                key: "regions",
-                at: at.unwrap_or(regions.len()),
-                value: Value::Object(r),
-                insert: at.is_none(),
-            },
-        )
     })?;
     Ok(report(&format!("region {id}"), by, &w))
 }
@@ -134,6 +146,12 @@ pub struct StepDraft<'a> {
 pub fn draft_tour_step(atlas: &Atlas, d: StepDraft<'_>, by: &str) -> Result<String, String> {
     if d.title.trim().is_empty() || d.text.trim().is_empty() {
         return Err("acu: a tour step needs a title and a text".into());
+    }
+    if d.replace > 0 && d.position > 0 {
+        return Err(
+            "acu: give either replace or position, not both; replace changes a step, position adds one"
+                .into(),
+        );
     }
     let open = open_for(atlas, d.view.trim(), d.target.trim())?;
     let mut w_what = String::new();
@@ -354,6 +372,11 @@ mod tests {
         assert_eq!(r["drafted"]["by"], "m");
         let text = std::fs::read_to_string(dir.path().join("atlas.yaml")).unwrap();
         assert!(text.contains("  # The selling side.\n  - id: selling\n    name: Selling\n    paths: [shop]\n    color: 1\n"), "{text}");
+        // The changed region keeps its own lines as written: no quotes.
+        assert!(
+            text.contains("  - id: storage\n    name: Storage\n    paths: [store]\n    description: \"The store keeps books.\"\n    readingTip: \"Read Store first.\"\n    drafted: { by: m, at: \""),
+            "{text}"
+        );
         let err = draft_region(
             &a,
             RegionDraft {
@@ -367,6 +390,25 @@ mod tests {
         )
         .unwrap_err();
         assert!(err.contains("needs name and paths"), "{err}");
+    }
+
+    #[test]
+    fn replace_and_position_together_are_refused() {
+        let (_d, a) = fixture();
+        let err = draft_tour_step(
+            &a,
+            StepDraft {
+                title: "x",
+                text: "y",
+                view: "overview",
+                target: "",
+                replace: 1,
+                position: 2,
+            },
+            "m",
+        )
+        .unwrap_err();
+        assert!(err.contains("either replace or position"), "{err}");
     }
 
     #[test]
