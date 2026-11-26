@@ -596,6 +596,7 @@ async function save() {
       S.regions.forEach(r => (r.origId = r.cfg.id));
       S.fileIds = S.regions.map(r => r.cfg.id);
       S.fileRows = em.rowsOf(f.layout ?? null);
+      if (f.layout !== undefined) S.hadLayout = f.layout != null;
     }
   }
   keep(S.tab);

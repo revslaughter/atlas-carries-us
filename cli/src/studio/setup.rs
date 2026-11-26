@@ -884,8 +884,7 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
-            .spawn()
-            ;
+            .spawn();
         let child = match child {
             Ok(c) => c,
             Err(e) => {
@@ -898,9 +897,10 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
         let ok = wait_limited(child, CLONE_LIMIT, log);
         st.set_child(None);
         let why = format!(
-            "acu: git could not clone {} into {}; check the address and your network, then try again",
+            "acu: git could not clone {} into {}; {}",
             target.url,
-            dest.display()
+            dest.display(),
+            "check the address and your network, then try again"
         );
         finish_clone(ok, &staging, &dest, &ws, why)?;
         log("acu: the clone finished");
