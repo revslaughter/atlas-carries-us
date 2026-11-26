@@ -55,11 +55,12 @@ pub fn build(out: &Path, data: &[u8]) -> Result<usize> {
 /// MCP write tool, or a fresh `acu extract` of a served atlas.json shows on
 /// reload.
 pub async fn serve(studio: Arc<Studio>) -> Result<()> {
-    let addr = studio.addr;
+    let addr = studio.addr();
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .with_context(|| format!("listen on {addr}"))?;
     let addr = listener.local_addr().unwrap_or(addr);
+    studio.set_addr(addr);
     let (mcp, stop_mcp) = crate::mcp::http_service(studio.live.clone(), addr);
     let writes = match studio.live.get() {
         Ok(a) if a.writable() => "writes on",
@@ -90,10 +91,22 @@ pub async fn serve(studio: Arc<Studio>) -> Result<()> {
 /// [`respond`].
 async fn route(req: Request, studio: Arc<Studio>) -> Response {
     let path = req.uri().path().to_string();
+    // On a loopback address, every answer needs the server's own Host, so a
+    // page that DNS rebinding points here reads neither the map nor the API.
+    // An address that other computers reach serves the map to any name.
+    if studio.addr().ip().is_loopback() || path.starts_with("/api/") {
+        if let Err(r) = studio.check_host(req.headers()) {
+            return json_reply(r);
+        }
+    }
     let Some(call) = path.strip_prefix("/api/") else {
         let atlas = studio.live.get().ok();
         return respond(&path, atlas.as_deref());
     };
+    // Refuse a foreign request before reading its body.
+    if let Err(r) = studio.admit(req.method(), req.headers()) {
+        return json_reply(r);
+    }
     let (parts, body) = req.into_parts();
     let bytes = match to_bytes(body, studio::MAX_BODY).await {
         Ok(b) => b,
@@ -182,6 +195,43 @@ fn reply(status: StatusCode, mime: &str, body: Vec<u8>) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mcp::Live;
+
+    /// Sends one request through [`route`] to a studio on 127.0.0.1:4321.
+    async fn send(host: &str, path: &str, body: Vec<u8>) -> StatusCode {
+        let studio = Arc::new(Studio::new(
+            Arc::new(Live::empty()),
+            studio::Mode::Studio,
+            "127.0.0.1:4321".parse().unwrap(),
+            None,
+            None,
+        ));
+        let req = Request::builder()
+            .method("POST")
+            .uri(path)
+            .header(header::HOST, host)
+            .body(Body::from(body))
+            .unwrap();
+        route(req, studio).await.status()
+    }
+
+    #[tokio::test]
+    async fn a_foreign_host_reads_nothing_and_sends_no_body() {
+        // A body over the limit would give 413 if acu read it first.
+        let big = vec![b'x'; studio::MAX_BODY + 10];
+        assert_eq!(
+            send("evil.example", "/api/tour", big).await,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            send("evil.example", "/data/atlas.json", vec![]).await,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            send("127.0.0.1:4321", "/data/atlas.json", vec![]).await,
+            StatusCode::NOT_FOUND
+        );
+    }
 
     #[test]
     fn the_served_page_carries_the_api_mark_and_the_built_one_does_not() {

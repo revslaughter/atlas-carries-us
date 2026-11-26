@@ -62,7 +62,7 @@ pub struct Job {
     pub log: Vec<String>,
     /// Why the job failed.
     pub error: Option<String>,
-    /// The folder that a clone wrote.
+    /// The folder that the job opened or cloned.
     pub path: Option<String>,
 }
 
@@ -89,8 +89,9 @@ pub struct Studio {
     pub live: Arc<Live>,
     /// The command that runs the server.
     pub mode: Mode,
-    /// The address that the server listens on.
-    pub addr: SocketAddr,
+    /// The address that the server listens on: the one asked for, then the
+    /// one that the system gave after the bind (which fills in port 0).
+    addr: std::sync::RwLock<SocketAddr>,
     /// The folder that the folder picker may show; `acu studio` only.
     pub browse_root: Option<PathBuf>,
     /// The folder that receives clones; `acu studio` only.
@@ -123,18 +124,36 @@ impl Studio {
         Studio {
             live,
             mode,
-            addr,
+            addr: std::sync::RwLock::new(addr),
             browse_root,
             workspace,
             job: Mutex::new(None),
         }
     }
 
+    /// Returns the address that the server listens on.
+    pub fn addr(&self) -> SocketAddr {
+        match self.addr.read() {
+            Ok(a) => *a,
+            Err(p) => *p.into_inner(),
+        }
+    }
+
+    /// Records the address that the bind gave, so the `Host` check names
+    /// the real port.
+    pub fn set_addr(&self, addr: SocketAddr) {
+        match self.addr.write() {
+            Ok(mut a) => *a = addr,
+            Err(p) => *p.into_inner() = addr,
+        }
+    }
+
     /// Lists the `Host` values that the API accepts: the loopback names and
     /// the listening address, each with the port.
     fn hosts(&self) -> Vec<String> {
-        let port = self.addr.port();
-        let ip = self.addr.ip();
+        let addr = self.addr();
+        let port = addr.port();
+        let ip = addr.ip();
         let mut v = vec![
             format!("localhost:{port}"),
             format!("127.0.0.1:{port}"),
@@ -151,21 +170,28 @@ impl Studio {
         v
     }
 
-    /// Checks that a request may reach the API: its `Host` names this
-    /// server, its `Origin` (when sent) names this server, and a changing
-    /// request carries the guard header and a JSON body.
-    pub fn admit(&self, method: &Method, headers: &HeaderMap) -> Result<(), Reply> {
-        let hosts = self.hosts();
+    /// Checks that a request's `Host` names this server, so a page that a
+    /// foreign name points at this computer (DNS rebinding) reads nothing.
+    pub fn check_host(&self, headers: &HeaderMap) -> Result<(), Reply> {
         let host = headers
             .get(header::HOST)
             .and_then(|h| h.to_str().ok())
             .unwrap_or("");
-        if !hosts.iter().any(|h| h.eq_ignore_ascii_case(host)) {
-            return Err(fail(
-                StatusCode::FORBIDDEN,
-                "the studio answers only requests for its own loopback address; open it at the address that acu printed",
-            ));
+        if self.hosts().iter().any(|h| h.eq_ignore_ascii_case(host)) {
+            return Ok(());
         }
+        Err(fail(
+            StatusCode::FORBIDDEN,
+            "the server answers only requests for its own loopback address; open it at the address that acu printed",
+        ))
+    }
+
+    /// Checks that a request may reach the API: its `Host` names this
+    /// server, its `Origin` (when sent) names this server, and a changing
+    /// request carries the guard header and a JSON body.
+    pub fn admit(&self, method: &Method, headers: &HeaderMap) -> Result<(), Reply> {
+        self.check_host(headers)?;
+        let hosts = self.hosts();
         if let Some(origin) = headers.get(header::ORIGIN) {
             let o = origin.to_str().unwrap_or("");
             if !hosts
@@ -218,7 +244,10 @@ impl Studio {
 
     /// Returns the last job.
     pub fn job(&self) -> Option<Job> {
-        self.job.lock().ok().and_then(|j| j.clone())
+        match self.job.lock() {
+            Ok(j) => j.clone(),
+            Err(p) => p.into_inner().clone(),
+        }
     }
 
     /// Starts a job on its own thread, unless one runs already. `work`
@@ -396,12 +425,15 @@ pub async fn handle(
         "regions" => blocking(move || edit::save_regions(&s, &args)).await,
         "project" => blocking(move || edit::save_project(&s, &args)).await,
         "match" => blocking(move || edit::matching(&s, &args)).await,
-        "extract" => edit::extract(&studio),
+        "extract" => blocking(move || edit::extract(&s)).await,
         "folders" => blocking(move || setup::folders(&s, &args)).await,
         "propose" => blocking(move || setup::propose(&s, &args)).await,
-        "open" => setup::open(&studio, &args),
-        "clone" => setup::clone(&studio, &args),
-        _ => fail(StatusCode::NOT_FOUND, "no such call"),
+        "open" => blocking(move || setup::open(&s, &args)).await,
+        "clone" => blocking(move || setup::clone(&s, &args)).await,
+        _ => fail(
+            StatusCode::NOT_FOUND,
+            "the API has no such call; docs/studio.md lists the calls",
+        ),
     }
 }
 
@@ -498,6 +530,19 @@ pub mod tests {
         h.insert(header::HOST, HeaderValue::from_static("localhost:4321"));
         h.remove(header::ORIGIN);
         assert!(s.admit(&Method::GET, &h).is_ok());
+    }
+
+    #[test]
+    fn the_guard_follows_the_port_that_the_bind_gave() {
+        let s = Studio::new(
+            Arc::new(Live::empty()),
+            Mode::Studio,
+            "127.0.0.1:0".parse().unwrap(),
+            None,
+            None,
+        );
+        s.set_addr("127.0.0.1:4321".parse().unwrap());
+        assert!(s.admit(&Method::GET, &own(false)).is_ok());
     }
 
     #[test]

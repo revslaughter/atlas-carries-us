@@ -115,7 +115,7 @@ impl Live {
     pub fn get(&self) -> Result<Arc<Atlas>, String> {
         self.slot
             .read()
-            .map_err(|_| BROKEN.to_string())?
+            .map_err(|_| format!("acu: {BROKEN}"))?
             .clone()
             .ok_or_else(|| NO_PROJECT.to_string())
     }
@@ -161,6 +161,9 @@ pub struct Written {
     pub warnings: Vec<String>,
     /// How acu edited the file: in place, or by writing a section again.
     pub how: &'static str,
+    /// The revision of the text that acu wrote, taken while acu still held
+    /// the file, so no later writer can slip in between.
+    pub revision: String,
 }
 
 /// Why the write tools stay off under `--read-only`.
@@ -347,14 +350,14 @@ impl Atlas {
             config::validate(&value, config::CONFIG_SCHEMA).map_err(|e| e.to_string())?;
         if !problems.is_empty() {
             return Err(format!(
-                "the draft breaks the config schema, so acu wrote nothing: {}",
+                "the change breaks the config schema, so acu wrote nothing: {}",
                 problems.join("; ")
             ));
         }
         let cfg: config::Config = serde_json::from_value(value)
-            .map_err(|e| format!("the draft breaks the config, so acu wrote nothing: {e}"))?;
+            .map_err(|e| format!("the change breaks the config, so acu wrote nothing: {e}"))?;
         let snap = assemble_checked(run, &cfg)
-            .map_err(|e| format!("the draft breaks the check, so acu wrote nothing: {e}"))?;
+            .map_err(|e| format!("the change breaks the check, so acu wrote nothing: {e}"))?;
         write_atomic(&target, &new_text)?;
         let warnings = snap.warnings.clone();
         *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
@@ -362,7 +365,23 @@ impl Atlas {
             path: target,
             warnings,
             how,
+            revision: revision(&new_text),
         })
+    }
+
+    /// Applies atlas.yaml as it stands on disk to the adapters' output
+    /// again, and shows the result. The studio calls it right after it puts
+    /// a new map on show, so a change that reached the file while the
+    /// adapters ran shows too.
+    pub fn refresh(&self) -> Result<(), String> {
+        let Origin::Config { path, run } = &self.origin else {
+            return Ok(());
+        };
+        let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
+        let loaded = config::load(path).map_err(|e| format!("{e:#}"))?;
+        let snap = assemble_checked(run, &loaded.config)?;
+        *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
+        Ok(())
     }
 }
 
@@ -550,7 +569,17 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
             .save(&now, |t| Ok((t.replace("Shop 2", "Shop 3"), "test")))
             .unwrap();
         assert_eq!(w.how, "test");
+        assert_eq!(w.revision, atlas.config_text().unwrap().1);
         assert_eq!(atlas.snapshot().unwrap().doc["project"]["name"], "Shop 3");
+        // A change on disk shows after a refresh.
+        let text = std::fs::read_to_string(dir.path().join("atlas.yaml")).unwrap();
+        std::fs::write(
+            dir.path().join("atlas.yaml"),
+            text.replace("Shop 3", "Shop 4"),
+        )
+        .unwrap();
+        atlas.refresh().unwrap();
+        assert_eq!(atlas.snapshot().unwrap().doc["project"]["name"], "Shop 4");
     }
 
     #[test]

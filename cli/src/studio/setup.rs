@@ -46,10 +46,12 @@ pub fn default_workspace() -> Option<PathBuf> {
 /// Resolves a folder from a request and checks that it lies inside the
 /// browse root or the clone workspace.
 fn allowed(s: &Studio, raw: Option<&str>) -> Result<PathBuf, Reply> {
-    let root = s
-        .browse_root
-        .clone()
-        .ok_or_else(|| fail(StatusCode::FORBIDDEN, "only acu studio picks folders"))?;
+    let root = s.browse_root.clone().ok_or_else(|| {
+        fail(
+            StatusCode::FORBIDDEN,
+            "acu serve picks no folders; start acu studio to pick one",
+        )
+    })?;
     let p = match raw.map(str::trim).filter(|r| !r.is_empty()) {
         Some(r) => PathBuf::from(r),
         None => root.clone(),
@@ -84,7 +86,7 @@ fn allowed(s: &Studio, raw: Option<&str>) -> Result<PathBuf, Reply> {
     if !p.is_dir() {
         return Err(fail(
             StatusCode::BAD_REQUEST,
-            format!("{} holds no folder", p.display()),
+            format!("{} is a file, not a folder; pick a folder", p.display()),
         ));
     }
     Ok(p)
@@ -174,6 +176,17 @@ fn small(p: &Path) -> String {
     }
 }
 
+/// Reports whether a manifest names a dependency as a whole word: `click`
+/// matches `click>=8` but not `clickhouse-driver`.
+pub fn names(text: &str, dep: &str) -> bool {
+    let part = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-';
+    text.match_indices(dep).any(|(i, _)| {
+        let before = text[..i].chars().next_back();
+        let after = text[i + dep.len()..].chars().next();
+        !before.is_some_and(part) && !after.is_some_and(part)
+    })
+}
+
 /// Looks at one folder's marker files and adds what they show.
 fn look(dir: &Path, rel: &str, d: &mut Detected) {
     let has = |f: &str| dir.join(f).is_file();
@@ -192,7 +205,7 @@ fn look(dir: &Path, rel: &str, d: &mut Detected) {
     };
     let mut plug = |text: &str, pairs: &[(&str, &'static str)]| {
         for (needle, plugin) in pairs {
-            if text.contains(needle) && !d.plugins.contains(plugin) {
+            if names(text, needle) && !d.plugins.contains(plugin) {
                 d.plugins.push(plugin);
             }
         }
@@ -206,6 +219,7 @@ fn look(dir: &Path, rel: &str, d: &mut Detected) {
                 ("github.com/spf13/cobra", "cobra"),
             ],
         );
+        // Most Go servers use net/http, so acu proposes its plugin always.
         plug("net/http", &[("net/http", "go-nethttp")]);
         add("go");
     }
@@ -279,19 +293,34 @@ pub fn detect(dir: &Path) -> Detected {
     d
 }
 
-/// Reads `owner/name` and the link preset from a folder's git remote, when
-/// it points at GitHub or GitLab.
+/// Reads `owner/name` and the link preset from the `origin` remote in a
+/// folder's `.git/config`, when it points at GitHub or GitLab. It reads the
+/// file as text and runs no git, because the person has not yet said that
+/// they trust the folder.
 fn remote(dir: &Path) -> Option<(String, &'static str)> {
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(dir)
-        .args(["remote", "get-url", "origin"])
-        .output()
-        .ok()?;
-    if !out.status.success() {
+    let cfg = dir.join(".git").join("config");
+    if !cfg.is_file() {
         return None;
     }
-    repo_of(String::from_utf8_lossy(&out.stdout).trim())
+    origin_url(&small(&cfg)).and_then(|u| repo_of(&u))
+}
+
+/// Finds the `url` of `[remote "origin"]` in the text of a git config.
+pub fn origin_url(text: &str) -> Option<String> {
+    let mut inside = false;
+    for line in text.lines() {
+        let t = line.trim();
+        if t.starts_with('[') {
+            inside = t.replace(' ', "") == "[remote\"origin\"]";
+        } else if inside {
+            if let Some((k, v)) = t.split_once('=') {
+                if k.trim() == "url" {
+                    return Some(v.trim().to_string());
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Turns a remote URL into `owner/name` and a link preset.
@@ -361,6 +390,23 @@ pub fn proposal(dir: &Path, d: &Detected) -> String {
     y
 }
 
+/// Returns the folder's atlas.yaml path, and refuses one that is a
+/// symbolic link: a cloned repository could point it at any file, and the
+/// editor's saves would then change that file.
+fn config_in(dir: &Path) -> Result<PathBuf, Reply> {
+    let file = dir.join("atlas.yaml");
+    if std::fs::symlink_metadata(&file).is_ok_and(|m| m.file_type().is_symlink()) {
+        return Err(fail(
+            StatusCode::FORBIDDEN,
+            format!(
+                "{} is a symbolic link; replace it with a file, then pick the folder again",
+                file.display()
+            ),
+        ));
+    }
+    Ok(file)
+}
+
 /// `POST /api/propose`: returns the folder's atlas.yaml when it has one,
 /// else a proposal, with the languages that acu found.
 pub fn propose(s: &Studio, args: &Map<String, Value>) -> Reply {
@@ -368,7 +414,10 @@ pub fn propose(s: &Studio, args: &Map<String, Value>) -> Reply {
         Ok(d) => d,
         Err(r) => return r,
     };
-    let file = dir.join("atlas.yaml");
+    let file = match config_in(&dir) {
+        Ok(f) => f,
+        Err(r) => return r,
+    };
     let d = detect(&dir);
     let langs: Vec<Value> = d
         .languages
@@ -416,7 +465,10 @@ pub fn check_text(text: &str) -> Result<(), String> {
 /// never replaces a file that exists.
 pub fn open(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
     if s.browse_root.is_none() {
-        return fail(StatusCode::FORBIDDEN, "only acu studio opens projects");
+        return fail(
+            StatusCode::FORBIDDEN,
+            "acu serve opens no other project; start acu studio to open one",
+        );
     }
     let dir = match allowed(s, args.get("path").and_then(Value::as_str)) {
         Ok(d) => d,
@@ -428,7 +480,10 @@ pub fn open(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
             "extraction runs the project's own build tools (Rust build scripts and procedural macros, Go's toolchain); confirm that you trust this code, then send trust: true",
         );
     }
-    let file = dir.join("atlas.yaml");
+    let file = match config_in(&dir) {
+        Ok(f) => f,
+        Err(r) => return r,
+    };
     let text = args.get("config").and_then(Value::as_str).map(String::from);
     match (&text, file.is_file()) {
         (Some(_), true) => {
@@ -458,19 +513,36 @@ pub fn open(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
     }
     s.start_job("open", move |st, log| {
         if let Some(t) = text {
-            // create_new: never replace a file that appeared meanwhile.
-            use std::io::Write;
-            let mut f = std::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&file)
-                .map_err(|e| format!("acu: create {}: {e}", file.display()))?;
-            f.write_all(t.as_bytes())
-                .map_err(|e| format!("acu: write {}: {e}", file.display()))?;
+            create_new(&file, &t)?;
             log(&format!("acu: wrote {}", file.display()));
         }
         edit::open_config(st, &file, log)?;
         Ok(Some(dir.display().to_string()))
+    })
+}
+
+/// Writes a new file in one step and never replaces one: the text goes to
+/// a temporary file first, which then gets the final name through a hard
+/// link, which fails when that name exists. A crash leaves no half file.
+pub fn create_new(file: &Path, text: &str) -> Result<(), String> {
+    use std::io::Write;
+    let dir = file.parent().unwrap_or(Path::new("."));
+    let tmp = dir.join(format!(".atlas.yaml.acu-new-{}", std::process::id()));
+    let done = (|| -> std::io::Result<()> {
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        f.write_all(text.as_bytes())?;
+        f.sync_all()?;
+        std::fs::hard_link(&tmp, file)
+    })();
+    let _ = std::fs::remove_file(&tmp);
+    done.map_err(|e| {
+        format!(
+            "acu: create {}: {e}; check that the folder is writable and holds no atlas.yaml",
+            file.display()
+        )
     })
 }
 
@@ -559,40 +631,103 @@ fn git_new_enough() -> Result<(), String> {
     }
 }
 
-/// Waits for a child up to a limit, and kills it after; returns whether it
-/// succeeded and what it wrote to standard error.
-fn wait_limited(mut child: std::process::Child, limit: std::time::Duration) -> (bool, String) {
-    use std::io::Read;
-    let mut err = child.stderr.take();
-    let reader = std::thread::spawn(move || {
-        let mut s = String::new();
-        if let Some(e) = err.as_mut() {
-            let _ = e.take(1 << 20).read_to_string(&mut s);
+/// Waits for a child up to a limit, and stops it and its own children
+/// after. Meanwhile it hands each line of the child's standard error to
+/// `log`; of git's progress lines, which end in a carriage return, it keeps
+/// only the finished ones. Returns whether the child succeeded.
+fn wait_limited(
+    mut child: std::process::Child,
+    limit: std::time::Duration,
+    log: &(dyn Fn(&str) + Sync),
+) -> bool {
+    use std::io::{BufRead, BufReader};
+    let err = child.stderr.take();
+    let (done_tx, done_rx) = std::sync::mpsc::channel::<()>();
+    std::thread::scope(|scope| {
+        if let Some(err) = err {
+            scope.spawn(move || {
+                let mut r = BufReader::new(err);
+                let mut buf = Vec::new();
+                loop {
+                    buf.clear();
+                    // Split on both line ends: git redraws progress with \r.
+                    let n = r.fill_buf().map(|b| b.len()).unwrap_or(0);
+                    if n == 0 {
+                        break;
+                    }
+                    match r.read_until(b'\n', &mut buf) {
+                        Ok(0) | Err(_) => break,
+                        Ok(_) => {
+                            for part in String::from_utf8_lossy(&buf).split(['\r', '\n']) {
+                                let t = part.trim();
+                                if !t.is_empty() && (!t.contains('%') || t.contains("done")) {
+                                    log(t);
+                                }
+                            }
+                        }
+                    }
+                }
+                let _ = done_tx.send(());
+            });
+        } else {
+            let _ = done_tx.send(());
         }
-        s
-    });
-    let start = std::time::Instant::now();
-    let ok = loop {
-        match child.try_wait() {
-            Ok(Some(st)) => break st.success(),
-            Ok(None) if start.elapsed() < limit => {
-                std::thread::sleep(std::time::Duration::from_millis(100))
+        let start = std::time::Instant::now();
+        let ok = loop {
+            match child.try_wait() {
+                Ok(Some(st)) => break st.success(),
+                Ok(None) if start.elapsed() < limit => {
+                    std::thread::sleep(std::time::Duration::from_millis(100))
+                }
+                _ => {
+                    log("acu: git took too long, so acu stopped it");
+                    kill_group(&mut child);
+                    let _ = child.wait();
+                    break false;
+                }
             }
-            _ => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break false;
-            }
+        };
+        // A grandchild that still holds the pipe must not keep acu waiting.
+        if done_rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .is_err()
+        {
+            kill_group(&mut child);
         }
-    };
-    (ok, reader.join().unwrap_or_default())
+        ok
+    })
+}
+
+/// Puts a command in a process group of its own, so [`kill_group`] can stop
+/// it with every process it starts.
+fn own_group(cmd: &mut Command) -> &mut Command {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0);
+    }
+    cmd
+}
+
+/// Stops a child and, on Unix, every process in its group.
+fn kill_group(child: &mut std::process::Child) {
+    #[cfg(unix)]
+    {
+        let _ = Command::new("kill")
+            .args(["-s", "KILL", "--", &format!("-{}", child.id())])
+            .status();
+    }
+    let _ = child.kill();
 }
 
 /// `POST /api/clone`: clones a repository into the workspace as a job, with
 /// depth 1 and no submodules. A repository cloned before opens as it is.
 pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
     let Some(ws) = s.workspace.clone() else {
-        return fail(StatusCode::FORBIDDEN, "only acu studio clones repositories");
+        return fail(
+            StatusCode::FORBIDDEN,
+            "acu serve clones no repository; start acu studio to clone one",
+        );
     };
     let target = match clone_target(args.get("url").and_then(Value::as_str).unwrap_or("")) {
         Ok(t) => t,
@@ -614,14 +749,20 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
                 dest.display()
             ));
         }
-        std::fs::create_dir_all(dest.parent().unwrap_or(&ws))
-            .map_err(|e| format!("acu: create {}: {e}", ws.display()))?;
+        let parent = dest.parent().unwrap_or(&ws).to_path_buf();
+        std::fs::create_dir_all(&parent).map_err(|e| {
+            format!(
+                "acu: create {}: {e}; check that acu may write there",
+                parent.display()
+            )
+        })?;
         log(&format!(
             "acu: cloning {} into {}",
             target.url,
             dest.display()
         ));
-        let child = Command::new("git")
+        let mut cmd = Command::new("git");
+        let child = own_group(&mut cmd)
             .env("GIT_TERMINAL_PROMPT", "0")
             .env("GIT_ALLOW_PROTOCOL", "https")
             .env("GIT_PROTOCOL_FROM_USER", "0")
@@ -638,6 +779,7 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
                 "--single-branch",
                 "--no-tags",
                 "--no-recurse-submodules",
+                "--progress",
                 "--",
                 &target.url,
             ])
@@ -647,15 +789,20 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
             .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| format!("acu: start git: {e}; install git and try again"))?;
-        let (ok, err) = wait_limited(child, CLONE_LIMIT);
-        for line in err.lines().filter(|l| !l.trim().is_empty()) {
-            log(line.trim());
-        }
-        if !ok {
+        if !wait_limited(child, CLONE_LIMIT, log) {
             let _ = std::fs::remove_dir_all(&dest);
+            // Remove the host and owner folders too when they stay empty.
+            let mut up = dest.parent();
+            while let Some(p) = up.filter(|p| p.starts_with(&ws) && *p != ws.as_path()) {
+                if std::fs::remove_dir(p).is_err() {
+                    break;
+                }
+                up = p.parent();
+            }
             return Err(format!(
-                "acu: git could not clone {}; check the address and your network",
-                target.url
+                "acu: git could not clone {} into {}; check the address and your network, then try again",
+                target.url,
+                dest.display()
             ));
         }
         log("acu: the clone finished");
@@ -734,6 +881,22 @@ mod tests {
     }
 
     #[test]
+    fn dependencies_match_whole_names() {
+        assert!(names("click>=8\n", "click"));
+        assert!(!names("clickhouse-driver\n", "click"));
+        assert!(names("\"hono\": \"4\"", "\"hono\""));
+        assert!(!names("axum-extra = 1", "axum"));
+        assert!(names("axum = \"0.8\"", "axum"));
+    }
+
+    #[test]
+    fn the_origin_url_comes_from_the_config_text() {
+        let text = "[core]\n\tbare = false\n[remote \"up\"]\n\turl = https://x/y\n[remote \"origin\"]\n\turl = git@github.com:a/b.git\n";
+        assert_eq!(origin_url(text).as_deref(), Some("git@github.com:a/b.git"));
+        assert_eq!(origin_url("[core]\n"), None);
+    }
+
+    #[test]
     fn remotes_become_repo_names() {
         assert_eq!(
             repo_of("https://github.com/go-chi/chi.git"),
@@ -766,6 +929,27 @@ mod tests {
         ] {
             assert!(clone_target(bad).is_err(), "{bad}");
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_slow_child_stops_at_the_limit_with_its_children() {
+        let mut cmd = Command::new("sh");
+        let child = own_group(&mut cmd)
+            .args(["-c", "echo started >&2; sleep 30 & sleep 30"])
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        let seen = std::sync::Mutex::new(Vec::<String>::new());
+        let t = std::time::Instant::now();
+        let ok = wait_limited(child, std::time::Duration::from_millis(300), &|l: &str| {
+            seen.lock().unwrap().push(l.to_string())
+        });
+        assert!(!ok);
+        assert!(t.elapsed() < std::time::Duration::from_secs(10));
+        let seen = seen.into_inner().unwrap();
+        assert_eq!(seen[0], "started");
+        assert!(seen.iter().any(|l| l.contains("too long")), "{seen:?}");
     }
 
     #[test]
@@ -801,6 +985,37 @@ mod tests {
         assert_eq!(folders(&s, &a).0, StatusCode::FORBIDDEN);
         a.insert("path".into(), json!("relative/path"));
         assert_eq!(folders(&s, &a).0, StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn a_new_config_never_replaces_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("atlas.yaml");
+        create_new(&f, "a\n").unwrap();
+        assert!(create_new(&f, "b\n").is_err());
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "a\n");
+        let left = std::fs::read_dir(dir.path()).unwrap().count();
+        assert_eq!(left, 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_config_is_refused() {
+        let (dir, s) = studio_in();
+        let root = dir.path().canonicalize().unwrap();
+        write(&root.join("outside.yaml"), "version: 1\n");
+        std::fs::create_dir_all(root.join("code/app")).unwrap();
+        std::os::unix::fs::symlink(root.join("outside.yaml"), root.join("code/app/atlas.yaml"))
+            .unwrap();
+        let mut a = Map::new();
+        a.insert(
+            "path".into(),
+            json!(root.join("code/app").display().to_string()),
+        );
+        let (code, v) = propose(&s, &a);
+        assert_eq!(code, StatusCode::FORBIDDEN, "{v}");
+        a.insert("trust".into(), json!(true));
+        assert_eq!(open(&s, &a).0, StatusCode::FORBIDDEN);
     }
 
     #[test]

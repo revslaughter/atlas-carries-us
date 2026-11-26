@@ -21,6 +21,19 @@ fn atlas(s: &Studio) -> Result<Arc<Atlas>, Reply> {
     s.live.get().map_err(|e| fail(StatusCode::CONFLICT, e))
 }
 
+/// Returns the map that a save changes, or an answer that refuses the save
+/// while a job runs: the job puts a new map on show when it ends, and a save
+/// meanwhile could reach the file but not that map.
+fn atlas_for_save(s: &Studio) -> Result<Arc<Atlas>, Reply> {
+    if s.job().is_some_and(|j| j.state == "running") {
+        return Err(fail(
+            StatusCode::CONFLICT,
+            "the adapters run now; wait until they finish, then save again",
+        ));
+    }
+    atlas(s)
+}
+
 /// Reads the revision that a save starts from.
 fn base(args: &Map<String, Value>) -> Result<String, Reply> {
     args.get("revision")
@@ -53,13 +66,10 @@ fn objects(args: &Map<String, Value>, key: &str) -> Result<Vec<Value>, Reply> {
 /// edited the file, and the warnings of the new map.
 fn saved(a: &Atlas, out: Result<Written, SaveError>) -> Reply {
     match out {
-        Ok(w) => {
-            let rev = a.config_text().map(|t| t.1).unwrap_or_default();
-            (
-                StatusCode::OK,
-                json!({ "revision": rev, "how": w.how, "warnings": w.warnings }),
-            )
-        }
+        Ok(w) => (
+            StatusCode::OK,
+            json!({ "revision": w.revision, "how": w.how, "warnings": w.warnings }),
+        ),
         Err(SaveError::Stale(e)) => fail(StatusCode::CONFLICT, e),
         Err(SaveError::Failed(e)) if !a.writable() => fail(StatusCode::FORBIDDEN, e),
         Err(SaveError::Failed(e)) => fail(StatusCode::UNPROCESSABLE_ENTITY, e),
@@ -133,7 +143,7 @@ pub fn config(s: &Studio) -> Reply {
 /// `POST /api/tour`: replaces the tour with the given steps. Steps that
 /// equal a step of the file keep their lines and comments.
 pub fn save_tour(s: &Studio, args: &Map<String, Value>) -> Reply {
-    let a = match atlas(s) {
+    let a = match atlas_for_save(s) {
         Ok(a) => a,
         Err(r) => return r,
     };
@@ -156,7 +166,7 @@ pub fn save_tour(s: &Studio, args: &Map<String, Value>) -> Reply {
 /// `POST /api/regions`: replaces the regions, and the layout when the body
 /// names one (null removes it).
 pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
-    let a = match atlas(s) {
+    let a = match atlas_for_save(s) {
         Ok(a) => a,
         Err(r) => return r,
     };
@@ -202,7 +212,7 @@ pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
 /// `POST /api/project`: sets the project's name and description, and keeps
 /// or removes the description's drafted mark as the body says.
 pub fn save_project(s: &Studio, args: &Map<String, Value>) -> Reply {
-    let a = match atlas(s) {
+    let a = match atlas_for_save(s) {
         Ok(a) => a,
         Err(r) => return r,
     };
@@ -326,7 +336,14 @@ pub fn open_config(
         log(&format!("warning: {w}"));
     }
     drop(snap);
-    st.live.set(Arc::new(atlas));
+    let atlas = Arc::new(atlas);
+    st.live.set(atlas.clone());
+    // A change that reached atlas.yaml while the adapters ran shows too.
+    if let Err(e) = atlas.refresh() {
+        log(&format!(
+            "warning: atlas.yaml changed during the run and no longer passes the check: {e}"
+        ));
+    }
     Ok(())
 }
 
@@ -471,6 +488,27 @@ mod tests {
         assert_eq!(code, StatusCode::OK);
         assert_eq!(v["units"], json!(["go:pkg:shop"]));
         assert_eq!(v["errors"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn saves_wait_while_a_job_runs() {
+        let (_dir, a) = fixture();
+        let s = studio(Live::of(Arc::new(a)), Mode::Serve);
+        let (_, v) = config(&s);
+        *s.job.lock().unwrap() = Some(super::super::Job {
+            id: 1,
+            kind: "extract",
+            state: "running",
+            log: vec![],
+            error: None,
+            path: None,
+        });
+        let (code, out) = save_tour(&s, &args(json!({"revision": v["revision"], "tour": []})));
+        assert_eq!(code, StatusCode::CONFLICT, "{out}");
+        assert!(
+            out["error"].as_str().unwrap().contains("adapters run"),
+            "{out}"
+        );
     }
 
     #[test]

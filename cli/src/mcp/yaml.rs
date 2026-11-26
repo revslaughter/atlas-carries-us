@@ -439,15 +439,40 @@ fn splice(
                 prev = end;
             }
             let tail = prev;
+            // First, each new item that equals an old item takes that item's
+            // lines. Then each changed item takes the comments above the old
+            // item with its ID, else above the old item at its position.
+            let mut used = vec![false; old.len()];
+            let mut pick: Vec<Option<(usize, bool)>> = vec![None; items.len()];
+            for (k, it) in items.iter().enumerate() {
+                if let Some(i) = (0..old.len()).find(|&i| !used[i] && old_values[i] == *it) {
+                    used[i] = true;
+                    pick[k] = Some((i, true));
+                }
+            }
+            for (k, it) in items.iter().enumerate() {
+                if pick[k].is_some() {
+                    continue;
+                }
+                let by_id = it.get("id").filter(|v| !v.is_null()).and_then(|id| {
+                    (0..old.len()).find(|&i| !used[i] && old_values[i].get("id") == Some(id))
+                });
+                let at = by_id.or((k < old.len() && !used[k]).then_some(k));
+                if let Some(i) = at {
+                    used[i] = true;
+                    pick[k] = Some((i, false));
+                }
+            }
             let mut out = own(&lines[..sec.start + 1]);
-            for it in items {
-                let reuse = (0..old.len())
-                    .find(|&i| blocks[i].is_some() && old_values[i] == *it)
-                    .and_then(|i| blocks[i].take());
-                match reuse {
-                    Some((lead, st, end)) => {
+            for (k, it) in items.iter().enumerate() {
+                match pick[k].and_then(|(i, same)| blocks[i].map(|b| (b, same))) {
+                    Some(((lead, st, end), true)) => {
                         out.extend(own(&lines[lead..st]));
                         out.extend(own(&lines[st..end]));
+                    }
+                    Some(((lead, st, _), false)) => {
+                        out.extend(own(&lines[lead..st]));
+                        out.extend(emit_item(it.as_object()?, n, pretty));
                     }
                     None => out.extend(emit_item(it.as_object()?, n, pretty)),
                 }
@@ -755,6 +780,59 @@ mod tests {
         );
         assert!(out.contains("  - title: One\n"), "{out}");
         assert!(out.ends_with("    text: \"Third.\"\n"), "{out}");
+    }
+
+    #[test]
+    fn a_changed_item_keeps_the_comment_above_it() {
+        let v = parse(TEXT).unwrap();
+        let mut steps = v["tour"].as_array().unwrap().clone();
+        steps[1]["text"] = json!("Changed.");
+        let (out, _) = edit(
+            TEXT,
+            &Change::List {
+                key: "tour",
+                items: steps.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["tour"], json!(steps));
+        assert!(
+            out.contains("  # Before two.\n  - title: \"Two\"\n"),
+            "{out}"
+        );
+        // A region keeps its comment by ID, even after a move.
+        let text = "version: 1\nregions:\n  # About a.\n  - id: a\n    name: A\n  # About b.\n  - id: b\n    name: B\n";
+        let items = vec![
+            json!({"id": "b", "name": "B2"}),
+            json!({"id": "a", "name": "A"}),
+        ];
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "regions",
+                items: items.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["regions"], json!(items));
+        assert!(out.contains("  # About b.\n  - id: b\n"), "{out}");
+        assert!(out.contains("  # About a.\n  - id: a\n"), "{out}");
+    }
+
+    #[test]
+    fn a_list_that_the_file_lacks_goes_in_at_the_end() {
+        let items = vec![json!({"id": "a", "name": "A", "paths": ["x"]})];
+        let (out, how) = edit(
+            TEXT,
+            &Change::List {
+                key: "regions",
+                items: items.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert_eq!(parse(&out).unwrap()["regions"], json!(items));
+        assert!(out.starts_with("# Top comment.\n"), "{out}");
     }
 
     #[test]

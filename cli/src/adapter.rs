@@ -275,6 +275,28 @@ fn on_path(exe: &str) -> bool {
     })
 }
 
+/// Reads a stream to its end, one line at a time, and hands each line to
+/// acu's standard error and to `progress`. Bytes that are not UTF-8 become
+/// replacement characters; the reading never stops early, so the writer
+/// never blocks on a full pipe.
+pub fn forward_lines(from: impl std::io::Read, progress: &(dyn Fn(&str) + Sync)) {
+    use std::io::BufRead;
+    let mut r = std::io::BufReader::new(from);
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        match r.read_until(b'\n', &mut buf) {
+            Ok(0) | Err(_) => break,
+            Ok(_) => {
+                let line = String::from_utf8_lossy(&buf);
+                let line = line.trim_end_matches(['\n', '\r']);
+                eprintln!("{line}");
+                progress(line);
+            }
+        }
+    }
+}
+
 /// Runs one adapter and returns its document. Each line that the adapter
 /// writes to standard error goes on to acu's standard error and to
 /// `progress`, so the studio can show it.
@@ -314,14 +336,7 @@ pub fn run(
         .take()
         .context("open the adapter's standard error")?;
     let out = std::thread::scope(|s| -> Result<std::process::Output> {
-        s.spawn(move || {
-            use std::io::BufRead;
-            for line in std::io::BufReader::new(stderr).lines() {
-                let Ok(line) = line else { break };
-                eprintln!("{line}");
-                progress(&line);
-            }
-        });
+        s.spawn(move || forward_lines(stderr, progress));
         // Drop standard input after the request, so the adapter sees its end.
         stdin.write_all(request.to_string().as_bytes())?;
         drop(stdin);
@@ -349,6 +364,20 @@ mod tests {
         assert_eq!(plugin_adapter("flask"), Some("python"));
         assert_eq!(plugin_adapter("python-main"), Some("python"));
         assert_eq!(plugin_adapter("rails"), None);
+    }
+
+    #[test]
+    fn forwarded_lines_survive_bytes_that_are_not_utf8() {
+        let mut input = b"one\n".to_vec();
+        input.extend_from_slice(&[0xff, 0xfe, b'\n']);
+        input.extend(std::iter::repeat_n(b'x', 200_000));
+        input.extend_from_slice(b"\nlast\n");
+        let seen = std::sync::Mutex::new(Vec::new());
+        forward_lines(&input[..], &|l: &str| seen.lock().unwrap().push(l.len()));
+        let seen = seen.into_inner().unwrap();
+        assert_eq!(seen.len(), 4, "{seen:?}");
+        assert_eq!(seen[2], 200_000);
+        assert_eq!(seen[3], 4);
     }
 
     /// Makes an empty folder for one test; it goes away when dropped.

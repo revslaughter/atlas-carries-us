@@ -189,17 +189,25 @@ fn run(cli: Cli) -> Result<()> {
             workspace,
         } => {
             if !addr.ip().is_loopback() {
-                bail!("acu studio listens on a loopback address only, such as 127.0.0.1:4321; use acu serve to share a map");
+                bail!("the studio listens on a loopback address only, such as 127.0.0.1:4321; use acu serve to share a map");
             }
             let root = match root.or_else(studio::setup::home) {
                 Some(r) => r
                     .canonicalize()
                     .with_context(|| format!("find {}", r.display()))?,
-                None => bail!("acu cannot find your home folder; pass --root"),
+                None => {
+                    bail!("found no home folder; pass --root with the folder to pick projects from")
+                }
             };
             let workspace = workspace
                 .or_else(studio::setup::default_workspace)
-                .context("acu cannot find a cache folder; pass --workspace")?;
+                .context("found no cache folder; pass --workspace with a folder for clones")?;
+            // An absolute workspace lets the picker match the folders of clones.
+            std::fs::create_dir_all(&workspace)
+                .with_context(|| format!("create {}", workspace.display()))?;
+            let workspace = workspace
+                .canonicalize()
+                .with_context(|| format!("find {}", workspace.display()))?;
             let live = Arc::new(mcp::Live::empty());
             if let Some(p) = project {
                 let file = if p.is_dir() { p.join("atlas.yaml") } else { p };
