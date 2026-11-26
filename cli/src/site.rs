@@ -93,11 +93,10 @@ pub async fn serve(studio: Arc<Studio>) -> Result<()> {
 /// [`respond`].
 async fn route(req: Request, studio: Arc<Studio>) -> Response {
     let path = req.uri().path().to_string();
-    // In the studio, every answer needs the server's own Host, so a page
-    // that DNS rebinding points here reads neither the map nor the API.
-    // `acu serve` keeps the map open to any name, as forwarded ports need,
-    // and guards only the API, below.
-    // The API's own guard, below, checks the Host of an API call.
+    // In the studio, every page needs the server's own Host, so a page that
+    // DNS rebinding points here reads nothing. `acu serve` keeps its pages
+    // open to any name, as forwarded ports need. For an API call, in either
+    // command, the API's guard below checks the Host.
     if studio.mode == studio::Mode::Studio && !path.starts_with("/api/") {
         if let Err(r) = studio.check_host(req.headers()) {
             return json_reply(r);

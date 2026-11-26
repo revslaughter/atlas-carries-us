@@ -315,11 +315,15 @@ function regionHTML(r: RegionItem, i: number, n: number): string {
   const names = (r.matched ?? []).map(id => S.units.find(u => u.id === id)?.path ?? id);
   const shared = em.sharedLocals(S.units);
   const unitBoxes = S.units
-    .map(
-      u =>
-        `<label class="ed-check"><input type="checkbox" data-unit="${esc(u.id)}" data-key="${r.key}" ${
-          em.hasPath(paths, u, shared.has(u.local)) ? "checked" : ""
-        } /> <code>${esc(u.path)}</code></label>`,
+    .map(u =>
+      shared.has(u.local) && paths.includes(u.local)
+        ? // A shared short path holds this unit and its twin; only the Paths field changes it.
+          `<label class="ed-check"><input type="checkbox" checked disabled /> <code>${esc(u.path)}</code> (through <code>${esc(
+            u.local,
+          )}</code>; edit Paths to change it)</label>`
+        : `<label class="ed-check"><input type="checkbox" data-unit="${esc(u.id)}" data-key="${r.key}" ${
+            em.hasPath(paths, u, shared.has(u.local)) ? "checked" : ""
+          } /> <code>${esc(u.path)}</code></label>`,
     )
     .join("");
   const form = `<div class="ed-form">
@@ -773,9 +777,10 @@ function onInput(e: Event) {
         queueMatch(r);
       } else if (field === "color") r.cfg = { ...r.cfg, color: t.value === "" ? undefined : Number(t.value) };
       else if (field === "row") {
-        r.row = t.value === "" ? null : Math.max(1, Math.floor(Number(t.value)) || 1);
+        const row = t.value === "" ? null : Math.max(1, Math.floor(Number(t.value)) || 1);
         // A region in a new row goes to that row's end.
-        r.col = null;
+        if (row !== r.row) r.col = null;
+        r.row = row;
       } else if (field === "default") r.cfg = { ...r.cfg, default: t.checked || undefined };
       else if (field === "id") {
         r.cfg = { ...r.cfg, id: t.value.trim() };
@@ -815,7 +820,11 @@ function refreshFoot() {
 function onKey(e: KeyboardEvent) {
   const t = e.target as HTMLElement;
   // Escape in a field or during a save stays with the field.
-  if (e.key === "Escape" && !S.busy && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) {
+  const typing =
+    t.tagName === "TEXTAREA" ||
+    t.tagName === "SELECT" ||
+    (t.tagName === "INPUT" && !["checkbox", "radio"].includes((t as HTMLInputElement).type));
+  if (e.key === "Escape" && !S.busy && !typing) {
     e.preventDefault();
     closeEditor();
     return;

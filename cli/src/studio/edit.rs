@@ -22,8 +22,11 @@ fn atlas(s: &Studio) -> Result<Arc<Atlas>, Reply> {
 }
 
 /// Returns the map that a save changes, or an answer that refuses the save
-/// while a job runs: the job puts a new map on show when it ends, and a save
-/// meanwhile could reach the file but not that map.
+/// while a job runs. The retired-map guard of [`Live::install`] already
+/// keeps such a save from going astray; this check says why at once, in
+/// words that fit a run, rather than after the run ends.
+///
+/// [`Live::install`]: crate::mcp::Live::install
 fn atlas_for_save(s: &Studio) -> Result<Arc<Atlas>, Reply> {
     if s.job().is_some_and(|j| j.state == "running") {
         return Err(fail(

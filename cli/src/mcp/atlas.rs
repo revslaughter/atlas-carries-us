@@ -138,7 +138,9 @@ impl Live {
     /// old map then fails and asks for a retry.
     pub fn install(&self, atlas: Arc<Atlas>, stale: impl FnOnce() -> bool) -> Result<(), String> {
         let lock = atlas.write_lock();
-        let _guard = lock.lock().map_err(|_| BROKEN.to_string())?;
+        // A lock that a panic broke still guards; take it and go on, so the
+        // new map always goes on show.
+        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
         let old = match self.slot.write() {
             Ok(mut g) => g.replace(atlas.clone()),
             Err(p) => p.into_inner().replace(atlas.clone()),
@@ -312,6 +314,7 @@ impl Atlas {
         });
         match (out, stale.into_inner()) {
             (Ok(w), _) => Ok(w),
+            (Err(e), _) if self.retired.load(Ordering::SeqCst) => Err(SaveError::Stale(e)),
             (Err(_), Some(now)) => Err(SaveError::Stale(format!(
                 "acu: atlas.yaml changed on disk since you opened it (now revision {now}); reload the editor, then make the change again"
             ))),
@@ -659,6 +662,11 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
         assert_eq!(new.snapshot().unwrap().doc["project"]["name"], "Shop 2");
         let err = old.write(|t| Ok((t.to_string(), "test"))).err().unwrap();
         assert!(err.contains("newer map"), "{err}");
+        let stale = old
+            .save("any", |t| Ok((t.to_string(), "test")))
+            .err()
+            .unwrap();
+        assert!(matches!(stale, SaveError::Stale(_)), "{stale:?}");
         assert!(new.write(|t| Ok((t.to_string(), "test"))).is_ok());
     }
 

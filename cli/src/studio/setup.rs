@@ -738,12 +738,21 @@ fn kill_group(child: &mut std::process::Child) {
 }
 
 /// Stops every process in the group that a child led. A group keeps its
-/// number while any member lives, so the number never names another
-/// process's group, even after acu reaped the leader.
+/// number while any member lives. Once none lives, the system may give the
+/// number to a new process, so acu signals a group only while it tracks a
+/// running clone; a short window stays between the clone's end and the
+/// moment acu stops tracking it. acu runs the system's `kill` program
+/// rather than call the C library, because the project adds no runtime
+/// dependency without the maintainer's agreement.
 pub fn kill_pgid(pid: u32) {
     #[cfg(unix)]
     {
-        let _ = Command::new("kill")
+        // The system's own program, not whatever `kill` the PATH names.
+        let program = ["/bin/kill", "/usr/bin/kill"]
+            .into_iter()
+            .find(|p| Path::new(p).is_file())
+            .unwrap_or("kill");
+        let _ = Command::new(program)
             .args(["-s", "KILL", "--", &format!("-{pid}")])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -782,6 +791,17 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
                 dest.display()
             ));
         }
+        // git writes into a staging folder beside the final one, which gets
+        // its name only after git succeeds. A clone that Ctrl-C or a crash
+        // stopped halfway never sits at the final name, so it never opens
+        // later as a good one.
+        let staging = dest.with_file_name(format!(
+            "{}.acu-partial",
+            dest.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()
+        ));
+        if staging.exists() {
+            let _ = std::fs::remove_dir_all(&staging);
+        }
         let parent = dest.parent().unwrap_or(&ws).to_path_buf();
         std::fs::create_dir_all(&parent).map_err(|e| {
             format!(
@@ -816,7 +836,7 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
                 "--",
                 &target.url,
             ])
-            .arg(&dest)
+            .arg(&staging)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
@@ -826,8 +846,12 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
         st.set_child(Some(child.id()));
         let ok = wait_limited(child, CLONE_LIMIT, log);
         st.set_child(None);
+        let ok = ok
+            && std::fs::rename(&staging, &dest)
+                .map_err(|e| log(&format!("acu: name the clone {}: {e}", dest.display())))
+                .is_ok();
         if !ok {
-            let _ = std::fs::remove_dir_all(&dest);
+            let _ = std::fs::remove_dir_all(&staging);
             // Remove the host and owner folders too when they stay empty.
             let mut up = dest.parent();
             while let Some(p) = up.filter(|p| p.starts_with(&ws) && *p != ws.as_path()) {

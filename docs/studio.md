@@ -128,8 +128,9 @@ lists the steps in order.
    on a step.
 4. **Preview.** Choose **Show** on a step to open its view.
 5. **Reorder.** Drag a step by its row; it lands before the row that you
-   drop it on, or after the row when you drop it on the row's lower half. Or use the ↑ and ↓ buttons, or press Alt+ArrowUp and
-   Alt+ArrowDown while a step's row has focus. Enter opens the step's form.
+   drop it on, or after the row when you drop it on the row's lower half.
+   Or use the ↑ and ↓ buttons, or press Alt+ArrowUp and Alt+ArrowDown while
+   a step's row has focus. Enter opens the step's form.
 6. **Delete.** Choose **Delete step** in a step's form.
 7. **Accept a drafted step.** A step that a program drafted carries a
    `drafted` mark (see [`config.md`](config.md#drafted-text)). Read it
@@ -196,12 +197,20 @@ A save takes the same path as a draft from an MCP write tool
    The revision holds an FNV-1a hash of the file's text. A file that changed
    meanwhile, in a text editor or another window, fails the save with status
    409. Choose **Discard changes** to read the file again, then make the
-   change again.
-3. It rewrites only the changed section. In a list save (regions or tour),
-   each item equal to an old item keeps its old lines and the comments above
-   them. A changed item keeps the comments above the old item with its ID
-   (a region), else above the old item at its place. A reorder or a deletion
-   therefore keeps the comments of the other items.
+   change again. A save that reaches a map that a new extraction has just
+   replaced also fails with 409, for the same remedy.
+3. It rewrites only the changed section. In a list save (regions or tour):
+   - Comments under the key, up to the last blank line before the first
+     item, stay under the key: they speak of the whole list. Comments
+     directly above the first item, with no blank line between, belong to
+     that item and move with it.
+   - Each item equal to an old item keeps its old lines and the comments
+     above them.
+   - A changed item keeps the comments above the old item with the same ID
+     (a region), else with the same title (a step). Only when the list kept
+     its length does a changed item take the comments of the old item at
+     its place. So an insert or a deletion never hands one item's comment
+     to another.
 4. It checks the new config against the config schema and runs the check of
    `acu extract`. A step whose target matches nothing, or a layout that
    names a missing region, fails with status 422 and the reason. acu then
@@ -252,9 +261,10 @@ could still try to reach it. These guards stop that:
 
 1. **Host.** The API answers only a `Host` of `127.0.0.1:<port>`,
    `localhost:<port>`, `[::1]:<port>`, or the address that acu listens on,
-   with the port that the system gave (so `--addr 127.0.0.1:0` works). On a
-   loopback address the rule covers the whole site, the map's data
-   included. This blocks DNS rebinding. acu checks the guards before it
+   with the port that the system gave (so `--addr 127.0.0.1:0` works). In
+   `acu studio` the rule covers the whole site, the map's data included.
+   `acu serve` applies it to the API only, so a map behind a forwarded port
+   still shows. This blocks DNS rebinding. acu checks the guards before it
    reads a request's body.
 2. **Origin.** A request that sends `Origin` must name one of those hosts.
 3. **Changing calls.** Every POST needs all of these:
@@ -286,7 +296,10 @@ could still try to reach it. These guards stop that:
      (CVE-2024-32002);
    - in a process group of its own, for at most 10 minutes; acu then stops
      the group and removes the folder, with the host and owner folders that
-     stay empty.
+     stay empty;
+   - into a staging folder (`<name>.acu-partial`) that takes the final name
+     only after git succeeds, so a clone that Ctrl-C stopped halfway never
+     opens later as a good one. Ctrl-C stops a running clone's group.
 7. **Trust.** Opening a project needs `trust: true`, because extraction runs
    the project's build tools.
 
