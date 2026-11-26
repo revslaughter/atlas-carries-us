@@ -61,6 +61,62 @@ Each adapter also accepts flags for a run by hand; see its `-help`.
 4. A public project from `corpus/`, with a count snapshot in
    `examples/<name>/counts.json` that CI compares on every run.
 
+## Ship an adapter
+
+Users get `acu` in three forms: a release archive for each platform, the
+container image, and the GitHub Action, which runs the image
+([`install.md`](install.md), [`github-action.md`](github-action.md)). All
+three come from the `Dockerfile`, so a new adapter reaches users through
+these changes:
+
+1. **The `build` stage.** Write the adapter's program to `/out` as
+   `acu-adapter-<name>`, with `.exe` on Windows. The stage runs on the
+   build machine's platform and builds for `TARGETOS` and `TARGETARCH`, so
+   cross-compile; never run a step under emulation. Choose the form that
+   fits the language:
+   1. A compiled program, as Go and Rust do: one file per platform.
+   2. A Node package in a folder `acu-adapter-<name>/`, as the TypeScript
+      adapter does: `acu` runs the entry point from its `bin` field with
+      `node`.
+   3. A file with a `#!` line, as the Python adapter does with one zip
+      application. Windows reads no `#!` line, so there the Python adapter
+      takes the name `acu-adapter-python.pyz`, which `acu` runs with Python.
+      Another interpreter needs its own rule in `beside_acu`
+      (`cli/src/adapter.rs`), or users set `ACU_ADAPTER_<NAME>`.
+2. **The `runtime` stage.** Copy the program to `/usr/local/bin`, and the
+   tools that it needs at run time from a base image pinned by tag and
+   digest. Add the image to `scripts/check-pins.sh` with the file that pins
+   the same version outside Docker, and list the group in
+   [`CONTRIBUTING.md`](../CONTRIBUTING.md) section 4.11. Name the adapter in
+   the image's `description` label.
+3. **The release archive.** Add the program's name to the list `want` in
+   `scripts/release-pack.sh`, and to its `chmod 755` line, which sets the
+   executable mode on each program (a Node package names its entry point
+   there). The script refuses a folder that holds more or fewer programs,
+   so CI fails until the list matches the `build` stage.
+4. **CI.** In `.github/workflows/image.yml`, map the adapter's fixture with
+   the image, and with the unpacked archives on Linux, macOS and Windows.
+   Install the language's tools on those runners with its `setup-*` action.
+5. **Docs.** Add the adapter's run-time needs to the table in
+   [`install.md`](install.md) and in the README, and its file to the
+   archive table in `install.md`.
+6. **A dry run.** Run the workflow "Release" by hand from the Actions tab.
+   It builds every archive and the image for both architectures, and
+   publishes nothing. Download an archive from the run, and map the fixture
+   with it.
+
+An adapter that lives outside this repository needs none of these steps.
+Ship a program named `acu-adapter-<name>` on the user's `PATH`, or tell
+users to name it with `command:` in `atlas.yaml` or with the variable
+`ACU_ADAPTER_<NAME>`. The README section ["How `acu` finds an
+adapter"](../README.md#how-acu-finds-an-adapter) lists the order in which
+`acu` looks.
+
+`acu` finds an adapter in the folder that holds it (see the README, "How
+`acu` finds an adapter"), so an archive needs no install step beyond
+unpacking. Keep that true: put nothing that the adapter needs outside its
+own file or folder.
+
 ## Which languages to cover
 
 The goal "cover the top 66% of code" takes its meaning from one published
