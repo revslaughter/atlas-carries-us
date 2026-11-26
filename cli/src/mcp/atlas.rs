@@ -311,21 +311,25 @@ impl Atlas {
         edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
     ) -> Result<Written, SaveError> {
         let stale = std::cell::Cell::new(None);
-        let out = self.write(|text| {
-            let now = revision(text);
-            if now != base {
-                stale.set(Some(now));
-                return Err("stale".into());
-            }
-            edit(text)
-        });
+        let retired = std::cell::Cell::new(false);
+        let out = self.write_marked(
+            |text| {
+                let now = revision(text);
+                if now != base {
+                    stale.set(Some(now));
+                    return Err("stale".into());
+                }
+                edit(text)
+            },
+            &retired,
+        );
         match (out, stale.into_inner()) {
             (Ok(w), _) => Ok(w),
             (Err(_), Some(now)) => Err(SaveError::Stale(format!(
                 "acu: atlas.yaml changed on disk since you opened it (now revision {now}); reload the editor, then make the change again"
             ))),
             // Decided under the lock, by what the write itself saw.
-            (Err(e), None) if e == RETIRED => Err(SaveError::Stale(e)),
+            (Err(e), None) if retired.get() => Err(SaveError::Stale(e)),
             (Err(e), None) => Err(SaveError::Failed(e)),
         }
     }
@@ -383,6 +387,17 @@ impl Atlas {
         &self,
         edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
     ) -> Result<Written, String> {
+        self.write_marked(edit, &std::cell::Cell::new(false))
+    }
+
+    /// Writes as [`Atlas::write`] does, and sets `retired` when the write
+    /// failed because a newer map replaced this one, so a caller can tell
+    /// that case apart without reading the message.
+    fn write_marked(
+        &self,
+        edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
+        retired: &std::cell::Cell<bool>,
+    ) -> Result<Written, String> {
         if let Some(why) = self.why_read_only() {
             return Err(why.to_string());
         }
@@ -391,6 +406,7 @@ impl Atlas {
         };
         let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
         if self.retired.load(Ordering::SeqCst) {
+            retired.set(true);
             return Err(RETIRED.into());
         }
         // Write only the config file itself, and only inside its own folder.
@@ -673,6 +689,24 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
             .unwrap();
         assert!(matches!(stale, SaveError::Stale(_)), "{stale:?}");
         assert!(new.write(|t| Ok((t.to_string(), "test"))).is_ok());
+    }
+
+    #[test]
+    fn a_broken_lock_still_lets_a_new_map_on_show_and_take_saves() {
+        let (_dir, atlas) = fixture();
+        let atlas = Arc::new(atlas);
+        let lock = atlas.write_lock();
+        let poison = lock.clone();
+        let _ = std::thread::spawn(move || {
+            let _g = poison.lock().unwrap();
+            panic!("break the lock on purpose");
+        })
+        .join();
+        assert!(lock.is_poisoned());
+        let live = Live::empty();
+        live.install(atlas.clone(), || false).unwrap();
+        assert!(!lock.is_poisoned());
+        assert!(atlas.write(|t| Ok((t.to_string(), "test"))).is_ok());
     }
 
     #[test]

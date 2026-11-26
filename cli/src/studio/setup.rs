@@ -775,8 +775,15 @@ fn staging_for(dest: &Path) -> PathBuf {
 }
 
 /// Ends a clone: on success, gives the staging folder its final name; on
-/// failure, removes it, with the host and owner folders that stay empty.
-fn finish_clone(ok: bool, staging: &Path, dest: &Path, ws: &Path) -> Result<(), String> {
+/// failure, removes it, with the host and owner folders that stay empty,
+/// and returns `why`.
+fn finish_clone(
+    ok: bool,
+    staging: &Path,
+    dest: &Path,
+    ws: &Path,
+    why: String,
+) -> Result<(), String> {
     if ok {
         return std::fs::rename(staging, dest).map_err(|e| {
             format!(
@@ -794,7 +801,7 @@ fn finish_clone(ok: bool, staging: &Path, dest: &Path, ws: &Path) -> Result<(), 
         }
         up = p.parent();
     }
-    Err("acu: the clone failed; check the address and your network, then try again".into())
+    Err(why)
 }
 
 /// `POST /api/clone`: clones a repository into the workspace as a job, with
@@ -878,22 +885,24 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("acu: start git: {e}; install git and try again"))?;
+            ;
+        let child = match child {
+            Ok(c) => c,
+            Err(e) => {
+                let why = format!("acu: start git: {e}; install git and try again");
+                return finish_clone(false, &staging, &dest, &ws, why).map(|_| None);
+            }
+        };
         // Ctrl-C reaches acu but not git's own group; acu stops it then.
         st.set_child(Some(child.id()));
         let ok = wait_limited(child, CLONE_LIMIT, log);
         st.set_child(None);
-        finish_clone(ok, &staging, &dest, &ws).map_err(|e| {
-            if ok {
-                e
-            } else {
-                format!(
-                    "acu: git could not clone {} into {}; check the address and your network, then try again",
-                    target.url,
-                    dest.display()
-                )
-            }
-        })?;
+        let why = format!(
+            "acu: git could not clone {} into {}; check the address and your network, then try again",
+            target.url,
+            dest.display()
+        );
+        finish_clone(ok, &staging, &dest, &ws, why)?;
         log("acu: the clone finished");
         Ok(Some(dest.display().to_string()))
     })
@@ -1051,11 +1060,14 @@ mod tests {
         assert!(hidden(&staging.file_name().unwrap().to_string_lossy()));
         // A failure removes the staging folder and the empty owner folders.
         write(&staging.join(".git/HEAD"), "x");
-        assert!(finish_clone(false, &staging, &dest, &ws).is_err());
+        assert_eq!(
+            finish_clone(false, &staging, &dest, &ws, "acu: why".into()),
+            Err("acu: why".into())
+        );
         assert!(!staging.exists() && !ws.join("github.com").exists());
         // A success renames it.
         write(&staging.join(".git/HEAD"), "x");
-        finish_clone(true, &staging, &dest, &ws).unwrap();
+        finish_clone(true, &staging, &dest, &ws, String::new()).unwrap();
         assert!(dest.join(".git/HEAD").is_file() && !staging.exists());
     }
 

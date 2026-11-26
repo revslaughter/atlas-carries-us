@@ -592,9 +592,10 @@ async function save() {
     S.saved[path as "tour" | "regions" | "project"] = f.keys[path as "tour" | "regions" | "project"];
     if (path === "regions") {
       if (withTour) S.saved.tour = f.keys.tour;
-      // The file now names the regions by their new IDs.
+      // The file now names the regions by their new IDs, in the new layout.
       S.regions.forEach(r => (r.origId = r.cfg.id));
       S.fileIds = S.regions.map(r => r.cfg.id);
+      S.fileRows = em.rowsOf(f.layout ?? null);
     }
   }
   keep(S.tab);
