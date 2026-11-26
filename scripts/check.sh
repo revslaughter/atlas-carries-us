@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Runs every check that CI runs: pinned versions, formatting, lints, unit
 # tests, the golden files of both adapters, the end-to-end smoke test on each
-# example, and this project's own map, whose docs must stay complete.
+# example, the MCP server's tools, and this project's own map, whose docs
+# must stay complete.
 #
 #   scripts/check.sh           everything
 #   scripts/check.sh --quick   everything except the end-to-end run
@@ -98,6 +99,9 @@ for ex in lending chi cobra immer hono realworld svelte-changelog mixed lending-
   node tests/e2e/smoke.mjs "out/site-$ex" "out/shot-$ex"
   node tests/e2e/smoke.mjs "out/site-$ex" "out/shot-$ex-light" --light
 done
+
+step "MCP server: every tool on chi and Cobra, and a drafted tour step in the viewer"
+node tests/e2e/mcp.mjs ./target/release/acu out/mcp
 
 step "This project's own map: every unit, file and item documented"
 ./target/release/acu extract -c atlas.yaml -o out/self.json

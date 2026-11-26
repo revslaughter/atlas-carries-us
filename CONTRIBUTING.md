@@ -69,14 +69,17 @@ emulation, so every platform builds at about the same speed.
 `--provenance=false` keeps buildx from writing a `provenance.json` into the
 folder.
 
-`out/docker` then holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and
-`acu-adapter-typescript/`. On Windows the three programs end in `.exe`. `acu`
-finds its adapters beside itself, the `acu-adapter-typescript/` folder
-included, which it runs with Node; they need no `PATH` setup. The adapters
-still need Go, Node and the pinned nightly on the machine that runs them,
-whatever its system. The folder leaves out the Python adapter; to map Python
-with it, set `PYTHONPATH` to `adapters/python` in a checkout, and
-`ACU_ADAPTER_PYTHON` to `python3 -m acu_adapter_python`.
+`out/docker` then holds `acu`, `acu-adapter-go`, `acu-adapter-python`,
+`acu-adapter-rust` and `acu-adapter-typescript/`. On Windows the three
+compiled programs end in `.exe`, and the Python adapter takes the name
+`acu-adapter-python.pyz`. `acu` finds its adapters beside itself, the
+`acu-adapter-typescript/` folder included, which it runs with Node; they need
+no `PATH` setup. The Python adapter comes as one zip application that
+`python3` runs. Windows reads no `#!` line, so there `acu` runs the `.pyz`
+file with `py -3`, `python` or `python3`. The adapters still need
+Go, Node, Python 3.12 or later and the pinned nightly on the machine that
+runs them, whatever its system. A release ships the same folder as an
+archive; see [`docs/install.md`](docs/install.md).
 
 - Linux: the programs need glibc 2.28 or later. `acu-adapter-go` builds with
   `CGO_ENABLED=0` and runs on any Linux.
@@ -139,6 +142,7 @@ cargo zigbuild --release --locked --target aarch64-apple-darwin -p atlas-carries
 | Viewer | The TypeScript type check, unit tests (including the language-word test), and the build. |
 | `acu` and the Rust adapter | `cargo fmt`, `cargo clippy` with warnings as errors, the tests (for the Rust adapter: golden file, schema validation, named facts), and a release build of the workspace. |
 | End to end | For each example: `acu extract`, the count snapshot, `acu build`, and the smoke test in both themes. |
+| MCP server | `tests/e2e/mcp.mjs`: a scripted client calls every MCP tool on chi and Cobra, then drafts a tour step over HTTP and checks the viewer's "Machine-drafted" label ([`docs/mcp.md`](docs/mcp.md)). |
 | This project's map | `acu extract -c atlas.yaml`, the doc check (`tests/e2e/docs.mjs`), `acu build`, and the smoke test in both themes. |
 
 ## 4. Conventions that hold everywhere
@@ -283,6 +287,8 @@ Each tool version lives in two or more files. Change a group together;
 | `rustdoc-types` | `adapters/rust/Cargo.toml` (exact); `Cargo.lock`. It must read the nightly's JSON format; move both together. |
 | zig | `ZIG_VERSION` and the two `ZIG_SHA256_*` sums in `Dockerfile`; `ziglang==` in this file |
 | cargo-zigbuild | `CARGO_ZIGBUILD_VERSION` in `Dockerfile`; `cargo-zigbuild@` in this file |
+| GitHub Actions | Each `uses:` in `.github/workflows/`, `action.yml`, `examples/github-pages/` and `docs/github-action.md`: one version per action |
+| This action's tag | `uses: revslaughter/atlas-carries-us@v<version>` in those files; `[workspace.package] version` in `Cargo.toml` |
 
 1. Pin base images by tag and digest.
 2. Pin npm packages to exact versions.
@@ -335,7 +341,10 @@ generated maps of private code. Never commit generated files such as
    checked against the source.
 6. Teach `acu` the adapter's built-in plugins (`plugin_adapter` in
    `cli/src/adapter.rs`) and add the adapter's toolchain to the `Dockerfile`.
-7. Record the decisions in `docs/adapters.md`.
+7. Put the adapter into the release: its program into the `build` stage's
+   `/out` folder, and its program and run-time tools into the `runtime`
+   stage. `docs/adapters.md` ("Ship an adapter") lists every file to change.
+8. Record the decisions in `docs/adapters.md`.
 
 ## 6. Licence
 

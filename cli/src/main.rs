@@ -3,16 +3,19 @@
 //! 1. `acu extract` runs the language adapters, merges their output, applies
 //!    atlas.yaml, checks the result and writes atlas.json.
 //! 2. `acu build` writes a static site: the viewer plus the data.
-//! 3. `acu serve` runs the viewer locally.
-//! 4. `acu check` reports config and data problems without writing anything.
+//! 3. `acu serve` runs the viewer locally, with an MCP server at `/mcp`.
+//! 4. `acu mcp` runs the same MCP server over standard input and output.
+//! 5. `acu check` reports config and data problems without writing anything.
 
 mod adapter;
 mod assemble;
 mod config;
+mod mcp;
 mod site;
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
@@ -30,7 +33,7 @@ struct Cli {
     cmd: Cmd,
 }
 
-/// The four things acu does.
+/// The five things acu does.
 #[derive(Subcommand)]
 enum Cmd {
     /// Run the adapters and write atlas.json.
@@ -52,13 +55,26 @@ enum Cmd {
         #[arg(long, short, default_value = "site")]
         out: PathBuf,
     },
-    /// Serve the viewer on this computer.
+    /// Serve the viewer on this computer, with an MCP server at /mcp.
     Serve {
         #[command(flatten)]
         input: Input,
         /// Address to listen on.
         #[arg(long, default_value = "127.0.0.1:4321")]
         addr: SocketAddr,
+        #[command(flatten)]
+        mcp: McpArgs,
+        /// Let the MCP write tools work on an address that other computers
+        /// can reach. Without it, they work on a loopback address only.
+        #[arg(long)]
+        allow_remote_writes: bool,
+    },
+    /// Run the MCP server over standard input and output, for desktop clients.
+    Mcp {
+        #[command(flatten)]
+        input: Input,
+        #[command(flatten)]
+        mcp: McpArgs,
     },
     /// Check the config and the data, and report problems.
     Check {
@@ -75,8 +91,8 @@ struct ConfigArg {
     config: PathBuf,
 }
 
-/// Where `build`, `serve` and `check` get the data: a config to extract, or
-/// a finished atlas.json.
+/// Where `build`, `serve`, `mcp` and `check` get the data: a config to
+/// extract, or a finished atlas.json.
 #[derive(Args)]
 struct Input {
     /// The project config. acu runs the adapters to make the data.
@@ -85,6 +101,18 @@ struct Input {
     /// A finished atlas.json, used as it stands.
     #[arg(long, short)]
     data: Option<PathBuf>,
+}
+
+/// The MCP options of `serve` and `mcp`.
+#[derive(Args)]
+struct McpArgs {
+    /// Turn off the MCP tools that write atlas.yaml.
+    #[arg(long)]
+    read_only: bool,
+    /// With --data: the folder of the mapped repository, where read_source
+    /// reads files. Default: the current folder.
+    #[arg(long, requires = "data")]
+    root: Option<PathBuf>,
 }
 
 /// Parses the command line and runs it; a failure exits with status 1.
@@ -119,12 +147,23 @@ fn run(cli: Cli) -> Result<()> {
             eprintln!("acu: wrote {n} files to {}", out.display());
             Ok(())
         }
-        Cmd::Serve { input, addr } => {
-            let src = match (&input.config, &input.data) {
-                (_, Some(d)) => site::DataSource::File(d.clone()),
-                _ => site::DataSource::Memory(load_input(&input)?),
-            };
-            tokio::runtime::Runtime::new()?.block_on(site::serve(addr, src))
+        Cmd::Serve {
+            input,
+            addr,
+            mcp,
+            allow_remote_writes,
+        } => {
+            let why = serve_writes(mcp.read_only, addr, allow_remote_writes);
+            if why == Some(mcp::atlas::REMOTE) && input.data.is_none() {
+                eprintln!("acu: {addr} lets other computers reach the server, so the MCP write tools stay off; add --allow-remote-writes to turn them on");
+            }
+            let atlas = Arc::new(open_atlas(&input, &mcp, why)?);
+            tokio::runtime::Runtime::new()?.block_on(site::serve(addr, atlas))
+        }
+        Cmd::Mcp { input, mcp } => {
+            let why = mcp.read_only.then_some(mcp::atlas::READ_ONLY);
+            let atlas = Arc::new(open_atlas(&input, &mcp, why)?);
+            tokio::runtime::Runtime::new()?.block_on(mcp::serve_stdio(atlas))
         }
         Cmd::Check { input } => {
             let doc = match (&input.config, &input.data) {
@@ -143,6 +182,19 @@ fn run(cli: Cli) -> Result<()> {
     }
 }
 
+/// Says why the MCP write tools of `serve` stay off, or `None` when they
+/// work: `--read-only` turns them off, and so does an address that other
+/// computers can reach, unless `--allow-remote-writes` lets them work there.
+fn serve_writes(read_only: bool, addr: SocketAddr, allow_remote: bool) -> Option<&'static str> {
+    if read_only {
+        Some(mcp::atlas::READ_ONLY)
+    } else if !addr.ip().is_loopback() && !allow_remote {
+        Some(mcp::atlas::REMOTE)
+    } else {
+        None
+    }
+}
+
 /// Reads a JSON file.
 fn read_json(p: &Path) -> Result<Value> {
     let b = std::fs::read(p).with_context(|| format!("read {}", p.display()))?;
@@ -150,8 +202,8 @@ fn read_json(p: &Path) -> Result<Value> {
         .with_context(|| format!("{} holds JSON that does not parse", p.display()))
 }
 
-/// Returns the data that `build` and `serve` show: a checked atlas.json, or
-/// the result of `extract` on the config.
+/// Returns the data that `build` shows: a checked atlas.json, or the result
+/// of `extract` on the config.
 fn load_input(input: &Input) -> Result<Vec<u8>> {
     match (&input.config, &input.data) {
         (_, Some(d)) => {
@@ -169,9 +221,68 @@ fn load_input(input: &Input) -> Result<Vec<u8>> {
     }
 }
 
+/// Opens the map that `serve` and `mcp` show: a finished atlas.json, read
+/// again whenever the file changes, or the checked result of the adapters
+/// and the config, which the MCP write tools can change.
+fn open_atlas(
+    input: &Input,
+    opts: &McpArgs,
+    read_only: Option<&'static str>,
+) -> Result<mcp::Atlas> {
+    if let Some(d) = &input.data {
+        // Report problems but serve the file anyway, as `serve -d` always
+        // has: a later `acu extract` may fix it, and the page reads it again.
+        assemble::check(&read_json(d)?).print();
+        return match &opts.root {
+            Some(root) => mcp::Atlas::from_file(d, root, true),
+            None => {
+                let cwd = std::env::current_dir().context("find the current folder")?;
+                mcp::Atlas::from_file(d, &cwd, false)
+            }
+        };
+    }
+    let path = input
+        .config
+        .clone()
+        .unwrap_or_else(|| PathBuf::from("atlas.yaml"));
+    let loaded = config::load(&path)?;
+    let run = run_adapters(&loaded)?;
+    mcp::Atlas::from_config(&path, run, read_only)
+}
+
+/// What the adapters found: their merged document before acu applies the
+/// config, the commit they read, and the repository roots that their paths
+/// start from.
+pub struct AdapterRun {
+    /// The merged adapter documents.
+    pub merged: Value,
+    /// The commit that the first adapter read, when git knows it.
+    pub commit: Option<String>,
+    /// The repository root of each language, without repeats.
+    pub repo_roots: Vec<PathBuf>,
+}
+
+/// Applies a config to a copy of the merged document and stamps the time.
+pub fn apply_config(run: &AdapterRun, cfg: &config::Config) -> (Value, assemble::Report) {
+    let mut doc = run.merged.clone();
+    let ctx = assemble::Context {
+        tool_version: env!("CARGO_PKG_VERSION").to_string(),
+        generated: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        commit: run.commit.clone(),
+    };
+    let rep = assemble::apply(&mut doc, cfg, &ctx);
+    (doc, rep)
+}
+
 /// Runs the adapters and applies the config, without the final check.
 fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
     let loaded = config::load(config_path)?;
+    let run = run_adapters(&loaded)?;
+    Ok(apply_config(&run, &loaded.config))
+}
+
+/// Runs each language's adapter with its plugins and merges the documents.
+fn run_adapters(loaded: &config::Loaded) -> Result<AdapterRun> {
     let cfg = &loaded.config;
     for e in &cfg.entry_points {
         if e.adapter.is_none() && adapter::plugin_adapter(&e.plugin).is_none() {
@@ -183,10 +294,14 @@ fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
     }
     let mut docs = Vec::new();
     let mut commit = None;
+    let mut repo_roots: Vec<PathBuf> = Vec::new();
     for lang in &cfg.languages {
         let src = adapter::source(&loaded.dir, lang)?;
         if commit.is_none() {
             commit = src.commit.clone();
+        }
+        if !repo_roots.contains(&src.repo_root) {
+            repo_roots.push(src.repo_root.clone());
         }
         let plugins: Vec<_> = cfg
             .entry_points
@@ -203,14 +318,11 @@ fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
         );
         docs.push(adapter::run(lang, &src, &plugins)?);
     }
-    let mut doc = assemble::merge(docs)?;
-    let ctx = assemble::Context {
-        tool_version: env!("CARGO_PKG_VERSION").to_string(),
-        generated: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    Ok(AdapterRun {
+        merged: assemble::merge(docs)?,
         commit,
-    };
-    let rep = assemble::apply(&mut doc, cfg, &ctx);
-    Ok((doc, rep))
+        repo_roots,
+    })
 }
 
 /// Runs the adapters, applies the config and checks the result; any error
@@ -242,4 +354,30 @@ fn summary(doc: &Value, target: &str) {
         n("regions"),
         n("tour")
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn writes_stay_off_on_a_reachable_address_unless_allowed() {
+        let local: SocketAddr = "127.0.0.1:4321".parse().unwrap();
+        let open: SocketAddr = "0.0.0.0:4321".parse().unwrap();
+        assert_eq!(serve_writes(false, local, false), None);
+        assert_eq!(
+            serve_writes(true, local, false),
+            Some(mcp::atlas::READ_ONLY)
+        );
+        assert_eq!(serve_writes(false, open, false), Some(mcp::atlas::REMOTE));
+        assert_eq!(serve_writes(false, open, true), None);
+        assert_eq!(serve_writes(true, open, true), Some(mcp::atlas::READ_ONLY));
+    }
+
+    #[test]
+    fn root_needs_data() {
+        assert!(Cli::try_parse_from(["acu", "mcp", "--root", "x"]).is_err());
+        assert!(Cli::try_parse_from(["acu", "mcp", "-d", "a.json", "--root", "x"]).is_ok());
+        assert!(Cli::try_parse_from(["acu", "serve", "--allow-remote-writes"]).is_ok());
+    }
 }

@@ -17,11 +17,11 @@ map.
 | `adapters/typescript/` | TypeScript | Reads TypeScript and JavaScript with the compiler API; writes the data format. |
 | `adapters/rust/` | Rust | Reads Rust with rustdoc JSON and rust-analyzer's SCIP index; writes the data format. |
 | `adapters/python/` | Python | Reads Python with `ast` and its own resolver; writes the data format. Standard library only. |
-| `cli/` | Rust | `acu`: runs adapters, applies `atlas.yaml`, builds and serves the site. |
+| `cli/` | Rust | `acu`: runs adapters, applies `atlas.yaml`, builds and serves the site, and hosts the MCP server (`cli/src/mcp/`, [`docs/mcp.md`](docs/mcp.md)). |
 | `viewer/` | TypeScript | The static viewer: one canvas and a docs panel. |
 | `examples/`, `corpus/` | YAML, submodules | Configs, and public projects for tests. |
-| `tests/e2e/` | JavaScript | The smoke test and the count snapshot check. |
-| `docs/` | Markdown | The spec, the config, adapter notes, research. |
+| `tests/e2e/` | JavaScript | The smoke test, the count snapshot check, and the MCP client test. |
+| `docs/` | Markdown | The spec, the config, the MCP server, adapter notes, research. |
 
 Read `docs/schema.md` before a change that touches data. Read
 `docs/research/report.md` before a change to how the map looks or behaves.
@@ -49,7 +49,9 @@ Read `docs/schema.md` before a change that touches data. Read
 | Map this project | `cargo run -- extract -c atlas.yaml -o out/self.json`, then `cargo run -- serve -d out/self.json` |
 | Find missing docs | `node tests/e2e/docs.mjs out/self.json` |
 | Screenshots of every view | `node tests/e2e/smoke.mjs out/site out/shot` (add `--light` for the light theme) |
+| MCP tools on chi and Cobra | `node tests/e2e/mcp.mjs ./target/release/acu out/mcp` (needs the chi and Cobra submodules) |
 | Write acu and its adapters to a folder | `scripts/docker-export.sh` (add `--platform darwin/arm64`, `windows/amd64` or another `os/arch` for that system) |
+| Pack that folder as a release archive | `scripts/release-pack.sh out/docker v0.2.0 linux/amd64 out/dist` (`.github/workflows/release.yml` runs it on a tag `v*`) |
 
 Build the viewer (`npm run build -w viewer`) before `cargo build`; `acu`
 embeds `viewer/dist` at compile time. Build the TypeScript adapter before an
