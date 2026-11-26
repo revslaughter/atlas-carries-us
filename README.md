@@ -9,6 +9,8 @@ to run it. Other files hold the details:
 
 | Topic | File |
 | --- | --- |
+| Install from a release, the image or source | [`docs/install.md`](docs/install.md) |
+| Map on every push, and publish to GitHub Pages | [`docs/github-action.md`](docs/github-action.md) |
 | Every `atlas.yaml` field | [`docs/config.md`](docs/config.md) |
 | The adapters and their plugins | [`docs/adapters.md`](docs/adapters.md) |
 | The data format | [`docs/schema.md`](docs/schema.md) |
@@ -33,12 +35,23 @@ One config may name several adapters. `acu` merges them into one map.
 
 ## 1. Get the programs
 
-Choose one route.
+Choose one route. [`docs/install.md`](docs/install.md) holds the full steps
+for each. To map a repository on every push with GitHub Actions, use the
+action in [`action.yml`](action.yml); see
+[`docs/github-action.md`](docs/github-action.md).
 
 ### Route A: the container image
 
 The image holds `acu`, the four adapters and every tool that the adapters
-need at run time. It builds for Linux.
+need at run time. It runs on Linux, for amd64 and arm64. Each release
+publishes it as `ghcr.io/revslaughter/atlas-carries-us`:
+
+```sh
+docker run --rm -v "$PWD:/work" -p 4321:4321 ghcr.io/revslaughter/atlas-carries-us:latest \
+  serve -c atlas.yaml --addr 0.0.0.0:4321
+```
+
+To build the image from a checkout instead:
 
 ```sh
 docker build -t acu .
@@ -51,8 +64,13 @@ docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.
 
 ### Route B: programs for your own system
 
-Docker builds the programs and writes them to a folder. The wrapper script
-takes the target system from `--platform`:
+Each [release](https://github.com/revslaughter/atlas-carries-us/releases)
+carries an archive for Linux, macOS and Windows, on amd64 and arm64, with a
+`SHA256SUMS` file. Unpack the archive and run `acu` from its folder.
+[`docs/install.md`](docs/install.md) gives the steps.
+
+To build the same programs yourself, Docker builds them and writes them to a
+folder. The wrapper script takes the target system from `--platform`:
 
 ```sh
 scripts/docker-export.sh                           # Linux, this machine's architecture
@@ -76,15 +94,16 @@ docker build --platform darwin/arm64 --target export --provenance=false \
   --output type=local,dest=out/docker .
 ```
 
-The folder holds `acu`, `acu-adapter-go`, `acu-adapter-rust` and the folder
-`acu-adapter-typescript/`. On Windows the three programs end in `.exe`.
+The folder, like a release archive, holds `acu`, `acu-adapter-go`,
+`acu-adapter-python`, `acu-adapter-rust` and the folder
+`acu-adapter-typescript/`. On Windows the three compiled programs end in
+`.exe`, and the Python adapter takes the name `acu-adapter-python.pyz`.
 
 1. `acu` finds its adapters beside itself. You need no `PATH` setup.
-2. The adapters still need their tools at run time: Go, Node and the pinned
-   nightly (see the table above).
-3. The folder leaves out the Python adapter. To map Python with these
-   programs, check out this repository, set `PYTHONPATH` to `adapters/python`
-   and set `ACU_ADAPTER_PYTHON` to `python3 -m acu_adapter_python`.
+2. The adapters still need their tools at run time: Go, Node, Python and the
+   pinned nightly (see the table above).
+3. The Python adapter comes as one zip application that `python3` runs.
+   On Windows, `acu` runs `acu-adapter-python.pyz` with Python by itself.
 4. The Linux programs need glibc 2.28 or later. `acu-adapter-go` runs on any
    Linux. The macOS programs need macOS 12 or later.
 5. Nothing signs the programs. A local `--output` sets no quarantine mark, so
@@ -166,7 +185,9 @@ For each entry in `languages`, `acu` picks the first match in this list:
    holds the program and its arguments, split on spaces.
 3. A program named `acu-adapter-<name>` on the `PATH`.
 4. A program (or, for TypeScript, a folder) named `acu-adapter-<name>` in the
-   folder that holds `acu`.
+   folder that holds `acu`, or a file `acu-adapter-<name>.pyz` there, which
+   `acu` runs with Python. A symbolic link to `acu` counts as the real
+   program, so `acu` looks in the folder of the program that the link names.
 5. The adapter source in this checkout, for the build that you made here.
 
 When none matches, `acu` stops and names the options. Messages from `acu`
@@ -424,7 +445,8 @@ issue #2.
 | `corpus/` | Public projects, pinned as shallow submodules, for testing. |
 | `tests/e2e/` | The smoke test, the count check and the doc check. |
 | `Dockerfile`, `.devcontainer/` | The pinned toolchain, the release image and the devcontainer. |
-| `scripts/` | `check.sh` (every check), `check-pins.sh`, `docker-export.sh`. |
+| `scripts/` | `check.sh` (every check), `check-pins.sh`, `docker-export.sh`, `release-pack.sh`. |
+| `action.yml`, `.github/workflows/` | The GitHub Action for users; CI, the image check and the release. |
 | `docs/` | The data format, the config, adapter notes, and the research. |
 
 ## Design

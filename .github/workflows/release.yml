@@ -1,0 +1,224 @@
+name: Release
+
+# Publishes a release when a tag v* arrives, such as v0.2.0:
+#   1. The job "check" checks that the tag names the version in Cargo.toml.
+#   2. The job "programs" builds the Dockerfile's export stage for each
+#      platform and packs it with scripts/release-pack.sh: a .tar.gz for
+#      Linux and macOS, a .zip for Windows.
+#   3. The job "image" waits for both, then builds the runtime stage for
+#      linux/amd64 and linux/arm64 and pushes it to
+#      ghcr.io/<owner>/atlas-carries-us, tagged with the version (0.2.0 for
+#      the tag v0.2.0) and latest. A tag with a hyphen, such as v0.2.0-rc.1,
+#      makes a pre-release and leaves latest.
+#   4. The job "release" checks the Linux archive, writes SHA256SUMS, and
+#      creates the GitHub release with the archives and the sums.
+#
+# Only a push of a tag publishes. Every other run works as a dry run: it
+# builds the same archives and the same image, keeps the archives and the
+# sums as artifacts of the run, and publishes nothing. A run by hand
+# (workflow_dispatch) makes one, on any branch or tag. So does a pull request
+# that changes this file or scripts/release-pack.sh; such a run takes about
+# an hour, mostly for the arm64 image, so other pull requests skip it.
+#
+# docs/install.md tells users how to install a release. docs/adapters.md
+# ("Ship an adapter") tells adapter authors how an adapter gets into it.
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/workflows/release.yml"
+      - "scripts/release-pack.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run per tag. A second push of the same tag waits for the first run. A
+# new push to a pull request stops the pull request's older dry run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The tag, or for a dry run on a branch a name that no tag can take.
+  VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dry-run-{0}', github.sha) }}
+  # "true" for a push of a tag, the only run that publishes.
+  PUBLISH: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+
+jobs:
+  check:
+    name: The tag names the version of acu
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check that the tag names the version in Cargo.toml
+        if: github.ref_type == 'tag'
+        run: |
+          want=$(sed -nE '/^\[workspace\.package\]$/,/^\[/s/^version = "([^"]+)"$/\1/p' Cargo.toml)
+          if [ "v$want" != "$VERSION" ]; then
+            echo "release: the tag $VERSION differs from the version v$want in Cargo.toml; set [workspace.package] version to match, then tag again." >&2
+            exit 1
+          fi
+
+  programs:
+    name: Programs for ${{ matrix.platform }}
+    needs: check
+    runs-on: ubuntu-latest
+    # Each platform takes about 10 minutes with a warm cache. The limit stops
+    # a hung run long before GitHub's default of 6 hours.
+    timeout-minutes: 40
+    strategy:
+      fail-fast: true
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+          - darwin/amd64
+          - darwin/arm64
+          - windows/amd64
+          - windows/arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # The stages that run on the build machine (toolchain, cross) come from
+      # the cache that ci.yml and image.yml fill on main. A run on a tag can
+      # read that cache but cannot write to it, so the job writes none.
+      - name: Build the export stage
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: export
+          platforms: ${{ matrix.platform }}
+          provenance: false
+          outputs: type=local,dest=${{ runner.temp }}/acu-export
+          cache-from: |
+            type=gha,scope=toolchain
+            type=gha,scope=runtime
+      - name: Pack the archive
+        id: pack
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          out=$(scripts/release-pack.sh "$RUNNER_TEMP/acu-export" "$VERSION" "$PLATFORM" "$RUNNER_TEMP/dist")
+          echo "artifact=$(basename "$out")" >>"$GITHUB_OUTPUT"
+          ls -l "$RUNNER_TEMP/dist"
+      - name: Keep the archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.artifact }}
+          path: ${{ runner.temp }}/dist/${{ steps.pack.outputs.artifact }}
+          if-no-files-found: error
+          retention-days: 7
+
+  # The image waits for every archive, so a failed build pushes no image.
+  image:
+    name: Runtime image
+    needs: [check, programs]
+    runs-on: ubuntu-latest
+    # The arm64 image runs two steps under emulation (see the Dockerfile), so
+    # it takes longer than the amd64 one.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Name the image
+        id: name
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/atlas-carries-us"
+          {
+            echo "image=$image"
+            echo "version=${VERSION#v}"
+            echo "tags<<EOF"
+            echo "$image:${VERSION#v}"
+            # A tag with a hyphen, such as v0.2.0-rc.1, names a pre-release,
+            # which leaves latest where it stands.
+            if [ "$PUBLISH" = true ] && [[ "$VERSION" != *-* ]]; then echo "$image:latest"; fi
+            echo "EOF"
+          } >>"$GITHUB_OUTPUT"
+      # The arm64 runtime image installs the nightly and sets up git under
+      # emulation; QEMU provides it.
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to the GitHub Container Registry
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the runtime image, and push it for a tag
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: ${{ steps.name.outputs.tags }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.name.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: |
+            type=gha,scope=toolchain
+            type=gha,scope=runtime
+
+  release:
+    name: GitHub release
+    needs: [programs, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: acu-*
+          path: ${{ runner.temp }}/dist
+          merge-multiple: true
+      - name: Check the Linux archive
+        run: |
+          cd "$RUNNER_TEMP"
+          tar -xzf "dist/acu-$VERSION-linux-amd64.tar.gz"
+          dir="acu-$VERSION-linux-amd64"
+          ls -l "$dir"
+          "$dir/acu" --version
+          "$dir/acu-adapter-python" --help >/dev/null
+          # A bad request must make the Python adapter exit with an error.
+          if echo 'no request' | "$dir/acu-adapter-python" >/dev/null 2>&1; then
+            echo "release: the Python adapter exits with 0 on a bad request; check its __main__.py in the Dockerfile." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            "$dir/acu" --version | grep -qF " ${VERSION#v}" \
+              || { echo "release: acu --version names another version than $VERSION; check Cargo.toml." >&2; exit 1; }
+          fi
+      - name: Write the SHA-256 sums
+        run: |
+          cd "$RUNNER_TEMP/dist"
+          sha256sum -- *.tar.gz *.zip | LC_ALL=C sort -k 2 >SHA256SUMS
+          cat SHA256SUMS
+      - name: Keep the sums
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHA256SUMS
+          path: ${{ runner.temp }}/dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+      - name: Create the release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$RUNNER_TEMP/dist"
+          pre=()
+          if [[ "$VERSION" == *-* ]]; then pre=(--prerelease); fi
+          gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes \
+            --title "$VERSION" "${pre[@]}" -- *.tar.gz *.zip SHA256SUMS

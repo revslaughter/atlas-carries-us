@@ -1,0 +1,53 @@
+# An example workflow for a repository that uses Atlas Carries Us: on each
+# push to the default branch, it maps the code with the action in this
+# repository's action.yml and publishes the map to GitHub Pages. Copy it to
+# .github/workflows/atlas.yml in your repository, and keep an atlas.yaml in
+# the repository root. docs/github-action.md explains each part.
+#
+# Before the first run, choose Settings > Pages > Source: "GitHub Actions".
+# GitHub Pages from a private repository stays public unless the account has
+# GitHub Enterprise Cloud.
+name: Atlas
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The map job reads the code; the deploy job alone may write to Pages.
+permissions:
+  contents: read
+
+# One deploy at a time. A newer push waits; it does not stop a deploy that
+# has begun.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The TypeScript adapter reads the types of your dependencies from
+      # node_modules. Uncomment these two steps when you map TypeScript.
+      # - uses: actions/setup-node@v4
+      # - run: npm ci
+      - uses: revslaughter/atlas-carries-us@v0.1.0
+        with:
+          config: atlas.yaml
+          output: site
+          publish: true
+
+  deploy:
+    needs: map
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

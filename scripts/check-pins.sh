@@ -14,6 +14,10 @@
 #   rustdoc-types  adapters/rust/Cargo.toml (exact) = Cargo.lock
 #   zig         Dockerfile ZIG_VERSION       = ziglang==<version> in CONTRIBUTING.md
 #   cargo-zigbuild  Dockerfile CARGO_ZIGBUILD_VERSION = cargo-zigbuild@<version> in CONTRIBUTING.md
+#   Actions     each `uses: <action>@<version>` agrees across .github/workflows/*.yml,
+#               action.yml, examples/github-pages/*.yml and docs/github-action.md
+#   This action `uses: revslaughter/atlas-carries-us@v<version>` = v + [workspace.package]
+#               version in Cargo.toml, so the docs name the release that comes next
 #
 # It also checks that each base image carries a digest, that each zig
 # archive carries a SHA-256 sum, and that TypeScript stays on major version
@@ -110,6 +114,36 @@ done
 agree cargo-zigbuild \
   "Dockerfile CARGO_ZIGBUILD_VERSION" "$(sed -nE 's/^ARG CARGO_ZIGBUILD_VERSION=(.+)$/\1/p' Dockerfile)" \
   "CONTRIBUTING.md" "$(sed -nE 's/^.*cargo-zigbuild@([0-9][0-9.]*).*$/\1/p' CONTRIBUTING.md | head -1)"
+
+# Each GitHub action runs at one version in every workflow, in the action
+# that users run (action.yml), in the example workflow for that action, and
+# in its docs. Each line of `uses` holds <action>@<version>; awk compares
+# the whole name, so one action's name never matches inside another's.
+action_files=()
+for f in .github/workflows/*.yml action.yml examples/github-pages/*.yml docs/github-action.md; do
+  [[ -f "$f" ]] && action_files+=("$f")
+done
+uses_pattern='uses: *[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[^[:space:]`]+'
+uses=$(grep -hoE "$uses_pattern" "${action_files[@]}" | sed -E 's/^uses: *//' | LC_ALL=C sort -u)
+while read -r action; do
+  versions=$(awk -F@ -v a="$action" '$1 == a {print $2}' <<<"$uses")
+  if [[ "$versions" == *$'\n'* ]]; then
+    echo "pins: $action versions disagree:"
+    grep -nE "uses: *$action@" "${action_files[@]}" | sed 's/^/    /'
+    fail=1
+  else
+    echo "pins: $action $versions"
+  fi
+done < <(awk -F@ '{print $1}' <<<"$uses" | LC_ALL=C sort -u)
+
+# This repository's own action: the docs and the example name the release
+# that Cargo.toml names. Raise both together before each release.
+own=$(awk -F@ '$1 == "revslaughter/atlas-carries-us" {print $2}' <<<"$uses" | head -1)
+if [[ -n "$own" ]]; then
+  agree "this action's tag" \
+    "uses: revslaughter/atlas-carries-us@ (action.yml, examples, docs)" "$own" \
+    "Cargo.toml [workspace.package] version" "v$(sed -nE '/^\[workspace\.package\]$/,/^\[/s/^version = "([^"]+)"$/\1/p' Cargo.toml)"
+fi
 
 if ((fail)); then
   echo "pins: change every file in a group together (see CONTRIBUTING.md, \"Versions\")."

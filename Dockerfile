@@ -8,8 +8,8 @@
 #              inside it. It runs on the build machine's own platform.
 #   cross      The toolchain, plus zig and cargo-zigbuild, which link Rust
 #              programs for another operating system or architecture.
-#   build      Builds the viewer, acu and the Go, TypeScript and Rust
-#              adapters into /out, for the platform that --platform names
+#   build      Builds the viewer, acu and the Go, TypeScript, Rust and
+#              Python adapters into /out, for the platform that --platform names
 #              (TARGETOS and TARGETARCH). It runs on the build machine's own
 #              platform and cross-compiles, so no step runs under emulation.
 #   export     The contents of /out alone, for `--output`: it writes the
@@ -198,12 +198,29 @@ RUN case "${TARGETOS}/${TARGETARCH}" in \
  && cp "target/${triple}/release/acu${ext}" "target/${triple}/release/acu-adapter-rust${ext}" /out/ \
  && (cd adapters/go && CGO_ENABLED=0 GOOS="${TARGETOS}" GOARCH="${TARGETARCH}" \
       go build -trimpath -o "/out/acu-adapter-go${ext}" ./cmd/acu-adapter-go)
+# The Python adapter as one zip application (the standard zipapp module): the
+# package's source, without bytecode, and a top-level __main__.py that runs
+# the package as `python3 -m acu_adapter_python` does, exit status included.
+# Any python3 of version 3.12 or later runs it. On Linux and macOS the file
+# starts with a #! line and takes the name acu-adapter-python, so acu runs it
+# from beside itself. Windows reads no #! line, so there the file takes the
+# name acu-adapter-python.pyz, which acu runs with Python.
+RUN name=acu-adapter-python \
+ && if [ "${TARGETOS}" = windows ]; then name=acu-adapter-python.pyz; fi \
+ && mkdir /tmp/pyapp \
+ && cp -r adapters/python/acu_adapter_python /tmp/pyapp/ \
+ && find /tmp/pyapp -name __pycache__ -prune -exec rm -rf {} + \
+ && printf 'import runpy\nrunpy.run_module("acu_adapter_python", run_name="__main__", alter_sys=True)\n' > /tmp/pyapp/__main__.py \
+ && python3 -m zipapp /tmp/pyapp -p '/usr/bin/env python3' -o "/out/${name}" \
+ && chmod 755 "/out/${name}" \
+ && rm -rf /tmp/pyapp
 
 # ---------------------------------------------------------------------------
 # The build output alone, with no base image. Use it with --output to write
-# acu, acu-adapter-go, acu-adapter-rust and acu-adapter-typescript/ to a
-# folder on the host, for the platform that --platform names. On Windows the
-# three programs end in .exe. Linux programs need glibc 2.28 or later; macOS
+# acu, acu-adapter-go, acu-adapter-python, acu-adapter-rust and
+# acu-adapter-typescript/ to a folder on the host, for the platform that
+# --platform names. On Windows the three compiled programs end in .exe, and
+# the Python adapter in .pyz. Linux programs need glibc 2.28 or later; macOS
 # programs need macOS 12 or later. Keep runtime the last stage, so that a
 # build without --target still makes the runtime image.
 FROM scratch AS export
@@ -240,15 +257,14 @@ COPY --from=build /out/acu /out/acu-adapter-go /out/acu-adapter-rust /usr/local/
 COPY --from=node-target /usr/local/bin/node /usr/local/bin/node
 COPY --from=build /out/acu-adapter-typescript /usr/local/lib/acu-adapter-typescript
 RUN ln -s /usr/local/lib/acu-adapter-typescript/dist/src/main.js /usr/local/bin/acu-adapter-typescript
-# The Python adapter: CPython, the adapter's package and a launcher.
+# The Python adapter: CPython, and the same zip application that the
+# release archives ship, so a test of the image tests that form.
 COPY --from=python-target /usr/local/bin/python3.13 /usr/local/bin/python3.13
 COPY --from=python-target /usr/local/lib/python3.13 /usr/local/lib/python3.13
 COPY --from=python-target /usr/local/lib/libpython3.13.so.1.0 /usr/local/lib/
-COPY --from=build /src/adapters/python/acu_adapter_python /usr/local/lib/acu-adapter-python/acu_adapter_python
+COPY --from=build /out/acu-adapter-python /usr/local/bin/acu-adapter-python
 RUN ln -s python3.13 /usr/local/bin/python3 \
- && ldconfig \
- && printf '#!/bin/sh\nPYTHONPATH=/usr/local/lib/acu-adapter-python exec python3 -m acu_adapter_python "$@"\n' > /usr/local/bin/acu-adapter-python \
- && chmod +x /usr/local/bin/acu-adapter-python
+ && ldconfig
 # The image exists to read a repository that you mount into it, which
 # belongs to your user, not the container's. Let git read it, so acu can name
 # the commit in source links.
