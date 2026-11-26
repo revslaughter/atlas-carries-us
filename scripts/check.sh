@@ -103,6 +103,9 @@ done
 step "MCP server: every tool on chi and Cobra, and a drafted tour step in the viewer"
 node tests/e2e/mcp.mjs ./target/release/acu out/mcp
 
+step "Studio: set up a fixture in the browser, edit the tour and regions, and check the API's guards"
+node tests/e2e/studio.mjs ./target/release/acu out/studio
+
 step "This project's own map: every unit, file and item documented"
 ./target/release/acu extract -c atlas.yaml -o out/self.json
 node tests/e2e/docs.mjs out/self.json

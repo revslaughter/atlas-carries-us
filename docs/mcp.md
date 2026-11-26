@@ -16,6 +16,7 @@ labels it until a person checks it.
 | `acu mcp -c atlas.yaml --read-only` | Standard input and output | off |
 | `acu serve -d atlas.json`, `acu mcp -d atlas.json` | Either | off |
 | `acu serve -c atlas.yaml --addr 0.0.0.0:4321` | HTTP, reachable from other computers | off, unless `--allow-remote-writes` |
+| `acu studio` | HTTP at `/mcp`, beside the studio ([`studio.md`](studio.md)) | on, once a project opens |
 
 1. Both commands run the adapters first, as `acu extract` does, so the tools
    answer from a fresh map. The first answer can take a few seconds.
@@ -24,9 +25,15 @@ labels it until a person checks it.
    reach (any address but a loopback one), anyone on the network could call
    the write tools, so they stay off and `acu` says so.
    `--allow-remote-writes` turns them on there.
+   `acu serve -c` also offers the studio's editor at the same address
+   ([`studio.md`](studio.md)); its saves and the write tools share one path.
 3. `acu mcp` writes the protocol to standard output and every message to
    standard error. Start it from a client, not by hand.
-4. With `-d`, no config stands behind the map, so the write tools stay off.
+4. `acu studio` mounts the same server at `/mcp`. The server follows the
+   project that the studio has open: after you open another project or
+   extract again, the tools read the new map. Before a project opens, every
+   tool answers that no project shows yet.
+5. With `-d`, no config stands behind the map, so the write tools stay off.
    `read_source` reads files from the folder that `--root` names, else from
    the current folder. The map's paths start at the root of the mapped
    repository, so pass that folder:

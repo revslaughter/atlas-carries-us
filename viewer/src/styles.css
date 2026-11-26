@@ -835,6 +835,358 @@ header h1 {
   border-bottom: 1px solid var(--line);
 }
 
+/* The editor drawer (acu serve -c, acu studio): it sits over the left side
+   of the map, so the map stays in view while a person records tour steps. */
+#editor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: min(420px, 100%);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--edge);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+#editor[hidden],
+#setup[hidden] {
+  display: none;
+}
+.ed-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 0;
+}
+.ed-top h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.ed-file {
+  margin: 2px 16px 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.ed-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ed-tab {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+.ed-tab[aria-selected="true"] {
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--focus);
+}
+.ed-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 20px;
+}
+.ed-foot {
+  border-top: 1px solid var(--line);
+  padding: 10px 16px 12px;
+}
+.ed-lead {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.ed-hint {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.ed-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+.ed-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.ed-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.ed-list > li {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-plate);
+  margin-bottom: 6px;
+  background: var(--bg);
+}
+.ed-list > li.open {
+  border-color: var(--edge);
+}
+.ed-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: grab;
+}
+.ed-head.dragging {
+  opacity: 0.5;
+}
+.ed-head.drop {
+  box-shadow: inset 0 3px 0 var(--focus);
+}
+.ed-grip {
+  color: var(--faint);
+  font-size: 14px;
+}
+.ed-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 1.5em;
+  text-align: right;
+}
+.ed-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid var(--edge);
+  flex: none;
+}
+.ed-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+.ed-title b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ed-title small {
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+.ed-acts {
+  display: flex;
+  gap: 4px;
+}
+.ed-acts .btn {
+  padding: 4px 8px;
+  min-height: 28px;
+}
+.ed-tag {
+  display: inline-block;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-left: 4px;
+  color: var(--fg);
+}
+.ed-form {
+  padding: 4px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ed-form label,
+#setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ed-form input:not([type="checkbox"]),
+.ed-form textarea,
+.ed-form select,
+#setup textarea,
+#setup input[type="url"] {
+  font: inherit;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-key);
+  padding: 6px 8px;
+  width: 100%;
+}
+.ed-form textarea,
+#setup textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+#setup textarea {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.ed-form label.ed-check,
+#setup label.ed-check,
+label.ed-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  color: var(--fg);
+}
+.ed-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ed-preview {
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--hairline);
+  font-family: var(--serif);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.ed-opens {
+  margin: 0;
+  font-size: 12.5px;
+}
+.ed-units {
+  font-size: 12.5px;
+  margin: 6px 0;
+}
+.ed-units summary {
+  cursor: pointer;
+  color: var(--link);
+}
+.ed-units .ed-check {
+  padding: 2px 0;
+}
+.ed-drafted {
+  background: var(--warn-bg);
+  border: 1px dashed var(--edge);
+  border-radius: var(--radius-plate);
+  padding: 6px 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.ed-msg {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.ed-msg.bad {
+  background: var(--warn-bg);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-plate);
+  padding: 6px 8px;
+}
+.ed-log {
+  max-height: 260px;
+  overflow: auto;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-plate);
+  padding: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The setup screen of acu studio. */
+#setup {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow-y: auto;
+  background: var(--bg);
+  padding: 24px 16px 48px;
+}
+.su-box {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.su-box .ed-top {
+  padding: 0;
+  margin-bottom: 8px;
+}
+.su-box p {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.su-box a {
+  color: var(--link);
+}
+.su-box h2 {
+  font-size: 20px;
+}
+.su-box h3 {
+  font-size: 14px;
+  margin: 18px 0 6px;
+}
+.su-path {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.su-folders {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-plate);
+  background: var(--surface);
+}
+.su-folder {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.su-folder:hover {
+  background: var(--surface-2);
+}
+.su-folder span:first-child {
+  flex: 1;
+}
+.su-clone {
+  display: flex;
+  gap: 6px;
+}
+.su-clone input {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (max-width: 860px) {
   #app {
     grid-template-columns: 1fr;
