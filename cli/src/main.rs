@@ -3,16 +3,19 @@
 //! 1. `acu extract` runs the language adapters, merges their output, applies
 //!    atlas.yaml, checks the result and writes atlas.json.
 //! 2. `acu build` writes a static site: the viewer plus the data.
-//! 3. `acu serve` runs the viewer locally.
-//! 4. `acu check` reports config and data problems without writing anything.
+//! 3. `acu serve` runs the viewer locally, with an MCP server at `/mcp`.
+//! 4. `acu mcp` runs the same MCP server over standard input and output.
+//! 5. `acu check` reports config and data problems without writing anything.
 
 mod adapter;
 mod assemble;
 mod config;
+mod mcp;
 mod site;
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
@@ -30,7 +33,7 @@ struct Cli {
     cmd: Cmd,
 }
 
-/// The four things acu does.
+/// The five things acu does.
 #[derive(Subcommand)]
 enum Cmd {
     /// Run the adapters and write atlas.json.
@@ -52,13 +55,24 @@ enum Cmd {
         #[arg(long, short, default_value = "site")]
         out: PathBuf,
     },
-    /// Serve the viewer on this computer.
+    /// Serve the viewer on this computer, with an MCP server at /mcp.
     Serve {
         #[command(flatten)]
         input: Input,
         /// Address to listen on.
         #[arg(long, default_value = "127.0.0.1:4321")]
         addr: SocketAddr,
+        /// Turn off the MCP tools that write atlas.yaml.
+        #[arg(long)]
+        read_only: bool,
+    },
+    /// Run the MCP server over standard input and output, for desktop clients.
+    Mcp {
+        #[command(flatten)]
+        input: Input,
+        /// Turn off the MCP tools that write atlas.yaml.
+        #[arg(long)]
+        read_only: bool,
     },
     /// Check the config and the data, and report problems.
     Check {
@@ -75,8 +89,8 @@ struct ConfigArg {
     config: PathBuf,
 }
 
-/// Where `build`, `serve` and `check` get the data: a config to extract, or
-/// a finished atlas.json.
+/// Where `build`, `serve`, `mcp` and `check` get the data: a config to
+/// extract, or a finished atlas.json.
 #[derive(Args)]
 struct Input {
     /// The project config. acu runs the adapters to make the data.
@@ -119,12 +133,17 @@ fn run(cli: Cli) -> Result<()> {
             eprintln!("acu: wrote {n} files to {}", out.display());
             Ok(())
         }
-        Cmd::Serve { input, addr } => {
-            let src = match (&input.config, &input.data) {
-                (_, Some(d)) => site::DataSource::File(d.clone()),
-                _ => site::DataSource::Memory(load_input(&input)?),
-            };
-            tokio::runtime::Runtime::new()?.block_on(site::serve(addr, src))
+        Cmd::Serve {
+            input,
+            addr,
+            read_only,
+        } => {
+            let atlas = Arc::new(open_atlas(&input, read_only)?);
+            tokio::runtime::Runtime::new()?.block_on(site::serve(addr, atlas))
+        }
+        Cmd::Mcp { input, read_only } => {
+            let atlas = Arc::new(open_atlas(&input, read_only)?);
+            tokio::runtime::Runtime::new()?.block_on(mcp::serve_stdio(atlas))
         }
         Cmd::Check { input } => {
             let doc = match (&input.config, &input.data) {
@@ -150,8 +169,8 @@ fn read_json(p: &Path) -> Result<Value> {
         .with_context(|| format!("{} holds JSON that does not parse", p.display()))
 }
 
-/// Returns the data that `build` and `serve` show: a checked atlas.json, or
-/// the result of `extract` on the config.
+/// Returns the data that `build` shows: a checked atlas.json, or the result
+/// of `extract` on the config.
 fn load_input(input: &Input) -> Result<Vec<u8>> {
     match (&input.config, &input.data) {
         (_, Some(d)) => {
@@ -169,9 +188,62 @@ fn load_input(input: &Input) -> Result<Vec<u8>> {
     }
 }
 
+/// Opens the map that `serve` and `mcp` show: a finished atlas.json, read
+/// again whenever the file changes, or the result of the adapters and the
+/// config, which the MCP write tools can change.
+fn open_atlas(input: &Input, read_only: bool) -> Result<mcp::Atlas> {
+    if let Some(d) = &input.data {
+        let doc = read_json(d)?;
+        let rep = assemble::check(&doc);
+        rep.print();
+        if !rep.errors.is_empty() {
+            bail!("{} does not pass the check", d.display());
+        }
+        let root = std::env::current_dir().context("find the current folder")?;
+        return mcp::Atlas::from_file(d, &root);
+    }
+    let path = input
+        .config
+        .clone()
+        .unwrap_or_else(|| PathBuf::from("atlas.yaml"));
+    let loaded = config::load(&path)?;
+    let run = run_adapters(&loaded)?;
+    mcp::Atlas::from_config(&path, run, read_only)
+}
+
+/// What the adapters found: their merged document before acu applies the
+/// config, the commit they read, and the repository roots that their paths
+/// start from.
+pub struct AdapterRun {
+    /// The merged adapter documents.
+    pub merged: Value,
+    /// The commit that the first adapter read, when git knows it.
+    pub commit: Option<String>,
+    /// The repository root of each language, without repeats.
+    pub repo_roots: Vec<PathBuf>,
+}
+
+/// Applies a config to a copy of the merged document and stamps the time.
+pub fn apply_config(run: &AdapterRun, cfg: &config::Config) -> (Value, assemble::Report) {
+    let mut doc = run.merged.clone();
+    let ctx = assemble::Context {
+        tool_version: env!("CARGO_PKG_VERSION").to_string(),
+        generated: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        commit: run.commit.clone(),
+    };
+    let rep = assemble::apply(&mut doc, cfg, &ctx);
+    (doc, rep)
+}
+
 /// Runs the adapters and applies the config, without the final check.
 fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
     let loaded = config::load(config_path)?;
+    let run = run_adapters(&loaded)?;
+    Ok(apply_config(&run, &loaded.config))
+}
+
+/// Runs each language's adapter with its plugins and merges the documents.
+fn run_adapters(loaded: &config::Loaded) -> Result<AdapterRun> {
     let cfg = &loaded.config;
     for e in &cfg.entry_points {
         if e.adapter.is_none() && adapter::plugin_adapter(&e.plugin).is_none() {
@@ -183,10 +255,14 @@ fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
     }
     let mut docs = Vec::new();
     let mut commit = None;
+    let mut repo_roots: Vec<PathBuf> = Vec::new();
     for lang in &cfg.languages {
         let src = adapter::source(&loaded.dir, lang)?;
         if commit.is_none() {
             commit = src.commit.clone();
+        }
+        if !repo_roots.contains(&src.repo_root) {
+            repo_roots.push(src.repo_root.clone());
         }
         let plugins: Vec<_> = cfg
             .entry_points
@@ -203,14 +279,11 @@ fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
         );
         docs.push(adapter::run(lang, &src, &plugins)?);
     }
-    let mut doc = assemble::merge(docs)?;
-    let ctx = assemble::Context {
-        tool_version: env!("CARGO_PKG_VERSION").to_string(),
-        generated: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    Ok(AdapterRun {
+        merged: assemble::merge(docs)?,
         commit,
-    };
-    let rep = assemble::apply(&mut doc, cfg, &ctx);
-    Ok((doc, rep))
+        repo_roots,
+    })
 }
 
 /// Runs the adapters, applies the config and checks the result; any error
