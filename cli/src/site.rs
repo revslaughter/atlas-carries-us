@@ -138,7 +138,12 @@ fn respond(path: &str, atlas: Option<&Atlas>) -> Response {
     match VIEWER.get_file(path) {
         Some(f) => {
             let mime = mime_guess::from_path(path).first_or_octet_stream();
-            reply(StatusCode::OK, mime.as_ref(), f.contents().to_vec())
+            let body = if path == "index.html" {
+                mark_api(f.contents())
+            } else {
+                f.contents().to_vec()
+            };
+            reply(StatusCode::OK, mime.as_ref(), body)
         }
         None => reply(
             StatusCode::NOT_FOUND,
@@ -146,6 +151,18 @@ fn respond(path: &str, atlas: Option<&Atlas>) -> Response {
             b"You find nothing at this address.".to_vec(),
         ),
     }
+}
+
+/// The tag that tells the viewer a server with the studio's API serves the
+/// page. A static site from `acu build` lacks it, so its viewer never calls
+/// the API and never logs a failed request.
+pub const API_MARK: &str = "<meta name=\"acu-api\" content=\"1\" />";
+
+/// Adds [`API_MARK`] to the viewer's page, right after `<head>`.
+fn mark_api(page: &[u8]) -> Vec<u8> {
+    let text = String::from_utf8_lossy(page);
+    text.replacen("<head>", &format!("<head>{API_MARK}"), 1)
+        .into_bytes()
 }
 
 /// Makes a response that no browser caches, so a reload shows fresh data.
@@ -160,4 +177,17 @@ fn reply(status: StatusCode, mime: &str, body: Vec<u8>) -> Response {
         .header(header::CONTENT_SECURITY_POLICY, "frame-ancestors 'none'")
         .body(Body::from(body))
         .unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_served_page_carries_the_api_mark_and_the_built_one_does_not() {
+        let page = VIEWER.get_file("index.html").unwrap().contents();
+        assert!(!String::from_utf8_lossy(page).contains("acu-api"));
+        let served = String::from_utf8(mark_api(page)).unwrap();
+        assert_eq!(served.matches(API_MARK).count(), 1);
+    }
 }

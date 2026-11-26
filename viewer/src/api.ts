@@ -37,8 +37,10 @@ export interface Answer<T = any> {
   data: T;
 }
 
-/** Reads the server's state, or returns null when no API answers (a static site). */
+/** Reads the server's state, or returns null when no API answers, as on a static site that lacks the page mark. */
 export async function loadState(): Promise<ServerState | null> {
+  // acu serve and acu studio mark the page; a static site has no API to ask.
+  if (!document.querySelector('meta[name="acu-api"]')) return null;
   try {
     const res = await fetch("api/state", { headers: { Accept: "application/json" } });
     if (!res.ok || !(res.headers.get("content-type") ?? "").includes("application/json")) return null;
