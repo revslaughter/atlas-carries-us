@@ -55,19 +55,34 @@ test("move shifts one entry and leaves bad positions alone", () => {
   assert.deepEqual(em.move([1, 2], -1, 0), [1, 2]);
 });
 
-test("layout rows follow the row numbers and keep region order", () => {
+test("layout rows follow the row numbers and keep the file's order within a row", () => {
   const rows = em.layoutRows([
     { id: "a", row: 2 },
     { id: "b", row: 1 },
     { id: "c", row: null },
-    { id: "d", row: 2 },
+    { id: "d", row: 2, col: 0 },
     { id: "e", row: 0 },
   ]);
-  assert.deepEqual(rows, [["b"], ["a", "d"]]);
+  assert.deepEqual(rows, [["b"], ["d", "a"]]);
   const back = em.rowsOf({ rows });
-  assert.equal(back.get("a"), 2);
+  assert.deepEqual(back.get("a"), { row: 2, col: 1 });
   assert.equal(back.get("c"), undefined);
   assert.equal(em.rowsOf(null).size, 0);
+});
+
+test("renamed and deleted regions reach the steps that open them", () => {
+  const tour: em.StepCfg[] = [
+    { title: "a", text: "x", open: { view: "region", id: "old" } },
+    { title: "b", text: "x", open: { view: "unit", id: "old" } },
+    { title: "c", text: "x", open: { view: "region", id: "gone" } },
+  ];
+  const out = em.renameSteps(tour, new Map([["old", "new"]]));
+  assert.equal(out[0].open.id, "new");
+  assert.equal(out[1].open.id, "old");
+  assert.equal(tour[0].open.id, "old");
+  assert.deepEqual(em.orphanSteps(out, new Set(["gone"])), [
+    "Step 3 opens the region gone, which you deleted; point the step at another view.",
+  ]);
 });
 
 test("slugs make unique, valid region IDs", () => {
@@ -104,7 +119,7 @@ test("picking a unit adds or removes its literal path", () => {
   assert.equal(em.hasPath(["api"], u), true);
   assert.equal(em.hasPath(["repo/api"], u), true);
   assert.equal(em.hasPath(["api/**"], u), false);
-  assert.deepEqual(em.togglePath(["x"], u, true), ["x", "api"]);
+  assert.deepEqual(em.togglePath(["x"], u, true), ["x", "repo/api"]);
   assert.deepEqual(em.togglePath(["x", "api", "repo/api"], u, false), ["x"]);
   assert.deepEqual(em.parsePaths(" a \n\n b/** \n"), ["a", "b/**"]);
 });

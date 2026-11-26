@@ -8,7 +8,7 @@ numbers in brackets below name its sections. Read issue #40 first.
 
 ## Principles
 
-1. **`atlas.yaml` in git stays the only source of truth.** Every durable
+1. **`atlas.yaml` in git stays the only place that stores the text.** Every durable
    product in the survey keeps its human text in the repository; a
    hosted-only product can vanish with its vendor (1). The service stores
    maps, never the only copy of a person's text.

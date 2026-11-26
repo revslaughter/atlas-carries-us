@@ -134,6 +134,13 @@ async function main() {
     return id;
   });
   await page.click("[data-act='record']");
+  const hint = await page.getAttribute("input[data-field='title']", "placeholder");
+  check(
+    !!hint && (await page.inputValue("input[data-field='title']")) === "",
+    "a recorded step leaves its title to the person",
+    hint,
+  );
+  await page.fill("input[data-field='title']", "The store");
   await page.fill("textarea[data-field='text']", "The store keeps the `Loan` records.");
   await page.evaluate(() => window.atlas.go({ v: "overview" }));
   await page.click("[data-act='toggle']");

@@ -69,7 +69,7 @@ Lessons for acu:
 Tour editing consists mostly of list reordering, and a CRDT would need a
 second format beside `atlas.yaml`. Recommendation:
 
-1. Keep `atlas.yaml` in git as the only source of truth.
+1. Keep `atlas.yaml` in git as the only place that stores the text.
 2. Publish hosted edits through a branch and a pull request. Review in the
    pull request replaces real-time merge.
 3. Give each region and each tour step a stable ID. A three-way merge then
@@ -264,7 +264,7 @@ job, for one repository.
    demands ([MCP spec](https://modelcontextprotocol.io/specification/latest/basic/transports/streamable-http)).
 4. For each state-changing request (POST, PUT, PATCH, DELETE), apply the
    Fetch Metadata check: reject `Sec-Fetch-Site` other than `same-origin`
-   or `none`. For the studio API, also require `Origin` to be present
+   or `none`. For the studio API, also require an `Origin` header
    ([Filippo Valsorda](https://words.filippo.io/csrf/),
    [web.dev](https://web.dev/articles/fetch-metadata),
    [MDN](https://developer.mozilla.org/docs/Web/HTTP/Headers/Sec-Fetch-Site)).

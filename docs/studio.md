@@ -54,14 +54,17 @@ finished map, use `acu build` or `acu serve -d`.
    `atlas.yaml` or a git repository.
 3. Choose a folder.
    - A folder with an `atlas.yaml` opens with that file. The studio never
-     replaces an existing `atlas.yaml`.
+     replaces an existing `atlas.yaml`. It refuses an `atlas.yaml` that
+     forms a symbolic link, because a link could point the editor's saves at
+     any file.
    - A folder without one gets a proposal (below).
 
 ### Clone a repository
 
 1. Paste an HTTPS address, such as `https://github.com/go-chi/chi`.
 2. Choose **Clone**. The studio clones the repository into the workspace,
-   at `<workspace>/<host>/<owner>/<name>`, and shows git's progress.
+   at `<workspace>/<host>/<owner>/<name>`, and shows git's progress lines as
+   they arrive.
 3. The clone then opens as a picked folder. A repository cloned before opens
    as it stands; the studio does not fetch it again.
 
@@ -80,9 +83,11 @@ The studio proposes a first `atlas.yaml` from what the folder holds:
    `go-chi` and `cobra` from `go.mod`, `go-nethttp` for every Go project,
    `express`, `hono` and `sveltekit` from `package.json`, `axum` and `clap`
    from `Cargo.toml`, and `flask`, `fastapi`, `django`, `click` and `typer`
-   from the Python marker files.
+   from the Python marker files. A dependency must appear as a whole name:
+   `click` does not match `clickhouse-driver`.
 3. **Repository and links.** A git remote named `origin` on GitHub or GitLab
-   gives `project.repo` and the matching `links` preset.
+   gives `project.repo` and the matching `links` preset. The studio reads
+   `.git/config` as text; it runs no git before you confirm trust.
 4. **Name.** The folder's name becomes `project.name`.
 
 The proposal holds no regions and no tour; you add them after the first
@@ -97,7 +102,7 @@ through cgo. So the studio asks you to confirm that you trust the code before
 the first extraction. Open only code that you would also build.
 
 1. Confirm that you trust the code.
-2. Choose **Write and extract** (or **Extract** for an existing
+2. Choose **Write and extract** (or **Open and extract** for an existing
    `atlas.yaml`). The studio writes the new `atlas.yaml`, runs each adapter,
    and shows each line of progress.
 3. The map opens when the check passes. A failure shows the reason; fix the
@@ -105,20 +110,26 @@ the first extraction. Open only code that you would also build.
 
 ## Edit the tour
 
-Open the editor with **Edit**. The **Tour** tab lists the steps in order.
+Open the editor with **Edit**. The drawer has four tabs: **Tour**,
+**Regions**, **Project** and **Extract**. The left and right arrow keys move
+between the tabs, and Escape closes the drawer. The **Tour** tab lists the
+steps in order.
 
 1. **Record a step.** Move the map to the view that the step should open:
    the overview, a region, a unit, an item, or a trace. Choose **Record this
-   view**. The studio adds a step that opens that view, by ID, and fills the
-   title with the view's name.
+   view as a step**. The studio adds a step that opens that view, by ID. The
+   title field stays empty and shows the view's name as a hint, because a
+   person writes the step's text.
 2. **Write the text.** Give the step a title and a text. The text takes the
-   inline subset of Markdown that the viewer shows.
+   inline subset of Markdown that the viewer shows, and a preview follows
+   the field.
 3. **Change the view.** Move the map, then choose **Use the current view**
    on a step.
 4. **Preview.** Choose **Show** on a step to open its view.
-5. **Reorder.** Drag a step by its handle. Or use **Move up** and **Move
-   down**, or press Alt+ArrowUp and Alt+ArrowDown while a step has focus.
-6. **Delete.** Choose **Delete** on a step.
+5. **Reorder.** Drag a step by its row; it lands before the row that you
+   drop it on. Or use the ↑ and ↓ buttons, or press Alt+ArrowUp and
+   Alt+ArrowDown while a step's row has focus. Enter opens the step's form.
+6. **Delete.** Choose **Delete step** in a step's form.
 7. **Accept a drafted step.** A step that a program drafted carries a
    `drafted` mark (see [`config.md`](config.md#drafted-text)). Read it
    against the code, then choose **Mark as checked**. That removes the mark.
@@ -128,17 +139,25 @@ Open the editor with **Edit**. The **Tour** tab lists the steps in order.
 
 The **Regions** tab lists the regions in order. For each region you can set:
 
-1. **Name** and **ID**. The ID takes letters, digits, `_` and `-`.
-2. **Description** and **Reading tip**.
-3. **Paths**: one glob per line, over unit paths. While you type, the studio
-   lists the units that the globs match, by the same rules as
+1. **Name** and **ID**. The ID takes letters, digits, `_` and `-`. A new
+   region's ID follows its name until you edit the ID. When you change the
+   ID of a region, the save also points the tour steps that open it at the
+   new ID, in the same write. A deleted region that a step opens stops the
+   save, with the step's number.
+2. **What it does** and **How to read it**: the region's `description` and
+   `readingTip`.
+3. **Paths, one pattern per line**: globs over unit paths. While you type,
+   the studio lists the units that the globs match, by the same rules as
    `acu extract`. A unit joins the first region that matches it.
-4. **Units**: tick units in the list to add their paths, or untick them to
-   remove them.
-5. **Colour**: an index from 0 to 8 into the colour-blind-safe palette.
-6. **Default**: units that match no region go to the default region.
-7. **Row**: the row of the overview that holds the region. The studio
-   writes the rows as `layout`.
+4. **Pick units**: tick units in the list to add their paths from the
+   repository root, or untick them to remove them.
+5. **Colour**: **Automatic**, or **Colour 1** to **Colour 9**, which
+   `atlas.yaml` stores as `color` 0 to 8, an index into the colour-blind-safe
+   palette.
+6. **Default region**: units that match no region go to the default region.
+7. **Layout row**: the row of the overview that holds the region, from 1.
+   The studio writes the rows as `layout`. Within a row, regions keep their
+   order from the file. A region without a row goes after the others.
 
 **Suggest regions from folders** makes one region per top-level folder of
 the units. Each suggestion carries a `drafted` mark by "acu studio", because
@@ -149,15 +168,19 @@ checked.
 
 The **Project** tab sets the project's name and its description, the text
 of the overview. A drafted description shows **Mark as checked**, as a
-drafted step does.
+drafted step does. Clearing the description also removes its mark.
 
 ## Save and extract again
 
-1. **Save** writes every changed section, in this order: the project, the
-   regions, the tour. A section that you did not change stays as it stands.
-2. After a save, the map shows the change at once.
-3. **Run the adapters again** extracts afresh after a change to the code,
-   to `languages` or to `entryPoints`, and shows the new map.
+1. **Save to atlas.yaml** writes every changed section, in this order: the
+   project, the regions, the tour. When both the regions and the tour
+   changed, they go in one write. A section that you did not change stays as
+   it stands. **Discard changes** reads the file again.
+2. After a save, the page reloads and shows the change.
+3. On the **Extract** tab, **Run the adapters again** extracts afresh after
+   a change to the code, to `languages` or to `entryPoints`, and shows the
+   new map. Save or discard your changes first. While the adapters run, a
+   save waits: acu answers 409 until they finish.
 
 ### How a save works
 
@@ -168,11 +191,13 @@ A save takes the same path as a draft from an MCP write tool
 2. It compares the file's revision with the revision that the editor read.
    The revision holds an FNV-1a hash of the file's text. A file that changed
    meanwhile, in a text editor or another window, fails the save with status
-   409. Reload the editor, then make the change again.
+   409. Choose **Discard changes** to read the file again, then make the
+   change again.
 3. It rewrites only the changed section. In a list save (regions or tour),
    each item equal to an old item keeps its old lines and the comments above
-   them. A reorder or a deletion therefore keeps the comments of the other
-   items.
+   them. A changed item keeps the comments above the old item with its ID
+   (a region), else above the old item at its place. A reorder or a deletion
+   therefore keeps the comments of the other items.
 4. It checks the new config against the config schema and runs the check of
    `acu extract`. A step whose target matches nothing, or a layout that
    names a missing region, fails with status 422 and the reason. acu then
@@ -188,9 +213,9 @@ local tools may use it too.
 | --- | --- | --- |
 | `GET /api/state` | none | The mode (`serve` or `studio`), whether a map shows, whether writes work and why not, the open project, the last job, and the picker's root and workspace. |
 | `GET /api/config` | none | The file's `revision` and `path`; `project`, `regions`, `layout` and `tour` as written; `resolved.tour` and `resolved.regions` as acu resolved them; every unit with its path and region; the map's warnings. |
-| `GET /api/job` | none | The last job: `id`, `kind` (`extract`, `open` or `clone`), `state` (`running`, `done` or `failed`), `log`, `error`, and the `path` of a clone. |
+| `GET /api/job` | none | The last job: `id`, `kind` (`extract`, `open` or `clone`), `state` (`running`, `done` or `failed`), `log`, `error`, and the `path` that the job opened or cloned. |
 | `POST /api/tour` | `revision`, `tour` | Replaces the tour. Answers the new `revision`, `how` and `warnings`. |
-| `POST /api/regions` | `revision`, `regions`, optional `layout` | Replaces the regions; with `layout`, also the layout (`null` removes it). |
+| `POST /api/regions` | `revision`, `regions`, optional `layout`, optional `tour` | Replaces the regions; with `layout`, also the layout (`null` removes it); with `tour`, also the tour, in the same write. |
 | `POST /api/project` | `revision`, `name`, `description`, `descriptionDrafted` | Sets the project's name and description; a missing or null `descriptionDrafted` removes the mark. |
 | `POST /api/match` | `paths` | The IDs of the units that the globs match, and the globs that do not parse. |
 | `POST /api/extract` | none | Starts a job that runs the adapters again on the open config. |
@@ -209,11 +234,12 @@ the text names the next step.
 | 400 | The body lacks a field or holds the wrong shape. |
 | 403 | The guards refused the request, or writes stay off. |
 | 404 | No such call, folder or file. |
-| 409 | The file changed since the editor read it, no project shows yet, a job runs already, or `atlas.yaml` exists already. |
+| 409 | The file changed since the editor read it, no project shows yet, a job runs already (a save waits for it too), or `atlas.yaml` exists already. |
 | 413 | The body exceeds 4 MB. |
 | 415 | The body does not come as `application/json`. |
 | 422 | The change fails the schema or the check; the error gives the reason. |
 | 428 | `open` lacks `trust: true`. |
+| 500 | A lock broke after an earlier failure, or a call stopped; restart acu. |
 
 ## Security
 
@@ -221,8 +247,11 @@ The studio listens on a loopback address, but a web page in your browser
 could still try to reach it. These guards stop that:
 
 1. **Host.** The API answers only a `Host` of `127.0.0.1:<port>`,
-   `localhost:<port>`, `[::1]:<port>`, or the address that acu listens on.
-   This blocks DNS rebinding.
+   `localhost:<port>`, `[::1]:<port>`, or the address that acu listens on,
+   with the port that the system gave (so `--addr 127.0.0.1:0` works). On a
+   loopback address the rule covers the whole site, the map's data
+   included. This blocks DNS rebinding. acu checks the guards before it
+   reads a request's body.
 2. **Origin.** A request that sends `Origin` must name one of those hosts.
 3. **Changing calls.** Every POST needs all of these:
    - the header `X-Acu-Studio: 1`;
@@ -251,7 +280,9 @@ could still try to reach it. These guards stop that:
      `GIT_TERMINAL_PROMPT=0`;
    - only with git 2.45.1 or later, which fixed a code execution in clone
      (CVE-2024-32002);
-   - for at most 10 minutes; acu then stops git and removes the folder.
+   - in a process group of its own, for at most 10 minutes; acu then stops
+     the group and removes the folder, with the host and owner folders that
+     stay empty.
 7. **Trust.** Opening a project needs `trust: true`, because extraction runs
    the project's build tools.
 

@@ -12,13 +12,17 @@ import { esc } from "./text";
 
 /** A folder as POST /api/folders lists it. */
 interface Folder {
+  /** The folder's name. */
   name: string;
+  /** The folder's absolute path. */
   path: string;
+  /** True when the folder holds an atlas.yaml. */
   config: boolean;
+  /** True when the folder holds a git repository. */
   git: boolean;
 }
 
-/** What the screen holds. */
+/** Holds the setup screen's state: the folder on show, the chosen folder and its proposal, the fields, and the job's progress. */
 const S = {
   server: null as ServerState | null,
   /** The folder on show in the picker. */
@@ -40,7 +44,7 @@ const S = {
   msg: null as { text: string; bad?: boolean } | null,
 };
 
-/** The screen. */
+/** The element that holds the setup screen. */
 let root: HTMLElement;
 /** True after the handlers sit on the screen. */
 let wired = false;
@@ -130,8 +134,8 @@ function render(focus?: string) {
     <div class="ed-top"><h2>Set up a map</h2>${back}</div>
     <p class="ed-lead">Pick the code to map. acu proposes an atlas.yaml, writes it into that folder, and runs the adapters. Then you edit the regions and the tour on the map.</p>
     ${pick}
-    ${S.msg ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
-    ${S.log.length ? `<pre class="ed-log" aria-live="polite">${esc(S.log.join("\n"))}</pre>` : ""}
+    ${S.msg ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
+    ${S.log.length ? `<pre class="ed-log">${esc(S.log.join("\n"))}</pre>` : ""}
   </div>`;
   if (focus) (root.querySelector(focus) as HTMLElement | null)?.focus();
 }
@@ -216,6 +220,12 @@ function onInput(e: Event) {
   }
 }
 
+/** Takes the page behind the setup screen out of the tab order and the accessibility tree, or puts it back. */
+function setInert(on: boolean) {
+  for (const id of ["stage", "panel", "status"]) document.getElementById(id)?.toggleAttribute("inert", on);
+  document.querySelector("#app > header")?.toggleAttribute("inert", on);
+}
+
 /** Shows the setup screen over the page. */
 export async function showSetup(server: ServerState) {
   S.server = server;
@@ -226,13 +236,17 @@ export async function showSetup(server: ServerState) {
     root.addEventListener("input", onInput);
     root.addEventListener("change", onInput);
     root.addEventListener("keydown", e => {
-      if (e.key === "Enter" && (e.target as HTMLElement).id === "suUrl") {
+      if (e.key === "Escape" && S.server?.map && !S.busy) {
+        e.preventDefault();
+        hideSetup();
+      } else if (e.key === "Enter" && (e.target as HTMLElement).id === "suUrl") {
         e.preventDefault();
         root.querySelector<HTMLButtonElement>("[data-act='clone']")?.click();
       }
     });
   }
   root.hidden = false;
+  setInert(true);
   document.getElementById("loading")?.remove();
   if (!S.at) await list(undefined);
   render(".su-folder, [data-act='choose']");
@@ -241,5 +255,6 @@ export async function showSetup(server: ServerState) {
 /** Hides the setup screen. */
 export function hideSetup() {
   root.hidden = true;
+  setInert(false);
   document.getElementById("projectsBtn")?.focus();
 }

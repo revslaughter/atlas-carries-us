@@ -13,40 +13,63 @@ import type { Provenance, View } from "./types";
 
 /** A tour step's `open` as atlas.yaml holds it: by ID, or by a name that acu resolves. */
 export interface OpenCfg {
+  /** The kind of view that the step opens. */
   view: "overview" | "region" | "unit" | "symbol" | "trace";
+  /** The exact ID of a region, unit or symbol. */
   id?: string;
+  /** A unit's path from the repository root. */
   path?: string;
+  /** A symbol's qualified name, which acu resolves. */
   name?: string;
+  /** The ID or name of the entry point that a trace starts from. */
   entryPoint?: string;
+  /** The ID or name of the function that a trace starts from. */
   symbol?: string;
 }
 
 /** A tour step as atlas.yaml holds it. */
 export interface StepCfg {
+  /** The step's title. */
   title: string;
+  /** The step's text, in the inline subset. */
   text: string;
+  /** The view that the step opens. */
   open: OpenCfg;
+  /** The provenance mark of text that a program drafted. */
   drafted?: Provenance;
 }
 
 /** A region as atlas.yaml holds it. */
 export interface RegionCfg {
+  /** The region's ID: letters, digits, "_" and "-". */
   id: string;
+  /** The region's name, by job. */
   name: string;
+  /** An index from 0 to 8 into the palette; acu picks one when it lacks. */
   color?: number;
+  /** Glob patterns over unit paths; a unit joins the first region that matches. */
   paths?: string[];
+  /** True when the region takes the units that match no other region. */
   default?: boolean;
+  /** What the region does. */
   description?: string;
+  /** How to read the region. */
   readingTip?: string;
+  /** The provenance mark of text that a program drafted. */
   drafted?: Provenance;
 }
 
 /** One unit as GET /api/config lists it, with the region that holds it now. */
 export interface UnitInfo {
+  /** The unit's ID. */
   id: string;
+  /** The unit's path from the repository root. */
   path: string;
+  /** The unit's path from its language's root. */
   local: string;
+  /** The unit's name. */
   name: string;
+  /** The ID of the region that holds the unit on the map on show. */
   region?: string | null;
 }
 
@@ -116,23 +139,53 @@ export function move<T>(list: readonly T[], from: number, to: number): T[] {
   return out;
 }
 
-/** Builds the layout rows from each region's row number; regions without one stay out, and acu places them after. */
-export function layoutRows(regions: { id: string; row: number | null }[]): string[][] {
-  const rows = new Map<number, string[]>();
-  for (const r of regions) {
-    if (r.row == null || !(r.row >= 1)) continue;
+/**
+ * Builds the layout rows from each region's row number; regions without one
+ * stay out, and acu places them after. Within a row, regions keep their
+ * place from the file (`col`), and new ones follow in list order.
+ */
+export function layoutRows(regions: { id: string; row: number | null; col?: number | null }[]): string[][] {
+  const rows = new Map<number, { id: string; col: number; i: number }[]>();
+  regions.forEach((r, i) => {
+    if (r.row == null || !(r.row >= 1)) return;
     const n = Math.floor(r.row);
     if (!rows.has(n)) rows.set(n, []);
-    rows.get(n)!.push(r.id);
-  }
-  return [...rows.keys()].sort((a, b) => a - b).map(k => rows.get(k)!);
+    rows.get(n)!.push({ id: r.id, col: r.col ?? Infinity, i });
+  });
+  return [...rows.keys()]
+    .sort((a, b) => a - b)
+    .map(k =>
+      rows
+        .get(k)!
+        .sort((a, b) => a.col - b.col || a.i - b.i)
+        .map(x => x.id),
+    );
 }
 
-/** Reads each region's row number (from 1) from the layout rows of atlas.yaml. */
-export function rowsOf(layout: { rows?: string[][] } | null | undefined): Map<string, number> {
-  const m = new Map<string, number>();
-  (layout?.rows ?? []).forEach((row, i) => row.forEach(id => m.has(id) || m.set(id, i + 1)));
+/** Reads each region's row (from 1) and place in that row (from 0) from the layout rows of atlas.yaml. */
+export function rowsOf(layout: { rows?: string[][] } | null | undefined): Map<string, { row: number; col: number }> {
+  const m = new Map<string, { row: number; col: number }>();
+  (layout?.rows ?? []).forEach((row, i) => row.forEach((id, c) => m.has(id) || m.set(id, { row: i + 1, col: c })));
   return m;
+}
+
+/** Points the steps that open a renamed region at its new ID, and returns the new list. */
+export function renameSteps(tour: StepCfg[], renames: Map<string, string>): StepCfg[] {
+  return tour.map(s =>
+    s.open.view === "region" && s.open.id && renames.has(s.open.id)
+      ? { ...s, open: { ...s.open, id: renames.get(s.open.id)! } }
+      : s,
+  );
+}
+
+/** Names the steps that open a region that the person deleted, as sentences for the reader. */
+export function orphanSteps(tour: StepCfg[], deleted: Set<string>): string[] {
+  const out: string[] = [];
+  tour.forEach((s, i) => {
+    if (s.open.view === "region" && s.open.id && deleted.has(s.open.id))
+      out.push(`Step ${i + 1} opens the region ${s.open.id}, which you deleted; point the step at another view.`);
+  });
+  return out;
 }
 
 /** Makes a region ID from a name: lower case letters, digits and "-", unique among `taken`. */
@@ -183,15 +236,19 @@ export function suggestRegions(units: UnitInfo[], mark: Provenance): RegionCfg[]
   return out;
 }
 
-/** Reports whether a list of path patterns names a unit's path literally. */
+/** Reports whether a list of path patterns names a unit's path literally, from the repository root or from its language's root. */
 export function hasPath(paths: string[], u: UnitInfo): boolean {
   return paths.includes(u.local) || paths.includes(u.path);
 }
 
-/** Adds or removes a unit's path from a list of patterns, and returns the new list. */
+/**
+ * Adds or removes a unit's path from a list of patterns, and returns the new
+ * list. It adds the path from the repository root, which no other unit
+ * shares; it removes both forms of the path.
+ */
 export function togglePath(paths: string[], u: UnitInfo, on: boolean): string[] {
   const rest = paths.filter(p => p !== u.local && p !== u.path);
-  return on ? [...rest, u.local] : rest;
+  return on ? [...rest, u.path] : rest;
 }
 
 /** Splits the text of the paths field into patterns: one per line, blank lines dropped. */

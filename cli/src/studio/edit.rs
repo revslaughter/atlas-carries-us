@@ -163,8 +163,9 @@ pub fn save_tour(s: &Studio, args: &Map<String, Value>) -> Reply {
     saved(&a, out)
 }
 
-/// `POST /api/regions`: replaces the regions, and the layout when the body
-/// names one (null removes it).
+/// `POST /api/regions`: replaces the regions, the layout when the body
+/// names one (null removes it), and the tour when the body names one, all in
+/// one write.
 pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
     let a = match atlas_for_save(s) {
         Ok(a) => a,
@@ -173,6 +174,15 @@ pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
     let (rev, regions) = match (base(args), objects(args, "regions")) {
         (Ok(r), Ok(t)) => (r, t),
         (Err(e), _) | (_, Err(e)) => return e,
+    };
+    // With `tour`, the steps change in the same write, so a renamed region
+    // and the steps that open it pass the check together.
+    let tour = match args.get("tour") {
+        None => None,
+        Some(_) => match objects(args, "tour") {
+            Ok(t) => Some(t),
+            Err(e) => return e,
+        },
     };
     let layout = args.get("layout").cloned();
     if let Some(l) = &layout {
@@ -197,6 +207,19 @@ pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
                 &Change::Top {
                     key: "layout",
                     value: l,
+                },
+            )?;
+            text = t;
+            if h != "in place" {
+                how = h;
+            }
+        }
+        if let Some(steps) = tour {
+            let (t, h) = yaml::edit(
+                &text,
+                &Change::List {
+                    key: "tour",
+                    items: steps,
                 },
             )?;
             text = t;
@@ -456,6 +479,36 @@ mod tests {
             &args(json!({"revision": rev, "regions": regions, "layout": {"rows": [["ghost"]]}})),
         );
         assert_eq!(code, StatusCode::UNPROCESSABLE_ENTITY, "{out}");
+    }
+
+    #[test]
+    fn a_renamed_region_saves_with_the_steps_that_open_it() {
+        let (_dir, a) = fixture();
+        let a = Arc::new(a);
+        let s = studio(Live::of(a.clone()), Mode::Serve);
+        let rev = current(&a);
+        let steps =
+            json!([{"title": "Sell", "text": "x", "open": {"view": "region", "id": "selling"}}]);
+        let (code, out) = save_tour(&s, &args(json!({"revision": rev, "tour": steps})));
+        assert_eq!(code, StatusCode::OK, "{out}");
+        let regions = json!([
+            {"id": "sales", "name": "Selling", "paths": ["shop"]},
+            {"id": "storage", "name": "Storage", "paths": ["store"]}
+        ]);
+        let renamed =
+            json!([{"title": "Sell", "text": "x", "open": {"view": "region", "id": "sales"}}]);
+        // Alone, the regions fail: the step still opens the old ID.
+        let (code, _) = save_regions(
+            &s,
+            &args(json!({"revision": out["revision"], "regions": regions})),
+        );
+        assert_eq!(code, StatusCode::UNPROCESSABLE_ENTITY);
+        let (code, out) = save_regions(
+            &s,
+            &args(json!({"revision": out["revision"], "regions": regions, "tour": renamed})),
+        );
+        assert_eq!(code, StatusCode::OK, "{out}");
+        assert_eq!(a.snapshot().unwrap().doc["tour"][0]["open"]["id"], "sales");
     }
 
     #[test]

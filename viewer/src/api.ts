@@ -9,31 +9,49 @@
 
 /** A job of the server: an extraction, the opening of a project, or a clone. */
 export interface Job {
+  /** The job's number, from 1. */
   id: number;
+  /** What the job does: extract, open or clone. */
   kind: string;
+  /** Whether the job runs, finished, or failed. */
   state: "running" | "done" | "failed";
+  /** The lines of progress so far. */
   log: string[];
+  /** Why the job failed. */
   error?: string | null;
+  /** The folder that the job opened or cloned. */
   path?: string | null;
 }
 
 /** What GET /api/state reports. */
 export interface ServerState {
+  /** The command that runs the server. */
   mode: "serve" | "studio";
+  /** True when a map shows. */
   map: boolean;
+  /** True when the editor may change atlas.yaml. */
   writable: boolean;
+  /** Why the editor may not change atlas.yaml. */
   why?: string | null;
+  /** The open project: its atlas.yaml, its folder and its name. */
   project?: { config: string; dir: string; name?: string } | null;
+  /** The last job. */
   job?: Job | null;
+  /** True when the server offers the setup screen (acu studio). */
   setup: boolean;
+  /** The folder that the folder picker shows. */
   browseRoot?: string | null;
+  /** The folder that receives clones. */
   workspace?: string | null;
 }
 
 /** The answer of one call: whether it worked, its status, and its JSON body. */
 export interface Answer<T = any> {
+  /** True for a status from 200 to 299. */
   ok: boolean;
+  /** The HTTP status, or 0 when the server does not answer. */
   status: number;
+  /** The JSON body; on failure it holds `error`. */
   data: T;
 }
 

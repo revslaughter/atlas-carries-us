@@ -28,6 +28,8 @@ interface StepItem {
   cfg: StepCfg;
   /** The view by IDs, for Show; null when acu has not resolved the step yet. */
   view: View | null;
+  /** The name of the recorded view, which the title field shows as a hint. */
+  hint?: string;
 }
 
 /** One region in the editor. */
@@ -38,6 +40,12 @@ interface RegionItem {
   cfg: RegionCfg;
   /** The layout row, from 1, or null to let acu place it. */
   row: number | null;
+  /** The region's place within its row in the file, from 0, so a save keeps the order. */
+  col?: number | null;
+  /** The ID that the file gave the region, so a rename reaches the steps that open it; null for a new region. */
+  origId: string | null;
+  /** Counts the match requests, so an older reply never overwrites a newer one. */
+  seq?: number;
   /** The units that its paths match, as the server reports them. */
   matched?: string[];
   /** Patterns that do not parse. */
@@ -48,15 +56,18 @@ interface RegionItem {
 
 /** The project's text in the editor. */
 interface ProjectText {
+  /** The project's name. */
   name: string;
+  /** The overview text. */
   description: string;
+  /** The provenance mark of a description that a program drafted. */
   descriptionDrafted?: Provenance;
 }
 
-/** The editor's tabs. */
+/** Names the editor's four tabs: the tour, the regions, the project text, and the extraction. */
 type Tab = "tour" | "regions" | "project" | "extract";
 
-/** Everything the editor holds. */
+/** Holds the editor's state: the file's revision, the entries, the open tab and form, and the last message. */
 const S = {
   /** The revision of atlas.yaml that the editor read. */
   revision: "",
@@ -68,6 +79,8 @@ const S = {
   units: [] as UnitInfo[],
   /** Whether atlas.yaml had a layout when the editor read it. */
   hadLayout: false,
+  /** The IDs of the regions in the file, as the editor read them. */
+  fileIds: [] as string[],
   /** The saved form of each section, to tell what changed. */
   saved: { tour: "", regions: "", project: "" },
   tab: "tour" as Tab,
@@ -87,8 +100,6 @@ const S = {
 let keys = 0;
 /** The drawer. */
 let root: HTMLElement;
-/** The live region that announces moves. */
-let say: HTMLElement;
 /** The entry that a drag carries: its list and position. */
 let dragging: { list: "tour" | "regions"; at: number } | null = null;
 /** The pending match request of each region, by key. */
@@ -140,7 +151,7 @@ function mark(): Provenance {
 /** Serializes the parts of the editor that atlas.yaml stores, per section. */
 function forms() {
   const regions = S.regions.map(r => em.clean(r.cfg));
-  const rows = em.layoutRows(S.regions.map(r => ({ id: r.cfg.id, row: r.row })));
+  const rows = em.layoutRows(S.regions.map(r => ({ id: r.cfg.id, row: r.row, col: r.col })));
   const layout = rows.length ? { rows } : S.hadLayout ? null : undefined;
   return {
     tour: S.tour.map(s => em.clean(s.cfg)),
@@ -155,8 +166,22 @@ function forms() {
   };
 }
 
-/** Reports which sections differ from the file. */
+/** Lists the regions whose ID the person changed, as old ID to new ID. */
+function renames(): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const r of S.regions) if (r.origId && r.origId !== r.cfg.id) m.set(r.origId, r.cfg.id);
+  return m;
+}
+
+/** Lists the IDs of the file's regions that the person deleted. */
+function deletedIds(): Set<string> {
+  const now = new Set(S.regions.map(r => r.origId));
+  return new Set(S.fileIds.filter(id => !now.has(id)));
+}
+
+/** Reports which sections differ from the file; nothing differs before the file loads. */
 function changed() {
+  if (!S.revision) return { tour: false, regions: false, project: false };
   const k = forms().keys;
   return {
     tour: k.tour !== S.saved.tour,
@@ -184,9 +209,16 @@ async function load(): Promise<boolean> {
   S.units = d.units ?? [];
   S.hadLayout = d.layout != null;
   const rows = em.rowsOf(d.layout);
+  S.fileIds = (d.regions as RegionCfg[]).map(r => r.id);
   const resolved: View[] = (d.resolved?.tour ?? []).map((s: any) => s.open);
   S.tour = (d.tour as StepCfg[]).map((cfg, i) => ({ key: ++keys, cfg, view: resolved[i] ?? null }));
-  S.regions = (d.regions as RegionCfg[]).map(cfg => ({ key: ++keys, cfg, row: rows.get(cfg.id) ?? null }));
+  S.regions = (d.regions as RegionCfg[]).map(cfg => ({
+    key: ++keys,
+    cfg,
+    row: rows.get(cfg.id)?.row ?? null,
+    col: rows.get(cfg.id)?.col ?? null,
+    origId: cfg.id,
+  }));
   S.project = {
     name: d.project?.name ?? "",
     description: d.project?.description ?? "",
@@ -203,8 +235,9 @@ function markSaved() {
   S.saved = { ...k };
 }
 
-/** Announces a short sentence to screen readers. */
+/** Announces a short sentence to screen readers, through the page's live region, which no redraw replaces. */
 function announce(text: string) {
+  const say = document.getElementById("announce")!;
   say.textContent = "";
   requestAnimationFrame(() => (say.textContent = text));
 }
@@ -223,8 +256,8 @@ function draftedBox(p: Provenance | undefined, act: string, key: number): string
 function stepHTML(s: StepItem, i: number, n: number): string {
   const openForm = S.open === s.key;
   const c = s.cfg;
-  const head = `<div class="ed-head" draggable="true" data-list="tour" data-at="${i}" tabindex="0" data-key="${s.key}"
-    aria-label="Step ${i + 1} of ${n}: ${esc(c.title || "untitled")}. Alt and the arrow keys move it.">
+  const head = `<div class="ed-head" role="group" draggable="true" data-list="tour" data-at="${i}" tabindex="0" data-key="${s.key}"
+    aria-label="Step ${i + 1} of ${n}: ${esc(c.title || "untitled")}" aria-describedby="edMoveHint">
     <span class="ed-grip" aria-hidden="true">⠿</span>
     <span class="ed-num">${i + 1}</span>
     <span class="ed-title"><b>${esc(c.title || "Untitled step")}</b><small>Opens ${esc(em.describeOpen(c.open, label))}${
@@ -237,7 +270,7 @@ function stepHTML(s: StepItem, i: number, n: number): string {
     </span></div>`;
   if (!openForm) return `<li data-key="${s.key}">${head}</li>`;
   const form = `<div class="ed-form">
-    <label>Title<input data-field="title" data-key="${s.key}" value="${esc(c.title)}" /></label>
+    <label>Title<input data-field="title" data-key="${s.key}" value="${esc(c.title)}" placeholder="${esc(s.hint ?? "")}" /></label>
     <label>Text<textarea data-field="text" data-key="${s.key}" rows="6">${esc(c.text)}</textarea></label>
     <p class="ed-hint">Write short sentences. Use \`backticks\` for code. Preview:</p>
     <p class="ed-preview" data-preview="${s.key}">${inlineHTML(c.text)}</p>
@@ -258,10 +291,10 @@ function regionHTML(r: RegionItem, i: number, n: number): string {
   const openForm = S.open === r.key;
   const count = r.matched ? `${r.matched.length} unit${r.matched.length === 1 ? "" : "s"}` : "…";
   const swatch = `<span class="ed-swatch" style="background:${regionColor(c.color ?? i)}" aria-hidden="true"></span>`;
-  const head = `<div class="ed-head" draggable="true" data-list="regions" data-at="${i}" tabindex="0" data-key="${r.key}"
-    aria-label="Region ${i + 1} of ${n}: ${esc(c.name || "unnamed")}. Alt and the arrow keys move it.">
+  const head = `<div class="ed-head" role="group" draggable="true" data-list="regions" data-at="${i}" tabindex="0" data-key="${r.key}"
+    aria-label="Region ${i + 1} of ${n}: ${esc(c.name || "unnamed")}" aria-describedby="edMoveHint">
     <span class="ed-grip" aria-hidden="true">⠿</span>${swatch}
-    <span class="ed-title"><b>${esc(c.name || "Unnamed region")}</b><small>${esc(c.id)} · ${count}${
+    <span class="ed-title"><b>${esc(c.name || "Unnamed region")}</b><small>${esc(c.id)} · <span data-count="${r.key}">${count}</span>${
       c.default ? " · default" : ""
     }${r.row ? " · row " + r.row : ""}${c.drafted ? ' · <span class="ed-tag">drafted</span>' : ""}</small></span>
     <span class="ed-acts">
@@ -279,17 +312,17 @@ function regionHTML(r: RegionItem, i: number, n: number): string {
       ),
     )
     .join("");
-  const names = (r.matched ?? []).map(id => S.units.find(u => u.id === id)?.local ?? id);
+  const names = (r.matched ?? []).map(id => S.units.find(u => u.id === id)?.path ?? id);
   const unitBoxes = S.units
     .map(
       u =>
         `<label class="ed-check"><input type="checkbox" data-unit="${esc(u.id)}" data-key="${r.key}" ${
           em.hasPath(paths, u) ? "checked" : ""
-        } /> <code>${esc(u.local)}</code></label>`,
+        } /> <code>${esc(u.path)}</code></label>`,
     )
     .join("");
   const form = `<div class="ed-form">
-    <label>Name<input data-field="name" data-key="${r.key}" value="${esc(c.name)}" /></label>
+    <label>Name<input data-field="name" data-key="${r.key}" value="${esc(c.name)}" placeholder="Name the region by its job" /></label>
     <label>ID<input data-field="id" data-key="${r.key}" value="${esc(c.id)}" spellcheck="false" /></label>
     <label>What it does<textarea data-field="description" data-key="${r.key}" rows="4">${esc(c.description ?? "")}</textarea></label>
     <label>How to read it<textarea data-field="readingTip" data-key="${r.key}" rows="3">${esc(c.readingTip ?? "")}</textarea></label>
@@ -335,7 +368,8 @@ function tourTab(): string {
 /** Draws the regions tab. */
 function regionsTab(): string {
   const n = S.regions.length;
-  const ids = new Set(S.regions.map(r => r.cfg.id));
+  // The map on show names regions by the IDs of the file, so a renamed region still counts.
+  const ids = new Set(S.regions.flatMap(r => [r.cfg.id, r.origId ?? ""]));
   const loose = S.units.filter(u => !u.region || !ids.has(u.region));
   const looseText = loose.length
     ? `<details class="ed-units"><summary>${loose.length} unit${loose.length === 1 ? "" : "s"} sit in no region of yours</summary><p>${loose
@@ -362,12 +396,15 @@ function projectTab(): string {
   </div>`;
 }
 
+/** Joins a job's lines of progress and its error, if any, for the log box. */
+function logText(j: Job): string {
+  return j.log.join("\n") + (j.error ? "\n" + j.error : "");
+}
+
 /** Draws the extraction tab. */
 function extractTab(): string {
   const j = S.job;
-  const log = j
-    ? `<pre class="ed-log" aria-live="polite">${esc(j.log.join("\n"))}${j.error ? "\n" + esc(j.error) : ""}</pre>`
-    : "";
+  const log = j ? `<pre class="ed-log">${esc(logText(j))}</pre>` : "";
   const state = j
     ? `<p class="ed-hint">The last run ${j.state === "running" ? "runs now" : j.state === "done" ? "finished" : "failed"}.</p>`
     : "";
@@ -385,8 +422,9 @@ function render(focus?: string) {
     ["project", "Project", c.project],
     ["extract", "Extract", false],
   ];
-  const body =
-    S.tab === "tour"
+  const body = !S.revision
+    ? ""
+    : S.tab === "tour"
       ? tourTab()
       : S.tab === "regions"
         ? regionsTab()
@@ -399,23 +437,23 @@ function render(focus?: string) {
       <button class="btn" data-act="close" aria-label="Close the editor">Close</button>
     </div>
     <p class="ed-file">${esc(S.path)}</p>
+    ${S.revision ? "" : `<p class="ed-msg bad" role="alert" tabindex="-1"><b>Problem.</b> ${esc(S.msg?.text ?? "acu could not read atlas.yaml.")} Fix the file, then reload this page.</p>`}
     <div class="ed-tabs" role="tablist">${tabs
       .map(
         ([t, name, ch]) =>
-          `<button role="tab" class="ed-tab" data-act="tab" data-tab="${t}" aria-selected="${S.tab === t}">${name}<span class="ed-dot" ${ch ? "" : "hidden"}> •<span class="sr"> (changed)</span></span></button>`,
+          `<button role="tab" class="ed-tab" id="edTab-${t}" aria-controls="edPanel" tabindex="${S.tab === t ? 0 : -1}" data-act="tab" data-tab="${t}" aria-selected="${S.tab === t}">${name}<span class="ed-dot" ${ch ? "" : "hidden"}> •<span class="sr"> (changed)</span></span></button>`,
       )
       .join("")}</div>
-    <div class="ed-body" role="tabpanel">${body}</div>
+    <div class="ed-body" role="tabpanel" id="edPanel" aria-labelledby="edTab-${S.tab}">${body}</div>
     <div class="ed-foot">
-      ${S.msg ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
+      ${S.msg ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
       <div class="ed-row">
         <button class="btn primary" data-act="save" ${isDirty && !S.busy ? "" : "disabled"}>Save to atlas.yaml</button>
         <button class="btn" data-act="discard" ${isDirty && !S.busy ? "" : "disabled"}>Discard changes</button>
         ${S.server?.setup ? '<button class="btn" data-act="projects">Projects</button>' : ""}
       </div>
     </div>
-    <div class="sr" aria-live="polite" id="edSay"></div>`;
-  say = root.querySelector("#edSay")!;
+    <p class="sr" id="edMoveHint">Alt and the up or down arrow key move it. Enter opens its form.</p>`;
   if (focus) (root.querySelector(focus) as HTMLElement | null)?.focus();
 }
 
@@ -435,28 +473,27 @@ function moveEntry(list: "tour" | "regions", from: number, to: number, focusOn: 
   else S.regions = em.move(S.regions, from, to);
   const what = list === "tour" ? "Step" : "Region";
   announce(`${what} moved to position ${to + 1} of ${arr.length}.`);
-  const sel =
-    focusOn === "head"
-      ? `.ed-head[data-key="${key}"]`
-      : `li[data-key="${key}"] [data-act="${focusOn}"]:not(:disabled), .ed-head[data-key="${key}"]`;
-  render(sel);
+  render(`.ed-head[data-key="${key}"]`);
+  if (focusOn !== "head")
+    root.querySelector<HTMLElement>(`li[data-key="${key}"] [data-act="${focusOn}"]:not(:disabled)`)?.focus();
 }
 
-/** Asks the server which units a region's paths match, after a short pause. */
+/** Asks the server which units a region's paths match, after a short pause, and updates the region's text in place. */
 function queueMatch(r: RegionItem, delay = 250) {
   clearTimeout(matchTimers.get(r.key));
   matchTimers.set(
     r.key,
     window.setTimeout(async () => {
+      const seq = (r.seq = (r.seq ?? 0) + 1);
       const a = await call<{ units: string[]; errors: string[] }>("match", { paths: r.cfg.paths ?? [] });
-      if (!a.ok) return;
+      if (!a.ok || seq !== r.seq) return;
       r.matched = a.data.units;
       r.bad = a.data.errors;
+      const names = r.matched.map(id => S.units.find(u => u.id === id)?.path ?? id);
       const p = root.querySelector(`[data-match="${r.key}"]`);
-      const names = r.matched.map(id => S.units.find(u => u.id === id)?.local ?? id);
       if (p) p.innerHTML = matchText(r, names);
-      const head = root.querySelector(`.ed-head[data-key="${r.key}"] small`);
-      if (head && !p) render();
+      const count = root.querySelector(`[data-count="${r.key}"]`);
+      if (count) count.textContent = `${r.matched.length} unit${r.matched.length === 1 ? "" : "s"}`;
     }, delay),
   );
 }
@@ -465,32 +502,46 @@ function queueMatch(r: RegionItem, delay = 250) {
 function record() {
   const st = current();
   const open: OpenCfg = em.stateToOpen(st, (o, m) => M.member(o, m)?.id);
-  const name = stateName(st);
-  // "the overview" becomes "The overview"; a name such as internal/store stays as written.
-  const title = name.startsWith("the ") ? "The " + name.slice(4) : name;
-  const item: StepItem = { key: ++keys, cfg: { title, text: "", open }, view: em.openToView(open) };
+  // The title stays empty for the person to write; the view's name shows as a hint.
+  const item: StepItem = {
+    key: ++keys,
+    cfg: { title: "", text: "", open },
+    view: em.openToView(open),
+    hint: stateName(st),
+  };
   const at = S.tour.findIndex(s => s.key === S.open);
   if (at >= 0) S.tour.splice(at + 1, 0, item);
   else S.tour.push(item);
   S.open = item.key;
-  S.msg = { text: "You added a step. Write its text, then save." };
+  S.msg = { text: "You added a step. Write its title and text, then save." };
+  announce(S.msg.text);
   render(`[data-field="title"][data-key="${item.key}"]`);
 }
 
 /** Saves the changed sections in order (project, regions, tour), then reloads the page to show the new map. */
 async function save() {
   const f = forms();
-  const issues = em.problems(
-    f.tour as StepCfg[],
-    S.regions.map(r => r.cfg),
-    S.project.name,
-  );
+  const issues = em
+    .problems(
+      f.tour as StepCfg[],
+      S.regions.map(r => r.cfg),
+      S.project.name,
+    )
+    .concat(em.orphanSteps(f.tour as StepCfg[], deletedIds()));
   if (issues.length) {
     S.msg = { text: issues.join(" "), bad: true };
     render(".ed-msg");
     return;
   }
+  // A renamed region and the steps that open it save in one write.
+  const ren = renames();
+  if (ren.size) {
+    S.tour = S.tour.map(x => ({ ...x, cfg: em.renameSteps([x.cfg], ren)[0] }));
+    Object.assign(f, { tour: S.tour.map(x => em.clean(x.cfg)) });
+    f.keys.tour = JSON.stringify(f.tour);
+  }
   const c = changed();
+  const withTour = c.regions && c.tour;
   S.busy = true;
   S.msg = { text: "Saving…" };
   render();
@@ -501,15 +552,20 @@ async function save() {
       () => ({
         name: S.project.name,
         description: S.project.description,
-        descriptionDrafted: S.project.descriptionDrafted ?? null,
+        // A description that the person cleared keeps no mark.
+        descriptionDrafted: S.project.description.trim() ? (S.project.descriptionDrafted ?? null) : null,
       }),
     ],
     [
       c.regions,
       "regions",
-      () => (f.layout === undefined ? { regions: f.regions } : { regions: f.regions, layout: f.layout }),
+      () => ({
+        regions: f.regions,
+        ...(f.layout === undefined ? {} : { layout: f.layout }),
+        ...(withTour ? { tour: f.tour } : {}),
+      }),
     ],
-    [c.tour, "tour", () => ({ tour: f.tour })],
+    [c.tour && !withTour, "tour", () => ({ tour: f.tour })],
   ];
   for (const [need, path, body] of steps) {
     if (!need) continue;
@@ -526,6 +582,12 @@ async function save() {
     }
     S.revision = a.data.revision;
     S.saved[path as "tour" | "regions" | "project"] = f.keys[path as "tour" | "regions" | "project"];
+    if (path === "regions") {
+      if (withTour) S.saved.tour = f.keys.tour;
+      // The file now names the regions by their new IDs.
+      S.regions.forEach(r => (r.origId = r.cfg.id));
+      S.fileIds = S.regions.map(r => r.cfg.id);
+    }
   }
   keep(S.tab);
   location.reload();
@@ -534,6 +596,7 @@ async function save() {
 /** Runs the adapters again, shows the progress, and reloads the page when they finish. */
 async function extract() {
   S.busy = true;
+  render('[data-tab="extract"]');
   const a = await call("extract", {});
   if (!a.ok) {
     S.busy = false;
@@ -546,10 +609,11 @@ async function extract() {
   const j = await waitJob(job => {
     S.job = job;
     const pre = root.querySelector(".ed-log");
-    if (pre) pre.textContent = job.log.join("\n");
+    if (pre) pre.textContent = logText(job);
     else render();
   });
   S.busy = false;
+  announce(j?.state === "done" ? "The adapters finished. The page reloads." : "The adapters failed.");
   if (j?.state === "done") {
     keep("extract");
     location.reload();
@@ -589,7 +653,6 @@ async function onClick(e: Event) {
       return;
     case "delete": {
       const arr = list === "tour" ? S.tour : S.regions;
-      const gone = arr[at];
       arr.splice(at, 1);
       S.open = -1;
       S.msg = {
@@ -597,7 +660,6 @@ async function onClick(e: Event) {
       };
       announce(S.msg.text);
       render(".ed-list .ed-head, [data-act='record'], [data-act='add-region']");
-      void gone;
       return;
     }
     case "record":
@@ -634,10 +696,10 @@ async function onClick(e: Event) {
       return;
     case "add-region": {
       const id = em.slug(
-        "New region",
+        "region",
         S.regions.map(r => r.cfg.id),
       );
-      const r: RegionItem = { key: ++keys, cfg: { id, name: "New region", paths: [] }, row: null, fresh: true };
+      const r: RegionItem = { key: ++keys, cfg: { id, name: "", paths: [] }, row: null, origId: null, fresh: true };
       S.regions.push(r);
       S.open = r.key;
       queueMatch(r, 0);
@@ -646,11 +708,12 @@ async function onClick(e: Event) {
     }
     case "suggest": {
       const m = mark();
-      S.regions = em.suggestRegions(S.units, m).map(cfg => ({ key: ++keys, cfg, row: null }));
+      S.regions = em.suggestRegions(S.units, m).map(cfg => ({ key: ++keys, cfg, row: null, origId: null }));
       S.regions.forEach(r => queueMatch(r, 0));
       S.msg = {
         text: `acu suggested ${S.regions.length} regions from the folders, marked as drafted. Rename them by job, then save.`,
       };
+      announce(S.msg.text);
       render(".ed-list .ed-head");
       return;
     }
@@ -743,8 +806,23 @@ function refreshFoot() {
   });
 }
 
-/** Moves the focused entry with Alt and the arrow keys. */
+/** Handles keys: Escape closes the drawer, the arrows move between tabs, and Alt and the arrows move the focused entry. */
 function onKey(e: KeyboardEvent) {
+  const t = e.target as HTMLElement;
+  if (e.key === "Escape") {
+    e.preventDefault();
+    closeEditor();
+    return;
+  }
+  if (t.classList.contains("ed-tab") && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+    e.preventDefault();
+    const order: Tab[] = ["tour", "regions", "project", "extract"];
+    const i = order.indexOf(t.dataset.tab as Tab);
+    S.tab = order[(i + (e.key === "ArrowRight" ? 1 : order.length - 1)) % order.length];
+    S.open = -1;
+    render(`[data-tab="${S.tab}"]`);
+    return;
+  }
   const h = (e.target as HTMLElement).closest<HTMLElement>(".ed-head");
   if (!h || e.target !== h) return;
   const at = Number(h.dataset.at);
@@ -787,7 +865,9 @@ function onDrop(e: DragEvent) {
   root.querySelectorAll(".drop, .dragging").forEach(x => x.classList.remove("drop", "dragging"));
   if (!d || !h || h.dataset.list !== d.list) return;
   e.preventDefault();
-  moveEntry(d.list, d.at, Number(h.dataset.at));
+  // The marker shows the place before the target; moving down, that place sits one lower once the entry leaves.
+  const target = Number(h.dataset.at);
+  moveEntry(d.list, d.at, d.at < target ? target - 1 : target);
 }
 
 /** Opens the drawer, reading atlas.yaml first. */

@@ -20,7 +20,7 @@ map.
 | `cli/` | Rust | `acu`: runs adapters, applies `atlas.yaml`, builds and serves the site, hosts the MCP server (`cli/src/mcp/`, [`docs/mcp.md`](docs/mcp.md)) and the studio's API (`cli/src/studio/`, [`docs/studio.md`](docs/studio.md)). |
 | `viewer/` | TypeScript | The static viewer: one canvas and a docs panel. |
 | `examples/`, `corpus/` | YAML, submodules | Configs, and public projects for tests. |
-| `tests/e2e/` | JavaScript | The smoke test, the count snapshot check, and the MCP client test. |
+| `tests/e2e/` | JavaScript | The smoke test, the count snapshot check, the MCP client test, and the studio test. |
 | `docs/` | Markdown | The spec, the config, the MCP server, adapter notes, research. |
 
 Read `docs/schema.md` before a change that touches data. Read
