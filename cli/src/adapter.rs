@@ -275,8 +275,15 @@ fn on_path(exe: &str) -> bool {
     })
 }
 
-/// Runs one adapter and returns its document.
-pub fn run(lang: &Language, src: &Source, plugins: &[&EntryPointPlugin]) -> Result<Value> {
+/// Runs one adapter and returns its document. Each line that the adapter
+/// writes to standard error goes on to acu's standard error and to
+/// `progress`, so the studio can show it.
+pub fn run(
+    lang: &Language,
+    src: &Source,
+    plugins: &[&EntryPointPlugin],
+    progress: &(dyn Fn(&str) + Sync),
+) -> Result<Value> {
     let entry_points: Vec<Value> = plugins
         .iter()
         .map(|p| json!({ "plugin": p.plugin, "options": p.options.clone().unwrap_or(json!({})) }))
@@ -295,15 +302,31 @@ pub fn run(lang: &Language, src: &Source, plugins: &[&EntryPointPlugin]) -> Resu
     let mut child = cmd
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
+        .stderr(Stdio::piped())
         .spawn()
         .with_context(|| format!("start the {} adapter", lang.adapter))?;
-    child
+    let mut stdin = child
         .stdin
         .take()
-        .context("open the adapter's standard input")?
-        .write_all(request.to_string().as_bytes())?;
-    let out = child.wait_with_output()?;
+        .context("open the adapter's standard input")?;
+    let stderr = child
+        .stderr
+        .take()
+        .context("open the adapter's standard error")?;
+    let out = std::thread::scope(|s| -> Result<std::process::Output> {
+        s.spawn(move || {
+            use std::io::BufRead;
+            for line in std::io::BufReader::new(stderr).lines() {
+                let Ok(line) = line else { break };
+                eprintln!("{line}");
+                progress(&line);
+            }
+        });
+        // Drop standard input after the request, so the adapter sees its end.
+        stdin.write_all(request.to_string().as_bytes())?;
+        drop(stdin);
+        Ok(child.wait_with_output()?)
+    })?;
     if !out.status.success() {
         bail!("the {} adapter failed ({})", lang.adapter, out.status);
     }

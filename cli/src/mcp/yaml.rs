@@ -33,6 +33,24 @@ pub enum Change {
         /// The keys and their new values.
         values: Vec<(&'static str, Value)>,
     },
+    /// Replace a whole top-level list. Each new item that equals an old
+    /// item keeps that item's lines and the comments above them, so a
+    /// reorder or a deletion keeps the comments of the untouched items. An
+    /// empty list removes the key.
+    List {
+        /// The top-level key: `regions` or `tour`.
+        key: &'static str,
+        /// The new items, in order.
+        items: Vec<Value>,
+    },
+    /// Replace the value of a top-level key, or remove the key when the
+    /// value is null. acu writes the whole section again.
+    Top {
+        /// The top-level key, such as `layout`.
+        key: &'static str,
+        /// The new value, or null.
+        value: Value,
+    },
     /// Set keys of a top-level mapping, and drop the keys whose value is
     /// null.
     Keys {
@@ -93,6 +111,20 @@ fn expected(original: &Value, change: &Change) -> Result<Value, String> {
                 .ok_or(format!("{key} in atlas.yaml holds no entry {}", at + 1))?;
             set_keys(m, values);
         }
+        Change::List { key, items } => {
+            if items.is_empty() {
+                obj.remove(*key);
+            } else {
+                obj.insert(key.to_string(), Value::Array(items.clone()));
+            }
+        }
+        Change::Top { key, value } => {
+            if value.is_null() {
+                obj.remove(*key);
+            } else {
+                obj.insert(key.to_string(), value.clone());
+            }
+        }
         Change::Keys { key, values } => {
             let m = obj
                 .entry(*key)
@@ -132,7 +164,7 @@ pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), Strin
     };
     let mut tries: Vec<(Option<Vec<String>>, &'static str)> = Vec::new();
     for pretty in [true, false] {
-        tries.push((splice(&lines, change, &want, pretty), "in place"));
+        tries.push((splice(&lines, change, &original, &want, pretty), "in place"));
     }
     tries.push((rewrite_section(&lines, change, &want), "section"));
     for (attempt, how) in tries {
@@ -363,10 +395,67 @@ fn splice_keys(
 
 /// Writes the new lines of the one entry that changed and keeps every other
 /// line. Gives `None` when the file's shape does not allow it.
-fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option<Vec<String>> {
+fn splice(
+    lines: &[&str],
+    change: &Change,
+    original: &Value,
+    want: &Value,
+    pretty: bool,
+) -> Option<Vec<String>> {
     let secs = sections(lines);
     let own = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
     match change {
+        Change::Top { .. } => None,
+        Change::List { key, items } => {
+            let Some(sec) = secs.iter().find(|s| s.key == *key) else {
+                if items.is_empty() {
+                    return Some(own(lines));
+                }
+                let mut out = own(lines);
+                while out.last().is_some_and(|l| l.trim().is_empty()) {
+                    out.pop();
+                }
+                out.push(format!("{key}:"));
+                for it in items {
+                    out.extend(emit_item(it.as_object()?, 2, pretty));
+                }
+                return Some(out);
+            };
+            if items.is_empty() {
+                let mut out = own(&lines[..sec.start]);
+                out.extend(own(&lines[sec.end..]));
+                return Some(out);
+            }
+            let (n, old) = seq_items(lines, sec)?;
+            let old_values = original[*key].as_array()?;
+            if old_values.len() != old.len() {
+                return None;
+            }
+            // Each old item, with the comments and blank lines above it.
+            let mut prev = sec.start + 1;
+            let mut blocks: Vec<Option<(usize, usize, usize)>> = Vec::new();
+            for &(st, end) in &old {
+                blocks.push(Some((prev, st, end)));
+                prev = end;
+            }
+            let tail = prev;
+            let mut out = own(&lines[..sec.start + 1]);
+            for it in items {
+                let reuse = (0..old.len())
+                    .find(|&i| blocks[i].is_some() && old_values[i] == *it)
+                    .and_then(|i| blocks[i].take());
+                match reuse {
+                    Some((lead, st, end)) => {
+                        out.extend(own(&lines[lead..st]));
+                        out.extend(own(&lines[st..end]));
+                    }
+                    None => out.extend(emit_item(it.as_object()?, n, pretty)),
+                }
+            }
+            out.extend(own(&lines[tail..sec.end]));
+            out.extend(own(&lines[sec.end..]));
+            Some(out)
+        }
         Change::Item {
             key, at, insert, ..
         } => {
@@ -453,11 +542,16 @@ fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option
 /// every other section's lines.
 fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<String>> {
     let key = match change {
-        Change::Item { key, .. } | Change::ItemKeys { key, .. } | Change::Keys { key, .. } => *key,
+        Change::Item { key, .. }
+        | Change::ItemKeys { key, .. }
+        | Change::Keys { key, .. }
+        | Change::List { key, .. }
+        | Change::Top { key, .. } => *key,
     };
     let secs = sections(lines);
     let mut new = vec![format!("{key}:")];
     match &want[key] {
+        Value::Null => new.clear(),
         Value::Array(items) => {
             for it in items {
                 new.extend(emit_item(it.as_object()?, 2, false));
@@ -469,6 +563,9 @@ fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<
             }
         }
         _ => return None,
+    }
+    if new.is_empty() && secs.iter().all(|s| s.key != key) {
+        return Some(lines.iter().map(|l| l.to_string()).collect());
     }
     let own = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
     match secs.iter().find(|s| s.key == key) {
@@ -635,6 +732,79 @@ mod tests {
     use serde_json::json;
 
     const TEXT: &str = "# Top comment.\nversion: 1\nproject:\n  name: Shop\n  # About the shop.\n  description: |\n    Old text.\nlanguages:\n  - adapter: go\n\n# The tour.\ntour:\n  - title: One\n    open: { view: overview }\n    text: First.\n  # Before two.\n  - title: Two\n    open: { view: overview }\n    text: Second.\n";
+
+    #[test]
+    fn a_reordered_list_keeps_the_comments_of_each_item() {
+        let v = parse(TEXT).unwrap();
+        let mut steps = v["tour"].as_array().unwrap().clone();
+        steps.reverse();
+        steps.push(json!({"title": "Three", "open": {"view": "overview"}, "text": "Third."}));
+        let (out, how) = edit(
+            TEXT,
+            &Change::List {
+                key: "tour",
+                items: steps.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert_eq!(parse(&out).unwrap()["tour"], json!(steps));
+        assert!(
+            out.contains("# The tour.\ntour:\n  # Before two.\n  - title: Two\n"),
+            "{out}"
+        );
+        assert!(out.contains("  - title: One\n"), "{out}");
+        assert!(out.ends_with("    text: \"Third.\"\n"), "{out}");
+    }
+
+    #[test]
+    fn an_empty_list_removes_its_section() {
+        let (out, _) = edit(
+            TEXT,
+            &Change::List {
+                key: "tour",
+                items: vec![],
+            },
+        )
+        .unwrap();
+        assert!(parse(&out).unwrap().get("tour").is_none(), "{out}");
+        assert!(out.starts_with("# Top comment.\n"), "{out}");
+        // An empty list where none stood changes nothing.
+        let (same, _) = edit(
+            &out,
+            &Change::List {
+                key: "regions",
+                items: vec![],
+            },
+        )
+        .unwrap();
+        assert_eq!(same, out);
+    }
+
+    #[test]
+    fn a_top_key_is_set_and_removed() {
+        let rows = json!({"rows": [["a", "b"], ["c"]]});
+        let (out, how) = edit(
+            TEXT,
+            &Change::Top {
+                key: "layout",
+                value: rows.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "section");
+        assert_eq!(parse(&out).unwrap()["layout"], rows);
+        let (out, _) = edit(
+            &out,
+            &Change::Top {
+                key: "layout",
+                value: Value::Null,
+            },
+        )
+        .unwrap();
+        assert!(parse(&out).unwrap().get("layout").is_none(), "{out}");
+        assert!(out.contains("# Before two."), "{out}");
+    }
 
     #[test]
     fn replacing_a_step_keeps_every_other_line() {

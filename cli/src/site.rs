@@ -1,19 +1,21 @@
 //! The static site: the viewer that the build embeds, plus data/atlas.json.
-//! `build` writes it to a folder; `serve` answers HTTP requests from the live
-//! map, and mounts the MCP server at `/mcp`.
+//! `build` writes it to a folder; `serve` and `studio` answer HTTP requests
+//! from the live map, mount the MCP server at `/mcp`, and answer the
+//! studio's API under `/api/`.
 
-use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use axum::body::Body;
-use axum::http::{header, StatusCode, Uri};
+use axum::body::{to_bytes, Body};
+use axum::extract::Request;
+use axum::http::{header, StatusCode};
 use axum::response::Response;
 use axum::Router;
 use include_dir::{include_dir, Dir};
 
 use crate::mcp::Atlas;
+use crate::studio::{self, Studio};
 
 /// The built viewer, embedded in acu at compile time.
 static VIEWER: Dir<'_> = include_dir!("$OUT_DIR/viewer");
@@ -47,24 +49,34 @@ pub fn build(out: &Path, data: &[u8]) -> Result<usize> {
     Ok(n + 1)
 }
 
-/// Serves the viewer, the live map's data and the MCP server at `/mcp` on an
-/// address until Ctrl-C. The data comes from the live map on each request,
-/// so a draft from an MCP write tool, or a fresh `acu extract` of a served
-/// atlas.json, shows on reload.
-pub async fn serve(addr: SocketAddr, atlas: Arc<Atlas>) -> Result<()> {
+/// Serves the viewer, the live map's data, the studio's API at `/api/` and
+/// the MCP server at `/mcp` on an address until Ctrl-C. The data comes from
+/// the live map on each request, so a save in the editor, a draft from an
+/// MCP write tool, or a fresh `acu extract` of a served atlas.json shows on
+/// reload.
+pub async fn serve(studio: Arc<Studio>) -> Result<()> {
+    let addr = studio.addr;
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .with_context(|| format!("listen on {addr}"))?;
     let addr = listener.local_addr().unwrap_or(addr);
-    let (mcp, stop_mcp) = crate::mcp::http_service(atlas.clone(), addr);
-    let writes = if atlas.writable() { "on" } else { "off" };
+    let (mcp, stop_mcp) = crate::mcp::http_service(studio.live.clone(), addr);
+    let writes = match studio.live.get() {
+        Ok(a) if a.writable() => "writes on",
+        Ok(_) => "writes off",
+        Err(_) => "no project open yet",
+    };
+    let what = match studio.mode {
+        studio::Mode::Studio => "the studio",
+        studio::Mode::Serve => "the map",
+    };
     let app = Router::new()
         .nest_service("/mcp", mcp)
-        .fallback(move |uri: Uri| {
-            let atlas = atlas.clone();
-            async move { respond(uri, &atlas) }
+        .fallback(move |req: Request| {
+            let studio = studio.clone();
+            async move { route(req, studio).await }
         });
-    eprintln!("acu: serving the map at http://{addr}/ and MCP at http://{addr}/mcp, writes {writes}  (Ctrl-C stops)");
+    eprintln!("acu: serving {what} at http://{addr}/ and MCP at http://{addr}/mcp, {writes}  (Ctrl-C stops)");
     axum::serve(listener, app)
         .with_graceful_shutdown(async move {
             let _ = tokio::signal::ctrl_c().await;
@@ -74,11 +86,45 @@ pub async fn serve(addr: SocketAddr, atlas: Arc<Atlas>) -> Result<()> {
     Ok(())
 }
 
+/// Sends a request under `/api/` to the studio, and any other to
+/// [`respond`].
+async fn route(req: Request, studio: Arc<Studio>) -> Response {
+    let path = req.uri().path().to_string();
+    let Some(call) = path.strip_prefix("/api/") else {
+        let atlas = studio.live.get().ok();
+        return respond(&path, atlas.as_deref());
+    };
+    let (parts, body) = req.into_parts();
+    let bytes = match to_bytes(body, studio::MAX_BODY).await {
+        Ok(b) => b,
+        Err(_) => {
+            return json_reply(studio::fail(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "the request body exceeds 4 MB",
+            ))
+        }
+    };
+    let r = studio::handle(studio, parts.method, call, &parts.headers, &bytes).await;
+    json_reply(r)
+}
+
+/// Makes a JSON response that no browser caches.
+fn json_reply((status, body): studio::Reply) -> Response {
+    reply(
+        status,
+        "application/json",
+        serde_json::to_vec(&body).unwrap_or_default(),
+    )
+}
+
 /// Answers one request: the data at `DATA_PATH`, else a file of the viewer.
-fn respond(uri: Uri, atlas: &Atlas) -> Response {
-    let path = uri.path().trim_start_matches('/');
+fn respond(path: &str, atlas: Option<&Atlas>) -> Response {
+    let path = path.trim_start_matches('/');
     if path == DATA_PATH {
-        let bytes = atlas.snapshot().map(|s| s.bytes.clone());
+        let bytes = match atlas {
+            Some(a) => a.snapshot().map(|s| s.bytes.clone()),
+            None => Err("no project open yet".to_string()),
+        };
         return match bytes {
             Ok(b) => reply(StatusCode::OK, "application/json", b),
             Err(e) => reply(
@@ -103,11 +149,15 @@ fn respond(uri: Uri, atlas: &Atlas) -> Response {
 }
 
 /// Makes a response that no browser caches, so a reload shows fresh data.
+/// No other site may frame it or read its type differently.
 fn reply(status: StatusCode, mime: &str, body: Vec<u8>) -> Response {
     Response::builder()
         .status(status)
         .header(header::CONTENT_TYPE, mime)
         .header(header::CACHE_CONTROL, "no-store")
+        .header(header::X_CONTENT_TYPE_OPTIONS, "nosniff")
+        .header(header::REFERRER_POLICY, "no-referrer")
+        .header(header::CONTENT_SECURITY_POLICY, "frame-ancestors 'none'")
         .body(Body::from(body))
         .unwrap()
 }

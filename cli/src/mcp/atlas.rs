@@ -1,6 +1,8 @@
-//! The live map that `acu serve` and `acu mcp` share: the current atlas.json,
-//! where it came from, the folders that the read tools may see, and the one
-//! path by which a write tool changes atlas.yaml.
+//! The live map that `acu serve`, `acu studio` and `acu mcp` share: the
+//! current atlas.json, where it came from, the folders that the read tools
+//! may see, and the one path by which a write tool or the editor changes
+//! atlas.yaml. [`Live`] holds the map that a server shows now; the studio
+//! swaps in a new one after each extraction.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -82,6 +84,75 @@ pub struct Atlas {
     writing: Mutex<()>,
 }
 
+/// The slot that holds the map a server shows now. `acu serve` and `acu mcp`
+/// fill it once; `acu studio` starts with it empty and fills it again after
+/// each extraction, so every request reads the newest map.
+pub struct Live {
+    /// The map on show, if any.
+    slot: RwLock<Option<Arc<Atlas>>>,
+}
+
+/// What a request gets while the studio holds no map yet.
+pub const NO_PROJECT: &str =
+    "acu: the studio holds no project yet; open one in the browser, then call again";
+
+impl Live {
+    /// Makes a slot that holds one map.
+    pub fn of(atlas: Arc<Atlas>) -> Live {
+        Live {
+            slot: RwLock::new(Some(atlas)),
+        }
+    }
+
+    /// Makes an empty slot.
+    pub fn empty() -> Live {
+        Live {
+            slot: RwLock::new(None),
+        }
+    }
+
+    /// Returns the map on show, or the reason none shows.
+    pub fn get(&self) -> Result<Arc<Atlas>, String> {
+        self.slot
+            .read()
+            .map_err(|_| BROKEN.to_string())?
+            .clone()
+            .ok_or_else(|| NO_PROJECT.to_string())
+    }
+
+    /// Puts a new map on show.
+    pub fn set(&self, atlas: Arc<Atlas>) {
+        // A lock that a panic broke still holds a usable value; replace it.
+        match self.slot.write() {
+            Ok(mut g) => *g = Some(atlas),
+            Err(p) => *p.into_inner() = Some(atlas),
+        }
+    }
+}
+
+/// Names one state of atlas.yaml: a hash of its text. The editor sends it
+/// back with each save, so acu can refuse a save that would overwrite an
+/// edit made meanwhile in another window or in a text editor.
+pub fn revision(text: &str) -> String {
+    // FNV-1a, 64 bits: stable across runs and platforms.
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in text.as_bytes() {
+        h ^= u64::from(*b);
+        h = h.wrapping_mul(0x0100_0000_01b3);
+    }
+    format!("{h:016x}")
+}
+
+/// Why a save failed: the file changed since the editor read it, or the
+/// change itself fails.
+#[derive(Debug)]
+pub enum SaveError {
+    /// atlas.yaml changed since the given revision.
+    Stale(String),
+    /// The change fails the schema, the check or the file system.
+    Failed(String),
+}
+
 /// The result of a write: what acu did, and the warnings of the new map.
 pub struct Written {
     /// The file that acu wrote.
@@ -161,6 +232,52 @@ impl Atlas {
             ),
             writing: Mutex::new(()),
         })
+    }
+
+    /// The canonical path of atlas.yaml, when a config stands behind the
+    /// map.
+    pub fn config_path(&self) -> Option<&Path> {
+        match &self.origin {
+            Origin::Config { path, .. } => Some(path),
+            Origin::File { .. } => None,
+        }
+    }
+
+    /// Reads atlas.yaml as it stands on disk now, with its revision.
+    pub fn config_text(&self) -> Result<(String, String), String> {
+        let path = self
+            .config_path()
+            .ok_or("acu: no config stands behind this map; start acu with -c atlas.yaml")?;
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("acu: read {}: {e}; check the file", path.display()))?;
+        let rev = revision(&text);
+        Ok((text, rev))
+    }
+
+    /// Changes atlas.yaml as [`Atlas::write`] does, but only while the file
+    /// still has the revision that the editor read. A save over a newer
+    /// file fails with [`SaveError::Stale`] and changes nothing.
+    pub fn save(
+        &self,
+        base: &str,
+        edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
+    ) -> Result<Written, SaveError> {
+        let stale = std::cell::Cell::new(None);
+        let out = self.write(|text| {
+            let now = revision(text);
+            if now != base {
+                stale.set(Some(now));
+                return Err("stale".into());
+            }
+            edit(text)
+        });
+        match (out, stale.into_inner()) {
+            (Ok(w), _) => Ok(w),
+            (Err(_), Some(now)) => Err(SaveError::Stale(format!(
+                "acu: atlas.yaml changed on disk since you opened it (now revision {now}); reload the editor, then make the change again"
+            ))),
+            (Err(e), None) => Err(SaveError::Failed(e)),
+        }
     }
 
     /// Reports whether the write tools work.
@@ -411,6 +528,38 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
         };
         let atlas = Atlas::from_config(&dir.path().join("atlas.yaml"), run, None).unwrap();
         (dir, atlas)
+    }
+
+    #[test]
+    fn a_save_over_a_newer_file_is_refused() {
+        let (dir, atlas) = fixture();
+        let (text, rev) = atlas.config_text().unwrap();
+        assert_eq!(rev, revision(FIXTURE_CONFIG));
+        std::fs::write(
+            dir.path().join("atlas.yaml"),
+            text.replace("Shop", "Shop 2"),
+        )
+        .unwrap();
+        let err = atlas
+            .save(&rev, |t| Ok((t.to_string(), "test")))
+            .err()
+            .unwrap();
+        assert!(matches!(err, SaveError::Stale(_)), "{err:?}");
+        let (_, now) = atlas.config_text().unwrap();
+        let w = atlas
+            .save(&now, |t| Ok((t.replace("Shop 2", "Shop 3"), "test")))
+            .unwrap();
+        assert_eq!(w.how, "test");
+        assert_eq!(atlas.snapshot().unwrap().doc["project"]["name"], "Shop 3");
+    }
+
+    #[test]
+    fn a_live_slot_starts_empty_and_takes_a_map() {
+        let live = Live::empty();
+        assert_eq!(live.get().err().unwrap(), NO_PROJECT);
+        let (_dir, atlas) = fixture();
+        live.set(Arc::new(atlas));
+        assert!(live.get().unwrap().writable());
     }
 
     #[test]
