@@ -127,6 +127,10 @@ test("picking a unit adds or removes its literal path", () => {
   assert.deepEqual(em.togglePath(["api", "repo/api"], u, false, true), ["api"]);
   const twin = { id: "2", path: "web/api", local: "api", name: "api" };
   assert.deepEqual([...em.sharedLocals([u, twin])], ["api"]);
+  assert.equal(em.pickState(["api"], u, true), "fixed");
+  assert.equal(em.pickState(["repo/api"], u, true), "on");
+  assert.equal(em.pickState(["api"], u, false), "on");
+  assert.equal(em.pickState([], u, false), "off");
 });
 
 test("problems name what a save still needs", () => {

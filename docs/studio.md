@@ -297,9 +297,10 @@ could still try to reach it. These guards stop that:
    - in a process group of its own, for at most 10 minutes; acu then stops
      the group and removes the folder, with the host and owner folders that
      stay empty;
-   - into a staging folder (`<name>.acu-partial`) that takes the final name
-     only after git succeeds, so a clone that Ctrl-C stopped halfway never
-     opens later as a good one. Ctrl-C stops a running clone's group.
+   - into a hidden staging folder (`.<name>.acu-partial`) that takes the
+     final name only after git succeeds, so a clone that Ctrl-C stopped
+     halfway never opens later as a good one. Ctrl-C stops a running
+     clone's group.
 7. **Trust.** Opening a project needs `trust: true`, because extraction runs
    the project's build tools.
 

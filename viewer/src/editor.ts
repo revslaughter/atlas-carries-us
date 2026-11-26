@@ -81,6 +81,8 @@ const S = {
   hadLayout: false,
   /** The IDs of the regions in the file, as the editor read them. */
   fileIds: [] as string[],
+  /** Each region's row and place in the layout of the file, by the file's ID. */
+  fileRows: new Map<string, { row: number; col: number }>(),
   /** The saved form of each section, to tell what changed. */
   saved: { tour: "", regions: "", project: "" },
   tab: "tour" as Tab,
@@ -210,6 +212,7 @@ async function load(): Promise<boolean> {
   S.hadLayout = d.layout != null;
   const rows = em.rowsOf(d.layout);
   S.fileIds = (d.regions as RegionCfg[]).map(r => r.id);
+  S.fileRows = rows;
   const resolved: View[] = (d.resolved?.tour ?? []).map((s: any) => s.open);
   S.tour = (d.tour as StepCfg[]).map((cfg, i) => ({ key: ++keys, cfg, view: resolved[i] ?? null }));
   S.regions = (d.regions as RegionCfg[]).map(cfg => ({
@@ -315,16 +318,16 @@ function regionHTML(r: RegionItem, i: number, n: number): string {
   const names = (r.matched ?? []).map(id => S.units.find(u => u.id === id)?.path ?? id);
   const shared = em.sharedLocals(S.units);
   const unitBoxes = S.units
-    .map(u =>
-      shared.has(u.local) && paths.includes(u.local)
-        ? // A shared short path holds this unit and its twin; only the Paths field changes it.
-          `<label class="ed-check"><input type="checkbox" checked disabled /> <code>${esc(u.path)}</code> (through <code>${esc(
+    .map(u => {
+      const st = em.pickState(paths, u, shared.has(u.local));
+      return st === "fixed"
+        ? `<label class="ed-check"><input type="checkbox" checked disabled /> <code>${esc(u.path)}</code> (through <code>${esc(
             u.local,
           )}</code>; edit Paths to change it)</label>`
         : `<label class="ed-check"><input type="checkbox" data-unit="${esc(u.id)}" data-key="${r.key}" ${
-            em.hasPath(paths, u, shared.has(u.local)) ? "checked" : ""
-          } /> <code>${esc(u.path)}</code></label>`,
-    )
+            st === "on" ? "checked" : ""
+          } /> <code>${esc(u.path)}</code></label>`;
+    })
     .join("");
   const form = `<div class="ed-form">
     <label>Name<input data-field="name" data-key="${r.key}" value="${esc(c.name)}" placeholder="Name the region by its job" /></label>
@@ -778,8 +781,10 @@ function onInput(e: Event) {
       } else if (field === "color") r.cfg = { ...r.cfg, color: t.value === "" ? undefined : Number(t.value) };
       else if (field === "row") {
         const row = t.value === "" ? null : Math.max(1, Math.floor(Number(t.value)) || 1);
-        // A region in a new row goes to that row's end.
-        if (row !== r.row) r.col = null;
+        // A region in a new row goes to that row's end; back in its row of
+        // the file, it takes its place from the file again.
+        const home = S.fileRows.get(r.origId ?? "");
+        r.col = home && home.row === row ? home.col : null;
         r.row = row;
       } else if (field === "default") r.cfg = { ...r.cfg, default: t.checked || undefined };
       else if (field === "id") {

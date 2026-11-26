@@ -742,12 +742,13 @@ fn kill_group(child: &mut std::process::Child) {
 /// number to a new process, so acu signals a group only while it tracks a
 /// running clone; a short window stays between the clone's end and the
 /// moment acu stops tracking it. acu runs the system's `kill` program
-/// rather than call the C library, because the project adds no runtime
-/// dependency without the maintainer's agreement.
+/// rather than call the C library's `kill`, because acu holds no `unsafe`
+/// code and a foreign call needs it.
 pub fn kill_pgid(pid: u32) {
     #[cfg(unix)]
     {
-        // The system's own program, not whatever `kill` the PATH names.
+        // The system's own program where it sits at a usual place; else,
+        // as on NixOS, the `kill` that the PATH names.
         let program = ["/bin/kill", "/usr/bin/kill"]
             .into_iter()
             .find(|p| Path::new(p).is_file())
@@ -760,6 +761,40 @@ pub fn kill_pgid(pid: u32) {
     }
     #[cfg(not(unix))]
     let _ = pid;
+}
+
+/// Names the staging folder of a clone: the final name with a leading dot,
+/// so the folder picker hides it and no repository name (which never starts
+/// with a dot) can collide with it.
+fn staging_for(dest: &Path) -> PathBuf {
+    let name = dest
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    dest.with_file_name(format!(".{name}.acu-partial"))
+}
+
+/// Ends a clone: on success, gives the staging folder its final name; on
+/// failure, removes it, with the host and owner folders that stay empty.
+fn finish_clone(ok: bool, staging: &Path, dest: &Path, ws: &Path) -> Result<(), String> {
+    if ok {
+        return std::fs::rename(staging, dest).map_err(|e| {
+            format!(
+                "acu: name the clone {}: {e}; move {} there by hand, or remove it and clone again",
+                dest.display(),
+                staging.display()
+            )
+        });
+    }
+    let _ = std::fs::remove_dir_all(staging);
+    let mut up = dest.parent();
+    while let Some(p) = up.filter(|p| p.starts_with(ws) && *p != ws) {
+        if std::fs::remove_dir(p).is_err() {
+            break;
+        }
+        up = p.parent();
+    }
+    Err("acu: the clone failed; check the address and your network, then try again".into())
 }
 
 /// `POST /api/clone`: clones a repository into the workspace as a job, with
@@ -795,12 +830,14 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
         // its name only after git succeeds. A clone that Ctrl-C or a crash
         // stopped halfway never sits at the final name, so it never opens
         // later as a good one.
-        let staging = dest.with_file_name(format!(
-            "{}.acu-partial",
-            dest.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()
-        ));
+        let staging = staging_for(&dest);
         if staging.exists() {
-            let _ = std::fs::remove_dir_all(&staging);
+            std::fs::remove_dir_all(&staging).map_err(|e| {
+                format!(
+                    "acu: remove the half clone {}: {e}; remove it by hand, then clone again",
+                    staging.display()
+                )
+            })?;
         }
         let parent = dest.parent().unwrap_or(&ws).to_path_buf();
         std::fs::create_dir_all(&parent).map_err(|e| {
@@ -846,26 +883,17 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
         st.set_child(Some(child.id()));
         let ok = wait_limited(child, CLONE_LIMIT, log);
         st.set_child(None);
-        let ok = ok
-            && std::fs::rename(&staging, &dest)
-                .map_err(|e| log(&format!("acu: name the clone {}: {e}", dest.display())))
-                .is_ok();
-        if !ok {
-            let _ = std::fs::remove_dir_all(&staging);
-            // Remove the host and owner folders too when they stay empty.
-            let mut up = dest.parent();
-            while let Some(p) = up.filter(|p| p.starts_with(&ws) && *p != ws.as_path()) {
-                if std::fs::remove_dir(p).is_err() {
-                    break;
-                }
-                up = p.parent();
+        finish_clone(ok, &staging, &dest, &ws).map_err(|e| {
+            if ok {
+                e
+            } else {
+                format!(
+                    "acu: git could not clone {} into {}; check the address and your network, then try again",
+                    target.url,
+                    dest.display()
+                )
             }
-            return Err(format!(
-                "acu: git could not clone {} into {}; check the address and your network, then try again",
-                target.url,
-                dest.display()
-            ));
-        }
+        })?;
         log("acu: the clone finished");
         Ok(Some(dest.display().to_string()))
     })
@@ -1011,6 +1039,24 @@ mod tests {
         let seen = seen.into_inner().unwrap();
         assert_eq!(seen[0], "started");
         assert!(seen.iter().any(|l| l.contains("too long")), "{seen:?}");
+    }
+
+    #[test]
+    fn a_clone_takes_its_name_only_after_success() {
+        let dir = tempfile::tempdir().unwrap();
+        let ws = dir.path().to_path_buf();
+        let dest = ws.join("github.com/owner/repo");
+        let staging = staging_for(&dest);
+        assert!(staging.ends_with(".repo.acu-partial"));
+        assert!(hidden(&staging.file_name().unwrap().to_string_lossy()));
+        // A failure removes the staging folder and the empty owner folders.
+        write(&staging.join(".git/HEAD"), "x");
+        assert!(finish_clone(false, &staging, &dest, &ws).is_err());
+        assert!(!staging.exists() && !ws.join("github.com").exists());
+        // A success renames it.
+        write(&staging.join(".git/HEAD"), "x");
+        finish_clone(true, &staging, &dest, &ws).unwrap();
+        assert!(dest.join(".git/HEAD").is_file() && !staging.exists());
     }
 
     #[test]

@@ -138,9 +138,12 @@ impl Live {
     /// old map then fails and asks for a retry.
     pub fn install(&self, atlas: Arc<Atlas>, stale: impl FnOnce() -> bool) -> Result<(), String> {
         let lock = atlas.write_lock();
-        // A lock that a panic broke still guards; take it and go on, so the
-        // new map always goes on show.
-        let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
+        // A lock that a panic broke still guards; take it, clear the mark,
+        // and go on, so the new map always goes on show and takes saves.
+        let _guard = lock.lock().unwrap_or_else(|p| {
+            lock.clear_poison();
+            p.into_inner()
+        });
         let old = match self.slot.write() {
             Ok(mut g) => g.replace(atlas.clone()),
             Err(p) => p.into_inner().replace(atlas.clone()),
@@ -208,6 +211,10 @@ pub const READ_ONLY: &str = "acu runs with --read-only; start it without the fla
 /// Why the write tools stay off when `acu serve` listens on an address that
 /// other computers can reach.
 pub const REMOTE: &str = "acu listens on an address that other computers can reach; start it with --allow-remote-writes to draft text";
+
+/// What a write to a map that a newer map replaced answers.
+const RETIRED: &str =
+    "acu: a newer map went on show meanwhile; read the file again, then make the change again";
 
 /// The message of a lock that a panic in another thread left broken.
 const BROKEN: &str = "acu: a lock broke after an earlier failure; restart acu";
@@ -314,10 +321,11 @@ impl Atlas {
         });
         match (out, stale.into_inner()) {
             (Ok(w), _) => Ok(w),
-            (Err(e), _) if self.retired.load(Ordering::SeqCst) => Err(SaveError::Stale(e)),
             (Err(_), Some(now)) => Err(SaveError::Stale(format!(
                 "acu: atlas.yaml changed on disk since you opened it (now revision {now}); reload the editor, then make the change again"
             ))),
+            // Decided under the lock, by what the write itself saw.
+            (Err(e), None) if e == RETIRED => Err(SaveError::Stale(e)),
             (Err(e), None) => Err(SaveError::Failed(e)),
         }
     }
@@ -383,10 +391,7 @@ impl Atlas {
         };
         let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
         if self.retired.load(Ordering::SeqCst) {
-            return Err(
-                "acu: acu put a newer map on show meanwhile; read the file again, then make the change again"
-                    .into(),
-            );
+            return Err(RETIRED.into());
         }
         // Write only the config file itself, and only inside its own folder.
         let target = path

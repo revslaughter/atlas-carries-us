@@ -257,6 +257,16 @@ export function togglePath(paths: string[], u: UnitInfo, on: boolean, shared = f
   return on ? [...rest, u.path] : rest;
 }
 
+/**
+ * Says how a unit's tick box shows: "on" or "off", or "fixed" when a short
+ * path that a twin unit shares holds it, which only the Paths field can
+ * change.
+ */
+export function pickState(paths: string[], u: UnitInfo, shared: boolean): "on" | "off" | "fixed" {
+  if (shared && paths.includes(u.local)) return "fixed";
+  return hasPath(paths, u, shared) ? "on" : "off";
+}
+
 /** Lists the shorter paths (from a language's root) that more than one unit shares. */
 export function sharedLocals(units: UnitInfo[]): Set<string> {
   const seen = new Set<string>();
