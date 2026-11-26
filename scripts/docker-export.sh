@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Builds the Dockerfile's export stage and writes acu, acu-adapter-go,
-# acu-adapter-rust and acu-adapter-typescript/ to a folder on the host.
+# acu-adapter-python, acu-adapter-rust and acu-adapter-typescript/ to a
+# folder on the host.
 #
 #   scripts/docker-export.sh                           out/docker, this machine's platform
 #   scripts/docker-export.sh --platform darwin/arm64   another platform
@@ -21,7 +22,8 @@ usage() {
 Usage: scripts/docker-export.sh [--platform <os/arch>] [<folder>] [-- <docker build arguments>...]
 
 Builds the Dockerfile's export stage and writes acu, acu-adapter-go,
-acu-adapter-rust and acu-adapter-typescript/ to <folder> (default: out/docker).
+acu-adapter-python, acu-adapter-rust and acu-adapter-typescript/ to <folder>
+(default: out/docker).
 
 Options:
   --platform <os/arch>  The platform to build for: linux/amd64, linux/arm64,
@@ -35,8 +37,10 @@ Options:
                         --build-arg REGISTRY=mirror.gcr.io, or
                         --secret id=extra_ca,src=<ca.pem> behind a TLS-inspecting proxy.
 
-On windows, acu, acu-adapter-go and acu-adapter-rust end in .exe. The programs
-need Go, Node and the pinned Rust nightly on the machine that runs them.
+On windows, acu, acu-adapter-go and acu-adapter-rust end in .exe, and the
+Python adapter takes the name acu-adapter-python.pyz. The programs need Go,
+Node, Python 3.12 or later and the pinned Rust nightly on the machine that
+runs them. docs/install.md tells how to install them.
 EOF
 }
 

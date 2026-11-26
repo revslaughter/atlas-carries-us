@@ -5,8 +5,15 @@ name: Image
 # time, and macOS and Windows minutes cost more than Linux minutes on a
 # private repository. So a pull request runs them only when it changes what
 # goes into the image or the programs: the Dockerfile, acu, the adapters, the
-# pinned toolchains and dependencies, or this file. Every push to main that
-# changes more than docs runs them, which catches what a pull request skipped.
+# pinned toolchains and dependencies, the release packing (release-pack.sh),
+# or this file. Every push to main that changes
+# more than docs runs them, which catches what a pull request skipped.
+#
+# This workflow packs three of the six release platforms with
+# release-pack.sh, as release.yml does, and runs those archives. It does not
+# build the arm64
+# image or push anything. release.yml makes a full dry run of its own when a
+# pull request changes it.
 #
 # Like ci.yml, this workflow skips a draft pull request, runs when it becomes
 # ready for review, and stops a pull request's older run when a new push
@@ -36,6 +43,7 @@ on:
       - ".node-version"
       - ".python-version"
       - "scripts/docker-export.sh"
+      - "scripts/release-pack.sh"
       - ".github/workflows/image.yml"
 
 permissions:
@@ -72,6 +80,11 @@ jobs:
       - name: Map the fixtures with the image
         run: |
           docker run --rm acu:ci --version
+          # A bad request must make the Python adapter exit with an error.
+          if echo 'no request' | docker run --rm -i --entrypoint acu-adapter-python acu:ci >/dev/null 2>&1; then
+            echo "ci: the Python adapter in the image exits with 0 on a bad request" >&2
+            exit 1
+          fi
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/lending/atlas.yaml -o out/lending.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci check -d out/lending.json
           docker run --rm -v "$GITHUB_WORKSPACE:/work" acu:ci extract -c examples/mixed/atlas.yaml -o out/mixed.json
@@ -123,18 +136,26 @@ jobs:
           cache-from: |
             type=gha,scope=toolchain
             type=gha,scope=runtime
-      - name: Keep the macOS programs
+      # scripts/release-pack.sh packs each folder as release.yml does: it
+      # checks that the folder holds acu and its four adapters, and keeps the
+      # executable mode inside the archive. The job "cross" runs the macOS and
+      # Windows archives, so CI tests the same files that a release ships.
+      - name: Pack the macOS and Windows programs as release archives
+        run: |
+          scripts/release-pack.sh "$RUNNER_TEMP/acu-darwin-arm64" ci darwin/arm64 "$RUNNER_TEMP/dist"
+          scripts/release-pack.sh "$RUNNER_TEMP/acu-windows-amd64" ci windows/amd64 "$RUNNER_TEMP/dist"
+      - name: Keep the macOS archive
         uses: actions/upload-artifact@v4
         with:
           name: acu-darwin-arm64
-          path: ${{ runner.temp }}/acu-darwin-arm64
+          path: ${{ runner.temp }}/dist/acu-ci-darwin-arm64.tar.gz
           if-no-files-found: error
           retention-days: 1
-      - name: Keep the Windows programs
+      - name: Keep the Windows archive
         uses: actions/upload-artifact@v4
         with:
           name: acu-windows-amd64
-          path: ${{ runner.temp }}/acu-windows-amd64
+          path: ${{ runner.temp }}/dist/acu-ci-windows-amd64.zip
           if-no-files-found: error
           retention-days: 1
       - uses: actions/setup-go@v5
@@ -144,23 +165,32 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - name: Map the Go and TypeScript fixtures with the exported folder
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Map the Go, TypeScript and Python fixtures with the exported folder
         run: |
-          ls -l "$RUNNER_TEMP/acu-export"
-          [ "$(ls -A "$RUNNER_TEMP/acu-export" | LC_ALL=C sort | tr '\n' ' ')" = "acu acu-adapter-go acu-adapter-rust acu-adapter-typescript " ] \
-            || { echo "ci: the exported folder holds other files than acu and its three adapters" >&2; exit 1; }
-          "$RUNNER_TEMP/acu-export/acu" --version
-          "$RUNNER_TEMP/acu-export/acu" extract -c examples/mixed/atlas.yaml -o "$RUNNER_TEMP/mixed-export.json"
-          "$RUNNER_TEMP/acu-export/acu" check -d "$RUNNER_TEMP/mixed-export.json"
+          scripts/release-pack.sh "$RUNNER_TEMP/acu-export" ci linux/amd64 "$RUNNER_TEMP/dist"
+          tar -xzf "$RUNNER_TEMP/dist/acu-ci-linux-amd64.tar.gz" -C "$RUNNER_TEMP"
+          dir="$RUNNER_TEMP/acu-ci-linux-amd64"
+          ls -l "$dir"
+          "$dir/acu" --version
+          if echo 'no request' | "$dir/acu-adapter-python" >/dev/null 2>&1; then
+            echo "ci: the Python adapter in the archive exits with 0 on a bad request" >&2
+            exit 1
+          fi
+          "$dir/acu" extract -c examples/mixed/atlas.yaml -o "$RUNNER_TEMP/mixed-export.json"
+          "$dir/acu" check -d "$RUNNER_TEMP/mixed-export.json"
+          "$dir/acu" extract -c examples/lending-python/atlas.yaml -o "$RUNNER_TEMP/lending-python-export.json"
+          "$dir/acu" check -d "$RUNNER_TEMP/lending-python-export.json"
 
-  # The macOS and Windows programs from the "image" job, run on a machine of
-  # that system with its own Go and Node. Artifacts drop the executable mode,
-  # so the job sets it again. Outputs go to the runner's temp folder. When
-  # the image job is skipped, so is this one.
+  # The macOS and Windows archives from the "image" job, unpacked and run on
+  # a machine of that system with its own Go, Node and Python. Outputs go to
+  # the runner's temp folder. When the image job is skipped, so is this one.
   cross:
     name: Exported programs on ${{ matrix.os }}
     needs: image
-    # The job maps one small example; it takes about one minute.
+    # The job maps two small examples; it takes about two minutes.
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -181,7 +211,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ runner.temp }}/acu-export
+          path: ${{ runner.temp }}/archive
+      - name: Unpack the macOS archive
+        if: runner.os == 'macOS'
+        run: tar -xzf "$RUNNER_TEMP/archive/acu-ci-darwin-arm64.tar.gz" -C "$RUNNER_TEMP"
+      - name: Unpack the Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Expand-Archive -Path "$env:RUNNER_TEMP/archive/acu-ci-windows-amd64.zip" -DestinationPath "$env:RUNNER_TEMP"
       - uses: actions/setup-go@v5
         with:
           go-version-file: adapters/go/go.mod
@@ -189,18 +226,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - name: Map the Go and TypeScript fixtures with the exported folder
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Map the Go, TypeScript and Python fixtures with the unpacked archive
         env:
           EXE: ${{ matrix.exe }}
+          ARTIFACT: ${{ matrix.artifact }}
         run: |
           tmp=$RUNNER_TEMP
           if command -v cygpath >/dev/null 2>&1; then tmp=$(cygpath -u "$tmp"); fi
-          dir="$tmp/acu-export"
+          dir="$tmp/${ARTIFACT/acu-/acu-ci-}"
           ls -l "$dir"
-          want=$(printf '%s\n' "acu$EXE" "acu-adapter-go$EXE" "acu-adapter-rust$EXE" acu-adapter-typescript | LC_ALL=C sort)
-          [ "$(ls -A "$dir" | LC_ALL=C sort)" = "$want" ] \
-            || { echo "ci: the exported folder holds other files than acu and its three adapters" >&2; exit 1; }
-          chmod +x "$dir/acu$EXE" "$dir/acu-adapter-go$EXE" "$dir/acu-adapter-rust$EXE"
+          # Windows runs no #! line, so there the archive holds
+          # acu-adapter-python.pyz, which acu runs with Python by itself.
+          py=("$dir/acu-adapter-python")
+          if [ -n "$EXE" ]; then py=(python "$(cygpath -w "$dir/acu-adapter-python.pyz")"); fi
+          if echo 'no request' | "${py[@]}" >/dev/null 2>&1; then
+            echo "ci: the Python adapter in the archive exits with 0 on a bad request" >&2
+            exit 1
+          fi
           "$dir/acu$EXE" --version
           "$dir/acu$EXE" extract -c examples/mixed/atlas.yaml -o "$tmp/mixed-export.json"
           "$dir/acu$EXE" check -d "$tmp/mixed-export.json"
+          "$dir/acu$EXE" extract -c examples/lending-python/atlas.yaml -o "$tmp/lending-python-export.json"
+          "$dir/acu$EXE" check -d "$tmp/lending-python-export.json"
