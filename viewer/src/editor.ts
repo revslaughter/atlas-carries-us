@@ -313,11 +313,12 @@ function regionHTML(r: RegionItem, i: number, n: number): string {
     )
     .join("");
   const names = (r.matched ?? []).map(id => S.units.find(u => u.id === id)?.path ?? id);
+  const shared = em.sharedLocals(S.units);
   const unitBoxes = S.units
     .map(
       u =>
         `<label class="ed-check"><input type="checkbox" data-unit="${esc(u.id)}" data-key="${r.key}" ${
-          em.hasPath(paths, u) ? "checked" : ""
+          em.hasPath(paths, u, shared.has(u.local)) ? "checked" : ""
         } /> <code>${esc(u.path)}</code></label>`,
     )
     .join("");
@@ -444,9 +445,9 @@ function render(focus?: string) {
           `<button role="tab" class="ed-tab" id="edTab-${t}" aria-controls="edPanel" tabindex="${S.tab === t ? 0 : -1}" data-act="tab" data-tab="${t}" aria-selected="${S.tab === t}">${name}<span class="ed-dot" ${ch ? "" : "hidden"}> •<span class="sr"> (changed)</span></span></button>`,
       )
       .join("")}</div>
-    <div class="ed-body" role="tabpanel" id="edPanel" aria-labelledby="edTab-${S.tab}">${body}</div>
+    <div class="ed-body" role="tabpanel" tabindex="-1" id="edPanel" aria-labelledby="edTab-${S.tab}">${body}</div>
     <div class="ed-foot">
-      ${S.msg ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
+      ${S.msg && S.revision ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
       <div class="ed-row">
         <button class="btn primary" data-act="save" ${isDirty && !S.busy ? "" : "disabled"}>Save to atlas.yaml</button>
         <button class="btn" data-act="discard" ${isDirty && !S.busy ? "" : "disabled"}>Discard changes</button>
@@ -596,7 +597,7 @@ async function save() {
 /** Runs the adapters again, shows the progress, and reloads the page when they finish. */
 async function extract() {
   S.busy = true;
-  render('[data-tab="extract"]');
+  render("#edPanel");
   const a = await call("extract", {});
   if (!a.ok) {
     S.busy = false;
@@ -745,7 +746,8 @@ function onInput(e: Event) {
       const r = byKey(Number(t.dataset.key)) as RegionItem | undefined;
       const u = S.units.find(x => x.id === t.dataset.unit);
       if (!r || !u) return;
-      r.cfg = { ...r.cfg, paths: em.togglePath(r.cfg.paths ?? [], u, t.checked) };
+      const shared = em.sharedLocals(S.units).has(u.local);
+      r.cfg = { ...r.cfg, paths: em.togglePath(r.cfg.paths ?? [], u, t.checked, shared) };
       const ta = root.querySelector<HTMLTextAreaElement>(`textarea[data-field="paths"][data-key="${r.key}"]`);
       if (ta) ta.value = (r.cfg.paths ?? []).join("\n");
       queueMatch(r);
@@ -770,8 +772,11 @@ function onInput(e: Event) {
         r.cfg = { ...r.cfg, paths: em.parsePaths(t.value) };
         queueMatch(r);
       } else if (field === "color") r.cfg = { ...r.cfg, color: t.value === "" ? undefined : Number(t.value) };
-      else if (field === "row") r.row = t.value === "" ? null : Math.max(1, Math.floor(Number(t.value)) || 1);
-      else if (field === "default") r.cfg = { ...r.cfg, default: t.checked || undefined };
+      else if (field === "row") {
+        r.row = t.value === "" ? null : Math.max(1, Math.floor(Number(t.value)) || 1);
+        // A region in a new row goes to that row's end.
+        r.col = null;
+      } else if (field === "default") r.cfg = { ...r.cfg, default: t.checked || undefined };
       else if (field === "id") {
         r.cfg = { ...r.cfg, id: t.value.trim() };
         r.fresh = false;
@@ -809,16 +814,20 @@ function refreshFoot() {
 /** Handles keys: Escape closes the drawer, the arrows move between tabs, and Alt and the arrows move the focused entry. */
 function onKey(e: KeyboardEvent) {
   const t = e.target as HTMLElement;
-  if (e.key === "Escape") {
+  // Escape in a field or during a save stays with the field.
+  if (e.key === "Escape" && !S.busy && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) {
     e.preventDefault();
     closeEditor();
     return;
   }
-  if (t.classList.contains("ed-tab") && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+  const tabKeys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+  if (t.classList.contains("ed-tab") && tabKeys.includes(e.key)) {
     e.preventDefault();
     const order: Tab[] = ["tour", "regions", "project", "extract"];
     const i = order.indexOf(t.dataset.tab as Tab);
-    S.tab = order[(i + (e.key === "ArrowRight" ? 1 : order.length - 1)) % order.length];
+    const next =
+      e.key === "Home" ? 0 : e.key === "End" ? order.length - 1 : i + (e.key === "ArrowRight" ? 1 : order.length - 1);
+    S.tab = order[next % order.length];
     S.open = -1;
     render(`[data-tab="${S.tab}"]`);
     return;
@@ -848,13 +857,19 @@ function onDragStart(e: DragEvent) {
   h.classList.add("dragging");
 }
 
-/** Marks the entry that a drop would land before. */
+/** Reports whether the pointer sits in the lower half of a row, where a drop lands after the row. */
+function lowerHalf(e: DragEvent, h: HTMLElement): boolean {
+  const r = h.getBoundingClientRect();
+  return e.clientY > r.top + r.height / 2;
+}
+
+/** Marks the place that a drop would take: before the row under the pointer, or after it in its lower half. */
 function onDragOver(e: DragEvent) {
   const h = (e.target as HTMLElement).closest<HTMLElement>(".ed-head");
   if (!dragging || !h || h.dataset.list !== dragging.list) return;
   e.preventDefault();
-  root.querySelectorAll(".drop").forEach(x => x.classList.remove("drop"));
-  h.classList.add("drop");
+  root.querySelectorAll(".drop, .drop-after").forEach(x => x.classList.remove("drop", "drop-after"));
+  h.classList.add(lowerHalf(e, h) ? "drop-after" : "drop");
 }
 
 /** Drops the dragged entry at the position of the entry under the pointer. */
@@ -862,11 +877,13 @@ function onDrop(e: DragEvent) {
   const h = (e.target as HTMLElement).closest<HTMLElement>(".ed-head");
   const d = dragging;
   dragging = null;
-  root.querySelectorAll(".drop, .dragging").forEach(x => x.classList.remove("drop", "dragging"));
+  root
+    .querySelectorAll(".drop, .drop-after, .dragging")
+    .forEach(x => x.classList.remove("drop", "drop-after", "dragging"));
   if (!d || !h || h.dataset.list !== d.list) return;
   e.preventDefault();
-  // The marker shows the place before the target; moving down, that place sits one lower once the entry leaves.
-  const target = Number(h.dataset.at);
+  // The place before (or after) the target; moving down, it sits one lower once the entry leaves.
+  const target = Number(h.dataset.at) + (lowerHalf(e, h) ? 1 : 0);
   moveEntry(d.list, d.at, d.at < target ? target - 1 : target);
 }
 
@@ -914,7 +931,9 @@ export function wireEditor(server: ServerState) {
   root.addEventListener("drop", onDrop);
   root.addEventListener("dragend", () => {
     dragging = null;
-    root.querySelectorAll(".drop, .dragging").forEach(x => x.classList.remove("drop", "dragging"));
+    root
+      .querySelectorAll(".drop, .drop-after, .dragging")
+      .forEach(x => x.classList.remove("drop", "drop-after", "dragging"));
   });
   addEventListener("beforeunload", e => {
     if (dirty() && !S.busy) e.preventDefault();

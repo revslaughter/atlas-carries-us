@@ -345,7 +345,14 @@ pub fn open_config(
     let loaded = crate::config::load(path).map_err(err)?;
     let run = crate::run_adapters_with(&loaded, log).map_err(err)?;
     log("acu: checking the map");
-    let atlas = Atlas::from_config(path, run, None).map_err(err)?;
+    // The revision before the new map reads the file: a later change makes
+    // the install apply the file again.
+    let before = std::fs::read_to_string(path)
+        .map(|t| crate::mcp::atlas::revision(&t))
+        .unwrap_or_default();
+    let atlas = Atlas::from_config(path, run, None)
+        .map_err(err)?
+        .sharing(st.live.write_lock());
     let snap = atlas.snapshot()?;
     let n = |k: &str| snap.doc[k].as_array().map_or(0, Vec::len);
     log(&format!(
@@ -360,11 +367,15 @@ pub fn open_config(
     }
     drop(snap);
     let atlas = Arc::new(atlas);
-    st.live.set(atlas.clone());
-    // A change that reached atlas.yaml while the adapters ran shows too.
-    if let Err(e) = atlas.refresh() {
+    let stale = || {
+        atlas
+            .config_text()
+            .map(|(_, rev)| rev != before)
+            .unwrap_or(true)
+    };
+    if let Err(e) = st.live.install(atlas.clone(), stale) {
         log(&format!(
-            "warning: atlas.yaml changed during the run and no longer passes the check: {e}"
+            "warning: atlas.yaml changed during the run and no longer passes the check: {e}; fix the file, then run the adapters again"
         ));
     }
     Ok(())

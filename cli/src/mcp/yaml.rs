@@ -431,8 +431,16 @@ fn splice(
             if old_values.len() != old.len() {
                 return None;
             }
-            // Each old item, with the comments and blank lines above it.
-            let mut prev = sec.start + 1;
+            // Comments under the key, up to a blank line, stay there: they
+            // speak of the whole list. The lines after that blank line, and
+            // the comments and blank lines above each later item, go with
+            // the item below them.
+            let first = old.first().map_or(sec.start + 1, |o| o.0);
+            let head_end = (sec.start + 1..first)
+                .rev()
+                .find(|&i| lines[i].trim().is_empty())
+                .map_or(sec.start + 1, |i| i + 1);
+            let mut prev = head_end;
             let mut blocks: Vec<Option<(usize, usize, usize)>> = Vec::new();
             for &(st, end) in &old {
                 blocks.push(Some((prev, st, end)));
@@ -441,7 +449,9 @@ fn splice(
             let tail = prev;
             // First, each new item that equals an old item takes that item's
             // lines. Then each changed item takes the comments above the old
-            // item with its ID, else above the old item at its position.
+            // item with its ID, else with its title; by position
+            // only when the list kept its length, so an insert or a delete
+            // never hands one item's comment to another.
             let mut used = vec![false; old.len()];
             let mut pick: Vec<Option<(usize, bool)>> = vec![None; items.len()];
             for (k, it) in items.iter().enumerate() {
@@ -454,16 +464,19 @@ fn splice(
                 if pick[k].is_some() {
                     continue;
                 }
-                let by_id = it.get("id").filter(|v| !v.is_null()).and_then(|id| {
-                    (0..old.len()).find(|&i| !used[i] && old_values[i].get("id") == Some(id))
-                });
-                let at = by_id.or((k < old.len() && !used[k]).then_some(k));
+                let same = |field: &str| {
+                    it.get(field).filter(|v| !v.is_null()).and_then(|v| {
+                        (0..old.len()).find(|&i| !used[i] && old_values[i].get(field) == Some(v))
+                    })
+                };
+                let by_place = (items.len() == old.len() && !used[k]).then_some(k);
+                let at = same("id").or_else(|| same("title")).or(by_place);
                 if let Some(i) = at {
                     used[i] = true;
                     pick[k] = Some((i, false));
                 }
             }
-            let mut out = own(&lines[..sec.start + 1]);
+            let mut out = own(&lines[..head_end]);
             for (k, it) in items.iter().enumerate() {
                 match pick[k].and_then(|(i, same)| blocks[i].map(|b| (b, same))) {
                     Some(((lead, st, end), true)) => {
@@ -817,6 +830,60 @@ mod tests {
         assert_eq!(parse(&out).unwrap()["regions"], json!(items));
         assert!(out.contains("  # About b.\n  - id: b\n"), "{out}");
         assert!(out.contains("  # About a.\n  - id: a\n"), "{out}");
+    }
+
+    #[test]
+    fn comments_stay_with_their_own_items_after_an_insert_or_a_delete() {
+        let text = "version: 1\ntour:\n  # About the tour.\n\n  # About A.\n  - title: A\n    text: a\n    open: { view: overview }\n  # About B.\n  - title: B\n    text: b\n    open: { view: overview }\n";
+        let v = parse(text).unwrap();
+        let old = v["tour"].as_array().unwrap().clone();
+        // Delete A and change B's text: B keeps its own comment.
+        let mut b = old[1].clone();
+        b["text"] = json!("b2");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![b.clone()],
+            },
+        )
+        .unwrap();
+        assert!(!out.contains("About A."), "{out}");
+        assert!(out.contains("  # About B.\n  - title: \"B\"\n"), "{out}");
+        assert!(out.contains("  # About the tour.\n"), "{out}");
+        // A new step at the top, and A changed: the new step takes no comment.
+        let mut a = old[0].clone();
+        a["text"] = json!("a2");
+        let fresh = json!({"title": "New", "text": "n", "open": {"view": "overview"}});
+        let items = vec![fresh, a, old[1].clone()];
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: items.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["tour"], json!(items));
+        assert!(
+            out.contains("  # About the tour.\n\n  - title: \"New\"\n"),
+            "{out}"
+        );
+        assert!(out.contains("  # About A.\n  - title: \"A\"\n"), "{out}");
+        // The comment under the key stays first after a reorder.
+        let rev = vec![old[1].clone(), old[0].clone()];
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: rev,
+            },
+        )
+        .unwrap();
+        assert!(
+            out.starts_with("version: 1\ntour:\n  # About the tour.\n"),
+            "{out}"
+        );
     }
 
     #[test]

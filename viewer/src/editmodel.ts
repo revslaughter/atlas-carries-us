@@ -236,19 +236,33 @@ export function suggestRegions(units: UnitInfo[], mark: Provenance): RegionCfg[]
   return out;
 }
 
-/** Reports whether a list of path patterns names a unit's path literally, from the repository root or from its language's root. */
-export function hasPath(paths: string[], u: UnitInfo): boolean {
-  return paths.includes(u.local) || paths.includes(u.path);
+/**
+ * Reports whether a list of path patterns names a unit's path literally:
+ * from the repository root, or from its language's root when no other unit
+ * shares that shorter path (`shared`).
+ */
+export function hasPath(paths: string[], u: UnitInfo, shared = false): boolean {
+  return paths.includes(u.path) || (!shared && paths.includes(u.local));
 }
 
 /**
  * Adds or removes a unit's path from a list of patterns, and returns the new
  * list. It adds the path from the repository root, which no other unit
- * shares; it removes both forms of the path.
+ * shares. It removes that path, and the shorter path from the language's
+ * root unless another unit shares it (`shared`), so a tick never changes a
+ * twin unit.
  */
-export function togglePath(paths: string[], u: UnitInfo, on: boolean): string[] {
-  const rest = paths.filter(p => p !== u.local && p !== u.path);
+export function togglePath(paths: string[], u: UnitInfo, on: boolean, shared = false): string[] {
+  const rest = paths.filter(p => p !== u.path && (shared || p !== u.local));
   return on ? [...rest, u.path] : rest;
+}
+
+/** Lists the shorter paths (from a language's root) that more than one unit shares. */
+export function sharedLocals(units: UnitInfo[]): Set<string> {
+  const seen = new Set<string>();
+  const twice = new Set<string>();
+  for (const u of units) (seen.has(u.local) ? twice : seen).add(u.local);
+  return twice;
 }
 
 /** Splits the text of the paths field into patterns: one per line, blank lines dropped. */

@@ -63,8 +63,8 @@ finished map, use `acu build` or `acu serve -d`.
 
 1. Paste an HTTPS address, such as `https://github.com/go-chi/chi`.
 2. Choose **Clone**. The studio clones the repository into the workspace,
-   at `<workspace>/<host>/<owner>/<name>`, and shows git's progress lines as
-   they arrive.
+   at `<workspace>/<host>/<owner>/<name>`, and shows each phase of git's
+   progress when it ends.
 3. The clone then opens as a picked folder. A repository cloned before opens
    as it stands; the studio does not fetch it again.
 
@@ -112,8 +112,9 @@ the first extraction. Open only code that you would also build.
 
 Open the editor with **Edit**. The drawer has four tabs: **Tour**,
 **Regions**, **Project** and **Extract**. The left and right arrow keys move
-between the tabs, and Escape closes the drawer. The **Tour** tab lists the
-steps in order.
+between the tabs, and Home and End jump to the first and the last. Escape
+closes the drawer, outside a field and not during a save. The **Tour** tab
+lists the steps in order.
 
 1. **Record a step.** Move the map to the view that the step should open:
    the overview, a region, a unit, an item, or a trace. Choose **Record this
@@ -127,7 +128,7 @@ steps in order.
    on a step.
 4. **Preview.** Choose **Show** on a step to open its view.
 5. **Reorder.** Drag a step by its row; it lands before the row that you
-   drop it on. Or use the ↑ and ↓ buttons, or press Alt+ArrowUp and
+   drop it on, or after the row when you drop it on the row's lower half. Or use the ↑ and ↓ buttons, or press Alt+ArrowUp and
    Alt+ArrowDown while a step's row has focus. Enter opens the step's form.
 6. **Delete.** Choose **Delete step** in a step's form.
 7. **Accept a drafted step.** A step that a program drafted carries a
@@ -150,7 +151,8 @@ The **Regions** tab lists the regions in order. For each region you can set:
    the studio lists the units that the globs match, by the same rules as
    `acu extract`. A unit joins the first region that matches it.
 4. **Pick units**: tick units in the list to add their paths from the
-   repository root, or untick them to remove them.
+   repository root, or untick them to remove them. A tick never changes
+   another unit that shares the shorter path from a language's root.
 5. **Colour**: **Automatic**, or **Colour 1** to **Colour 9**, which
    `atlas.yaml` stores as `color` 0 to 8, an index into the colour-blind-safe
    palette.
@@ -162,7 +164,9 @@ The **Regions** tab lists the regions in order. For each region you can set:
 **Suggest regions from folders** makes one region per top-level folder of
 the units. Each suggestion carries a `drafted` mark by "acu studio", because
 a program chose the grouping. Rename and regroup them, then mark them as
-checked.
+checked. A region's mark covers the whole region (its name, paths and
+text), so it stays until you choose **Mark as checked**, even when you
+clear the region's text.
 
 ## Edit the project
 

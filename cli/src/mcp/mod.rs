@@ -285,7 +285,11 @@ pub fn call(atlas: &Atlas, name: &str, args: &JsonObject, client: &str) -> Resul
         }
     };
     let snap = atlas.snapshot().map_err(|e| {
-        format!("acu: read the map: {e}; fix the file or restart acu, then call again")
+        if e.starts_with("acu:") {
+            e
+        } else {
+            format!("acu: read the map: {e}; fix the file or restart acu, then call again")
+        }
     })?;
     let text = match name {
         "overview" => read::overview(&snap, atlas.why_read_only()),

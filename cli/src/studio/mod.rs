@@ -98,6 +98,9 @@ pub struct Studio {
     pub workspace: Option<PathBuf>,
     /// The last job, running or finished.
     pub job: Mutex<Option<Job>>,
+    /// The process group of a running clone, which acu stops when it shuts
+    /// down.
+    child: Mutex<Option<u32>>,
 }
 
 /// An answer of the API: a status and a JSON body.
@@ -128,6 +131,7 @@ impl Studio {
             browse_root,
             workspace,
             job: Mutex::new(None),
+            child: Mutex::new(None),
         }
     }
 
@@ -182,7 +186,7 @@ impl Studio {
         }
         Err(fail(
             StatusCode::FORBIDDEN,
-            "the server answers only requests for its own loopback address; open it at the address that acu printed",
+            "the server answers only requests for its own address; open it at the address that acu printed",
         ))
     }
 
@@ -200,7 +204,7 @@ impl Studio {
             {
                 return Err(fail(
                     StatusCode::FORBIDDEN,
-                    "the studio refuses requests from other sites",
+                    "the studio refuses requests from other sites; open the studio at the address that acu printed",
                 ));
             }
         }
@@ -213,7 +217,7 @@ impl Studio {
             if site != "same-origin" && site != "none" {
                 return Err(fail(
                     StatusCode::FORBIDDEN,
-                    "the studio refuses changing requests from other sites",
+                    "the studio refuses changing requests from other sites; make the change in the studio's own page",
                 ));
             }
             if headers.get(header::ORIGIN).is_none() {
@@ -240,6 +244,26 @@ impl Studio {
             }
         }
         Ok(())
+    }
+
+    /// Records the process group of a running clone, or clears it.
+    pub fn set_child(&self, pid: Option<u32>) {
+        match self.child.lock() {
+            Ok(mut c) => *c = pid,
+            Err(p) => *p.into_inner() = pid,
+        }
+    }
+
+    /// Stops a running clone and the processes it started, when acu shuts
+    /// down.
+    pub fn stop_children(&self) {
+        let pid = match self.child.lock() {
+            Ok(c) => *c,
+            Err(p) => *p.into_inner(),
+        };
+        if let Some(pid) = pid {
+            setup::kill_pgid(pid);
+        }
     }
 
     /// Returns the last job.

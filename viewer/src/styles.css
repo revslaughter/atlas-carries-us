@@ -951,6 +951,9 @@ header h1 {
 .ed-head.drop {
   box-shadow: inset 0 3px 0 var(--focus);
 }
+.ed-head.drop-after {
+  box-shadow: inset 0 -3px 0 var(--focus);
+}
 .ed-grip {
   color: var(--faint);
   font-size: 14px;

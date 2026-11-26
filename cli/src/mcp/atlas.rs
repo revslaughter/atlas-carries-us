@@ -81,7 +81,10 @@ pub struct Atlas {
     /// Keeps two writes of this process from editing atlas.yaml at once.
     /// Another process that writes the file at the same time can still
     /// overwrite a draft; the last rename wins.
-    writing: Mutex<()>,
+    writing: Arc<Mutex<()>>,
+    /// True once [`Live::install`] put a newer map on show; a write to this
+    /// map then fails, so no change reaches the file but not the map.
+    retired: std::sync::atomic::AtomicBool,
 }
 
 /// The slot that holds the map a server shows now. `acu serve` and `acu mcp`
@@ -115,9 +118,40 @@ impl Live {
     pub fn get(&self) -> Result<Arc<Atlas>, String> {
         self.slot
             .read()
-            .map_err(|_| format!("acu: {BROKEN}"))?
+            .map_err(|_| BROKEN.to_string())?
             .clone()
             .ok_or_else(|| NO_PROJECT.to_string())
+    }
+
+    /// Returns the write lock that a new map should share: the lock of the
+    /// map on show, or a new one.
+    pub fn write_lock(&self) -> Arc<Mutex<()>> {
+        self.get()
+            .map(|a| a.write_lock())
+            .unwrap_or_else(|_| Arc::new(Mutex::new(())))
+    }
+
+    /// Puts a new map on show while it holds the write lock, retires the old
+    /// map, and, when `stale` says the file changed since the new map read
+    /// it, applies the file again. So a write lands either before the swap,
+    /// and the new map shows it, or after, on the new map; a write to the
+    /// old map then fails and asks for a retry.
+    pub fn install(&self, atlas: Arc<Atlas>, stale: impl FnOnce() -> bool) -> Result<(), String> {
+        let lock = atlas.write_lock();
+        let _guard = lock.lock().map_err(|_| BROKEN.to_string())?;
+        let old = match self.slot.write() {
+            Ok(mut g) => g.replace(atlas.clone()),
+            Err(p) => p.into_inner().replace(atlas.clone()),
+        };
+        if let Some(old) = old {
+            if !Arc::ptr_eq(&old, &atlas) {
+                old.retired.store(true, Ordering::SeqCst);
+            }
+        }
+        if stale() {
+            atlas.reapply()?;
+        }
+        Ok(())
     }
 
     /// Puts a new map on show.
@@ -174,7 +208,7 @@ pub const READ_ONLY: &str = "acu runs with --read-only; start it without the fla
 pub const REMOTE: &str = "acu listens on an address that other computers can reach; start it with --allow-remote-writes to draft text";
 
 /// The message of a lock that a panic in another thread left broken.
-const BROKEN: &str = "a lock broke after an earlier failure; restart acu";
+const BROKEN: &str = "acu: a lock broke after an earlier failure; restart acu";
 
 impl Atlas {
     /// Opens a map from the adapters' output and a config; the result must
@@ -203,7 +237,8 @@ impl Atlas {
             current: RwLock::new(Arc::new(snap)),
             sources: Sources::new(roots, None),
             read_only,
-            writing: Mutex::new(()),
+            writing: Arc::new(Mutex::new(())),
+            retired: std::sync::atomic::AtomicBool::new(false),
         })
     }
 
@@ -233,7 +268,8 @@ impl Atlas {
             read_only: Some(
                 "acu serves a finished atlas.json, so no config stands behind it; start acu with -c atlas.yaml to draft text",
             ),
-            writing: Mutex::new(()),
+            writing: Arc::new(Mutex::new(())),
+            retired: std::sync::atomic::AtomicBool::new(false),
         })
     }
 
@@ -281,6 +317,18 @@ impl Atlas {
             ))),
             (Err(e), None) => Err(SaveError::Failed(e)),
         }
+    }
+
+    /// Makes this map share the write lock of another, so a write to the
+    /// old map and a write to this one never run at once.
+    pub fn sharing(mut self, lock: Arc<Mutex<()>>) -> Atlas {
+        self.writing = lock;
+        self
+    }
+
+    /// Returns this map's write lock, for a map that replaces it.
+    pub fn write_lock(&self) -> Arc<Mutex<()>> {
+        self.writing.clone()
     }
 
     /// Reports whether the write tools work.
@@ -331,6 +379,12 @@ impl Atlas {
             return Err("no config stands behind this map; start acu with -c atlas.yaml".into());
         };
         let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
+        if self.retired.load(Ordering::SeqCst) {
+            return Err(
+                "acu: acu put a newer map on show meanwhile; read the file again, then make the change again"
+                    .into(),
+            );
+        }
         // Write only the config file itself, and only inside its own folder.
         let target = path
             .canonicalize()
@@ -370,14 +424,11 @@ impl Atlas {
     }
 
     /// Applies atlas.yaml as it stands on disk to the adapters' output
-    /// again, and shows the result. The studio calls it right after it puts
-    /// a new map on show, so a change that reached the file while the
-    /// adapters ran shows too.
-    pub fn refresh(&self) -> Result<(), String> {
+    /// again, and shows the result; the caller holds the write lock.
+    fn reapply(&self) -> Result<(), String> {
         let Origin::Config { path, run } = &self.origin else {
             return Ok(());
         };
-        let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
         let loaded = config::load(path).map_err(|e| format!("{e:#}"))?;
         let snap = assemble_checked(run, &loaded.config)?;
         *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
@@ -578,8 +629,37 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
             text.replace("Shop 3", "Shop 4"),
         )
         .unwrap();
-        atlas.refresh().unwrap();
+        let atlas = Arc::new(atlas);
+        Live::empty().install(atlas.clone(), || true).unwrap();
         assert_eq!(atlas.snapshot().unwrap().doc["project"]["name"], "Shop 4");
+    }
+
+    #[test]
+    fn an_installed_map_retires_the_old_one_and_shows_later_changes() {
+        let (dir, old) = fixture();
+        let old = Arc::new(old);
+        let live = Live::of(old.clone());
+        let run = AdapterRun {
+            merged: fixture_doc(),
+            commit: None,
+            repo_roots: vec![dir.path().to_path_buf()],
+        };
+        let new = Atlas::from_config(&dir.path().join("atlas.yaml"), run, None)
+            .unwrap()
+            .sharing(live.write_lock());
+        let new = Arc::new(new);
+        // A change that lands after the new map read the file.
+        let text = std::fs::read_to_string(dir.path().join("atlas.yaml")).unwrap();
+        std::fs::write(
+            dir.path().join("atlas.yaml"),
+            text.replace("Shop", "Shop 2"),
+        )
+        .unwrap();
+        live.install(new.clone(), || true).unwrap();
+        assert_eq!(new.snapshot().unwrap().doc["project"]["name"], "Shop 2");
+        let err = old.write(|t| Ok((t.to_string(), "test"))).err().unwrap();
+        assert!(err.contains("newer map"), "{err}");
+        assert!(new.write(|t| Ok((t.to_string(), "test"))).is_ok());
     }
 
     #[test]

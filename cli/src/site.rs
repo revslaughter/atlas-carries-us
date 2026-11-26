@@ -71,6 +71,7 @@ pub async fn serve(studio: Arc<Studio>) -> Result<()> {
         studio::Mode::Studio => "the studio",
         studio::Mode::Serve => "the map",
     };
+    let stopper = studio.clone();
     let app = Router::new()
         .nest_service("/mcp", mcp)
         .fallback(move |req: Request| {
@@ -82,6 +83,7 @@ pub async fn serve(studio: Arc<Studio>) -> Result<()> {
         .with_graceful_shutdown(async move {
             let _ = tokio::signal::ctrl_c().await;
             stop_mcp();
+            stopper.stop_children();
         })
         .await?;
     Ok(())
@@ -91,10 +93,12 @@ pub async fn serve(studio: Arc<Studio>) -> Result<()> {
 /// [`respond`].
 async fn route(req: Request, studio: Arc<Studio>) -> Response {
     let path = req.uri().path().to_string();
-    // On a loopback address, every answer needs the server's own Host, so a
-    // page that DNS rebinding points here reads neither the map nor the API.
-    // An address that other computers reach serves the map to any name.
-    if studio.addr().ip().is_loopback() || path.starts_with("/api/") {
+    // In the studio, every answer needs the server's own Host, so a page
+    // that DNS rebinding points here reads neither the map nor the API.
+    // `acu serve` keeps the map open to any name, as forwarded ports need,
+    // and guards only the API, below.
+    // The API's own guard, below, checks the Host of an API call.
+    if studio.mode == studio::Mode::Studio && !path.starts_with("/api/") {
         if let Err(r) = studio.check_host(req.headers()) {
             return json_reply(r);
         }
@@ -199,9 +203,15 @@ mod tests {
 
     /// Sends one request through [`route`] to a studio on 127.0.0.1:4321.
     async fn send(host: &str, path: &str, body: Vec<u8>) -> StatusCode {
+        send_to(studio::Mode::Studio, host, path, body).await
+    }
+
+    /// Sends one request through [`route`] to a server of the given mode
+    /// on 127.0.0.1:4321.
+    async fn send_to(mode: studio::Mode, host: &str, path: &str, body: Vec<u8>) -> StatusCode {
         let studio = Arc::new(Studio::new(
             Arc::new(Live::empty()),
-            studio::Mode::Studio,
+            mode,
             "127.0.0.1:4321".parse().unwrap(),
             None,
             None,
@@ -230,6 +240,15 @@ mod tests {
         assert_eq!(
             send("127.0.0.1:4321", "/data/atlas.json", vec![]).await,
             StatusCode::NOT_FOUND
+        );
+        // acu serve keeps the map open to a forwarded port's name.
+        assert_eq!(
+            send_to(studio::Mode::Serve, "localhost:9999", "/index.html", vec![]).await,
+            StatusCode::OK
+        );
+        assert_eq!(
+            send_to(studio::Mode::Serve, "localhost:9999", "/api/state", vec![]).await,
+            StatusCode::FORBIDDEN
         );
     }
 

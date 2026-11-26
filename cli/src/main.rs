@@ -202,11 +202,9 @@ fn run(cli: Cli) -> Result<()> {
             let workspace = workspace
                 .or_else(studio::setup::default_workspace)
                 .context("found no cache folder; pass --workspace with a folder for clones")?;
-            // An absolute workspace lets the picker match the folders of clones.
-            std::fs::create_dir_all(&workspace)
-                .with_context(|| format!("create {}", workspace.display()))?;
-            let workspace = workspace
-                .canonicalize()
+            // An absolute workspace lets the picker match the folders of
+            // clones; the first clone creates it.
+            let workspace = std::path::absolute(&workspace)
                 .with_context(|| format!("find {}", workspace.display()))?;
             let live = Arc::new(mcp::Live::empty());
             if let Some(p) = project {

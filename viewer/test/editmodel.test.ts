@@ -122,6 +122,11 @@ test("picking a unit adds or removes its literal path", () => {
   assert.deepEqual(em.togglePath(["x"], u, true), ["x", "repo/api"]);
   assert.deepEqual(em.togglePath(["x", "api", "repo/api"], u, false), ["x"]);
   assert.deepEqual(em.parsePaths(" a \n\n b/** \n"), ["a", "b/**"]);
+  // A twin unit in another language shares "api"; ticks never touch it.
+  assert.equal(em.hasPath(["api"], u, true), false);
+  assert.deepEqual(em.togglePath(["api", "repo/api"], u, false, true), ["api"]);
+  const twin = { id: "2", path: "web/api", local: "api", name: "api" };
+  assert.deepEqual([...em.sharedLocals([u, twin])], ["api"]);
 });
 
 test("problems name what a save still needs", () => {

@@ -37,8 +37,10 @@ pub fn home() -> Option<PathBuf> {
 /// Returns the default clone workspace: `acu/repos` in the user's cache
 /// folder.
 pub fn default_workspace() -> Option<PathBuf> {
+    // The XDG rules say to ignore a relative XDG_CACHE_HOME.
     let cache = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
         .or_else(|| home().map(|h| h.join(".cache")))?;
     Some(cache.join("acu").join("repos"))
 }
@@ -305,7 +307,9 @@ fn remote(dir: &Path) -> Option<(String, &'static str)> {
     origin_url(&small(&cfg)).and_then(|u| repo_of(&u))
 }
 
-/// Finds the `url` of `[remote "origin"]` in the text of a git config.
+/// Finds the `url` of `[remote "origin"]` in the text of a git config. It
+/// does not follow `include` lines; a remote set there gives no repository,
+/// and the person can add `repo` by hand.
 pub fn origin_url(text: &str) -> Option<String> {
     let mut inside = false;
     for line in text.lines() {
@@ -314,7 +318,8 @@ pub fn origin_url(text: &str) -> Option<String> {
             inside = t.replace(' ', "") == "[remote\"origin\"]";
         } else if inside {
             if let Some((k, v)) = t.split_once('=') {
-                if k.trim() == "url" {
+                // Git reads keys without regard to case.
+                if k.trim().eq_ignore_ascii_case("url") {
                     return Some(v.trim().to_string());
                 }
             }
@@ -535,7 +540,24 @@ pub fn create_new(file: &Path, text: &str) -> Result<(), String> {
             .open(&tmp)?;
         f.write_all(text.as_bytes())?;
         f.sync_all()?;
-        std::fs::hard_link(&tmp, file)
+        match std::fs::hard_link(&tmp, file) {
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(e),
+            // A file system without hard links (exFAT, some network shares):
+            // write the final name directly, still never over a file.
+            Err(_) => {
+                let mut f = std::fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(file)?;
+                f.write_all(text.as_bytes())?;
+                f.sync_all()
+            }
+            Ok(()) => Ok(()),
+        }?;
+        // Make the new name itself durable.
+        #[cfg(unix)]
+        std::fs::File::open(dir)?.sync_all()?;
+        Ok(())
     })();
     let _ = std::fs::remove_file(&tmp);
     done.map_err(|e| {
@@ -711,13 +733,24 @@ fn own_group(cmd: &mut Command) -> &mut Command {
 
 /// Stops a child and, on Unix, every process in its group.
 fn kill_group(child: &mut std::process::Child) {
+    kill_pgid(child.id());
+    let _ = child.kill();
+}
+
+/// Stops every process in the group that a child led. A group keeps its
+/// number while any member lives, so the number never names another
+/// process's group, even after acu reaped the leader.
+pub fn kill_pgid(pid: u32) {
     #[cfg(unix)]
     {
         let _ = Command::new("kill")
-            .args(["-s", "KILL", "--", &format!("-{}", child.id())])
+            .args(["-s", "KILL", "--", &format!("-{pid}")])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .status();
     }
-    let _ = child.kill();
+    #[cfg(not(unix))]
+    let _ = pid;
 }
 
 /// `POST /api/clone`: clones a repository into the workspace as a job, with
@@ -733,7 +766,7 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
         Ok(t) => t,
         Err(e) => return fail(StatusCode::BAD_REQUEST, e),
     };
-    s.start_job("clone", move |_, log| {
+    s.start_job("clone", move |st, log| {
         let dest = ws.join(&target.rel);
         if dest.join(".git").exists() {
             log(&format!(
@@ -789,7 +822,11 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
             .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| format!("acu: start git: {e}; install git and try again"))?;
-        if !wait_limited(child, CLONE_LIMIT, log) {
+        // Ctrl-C reaches acu but not git's own group; acu stops it then.
+        st.set_child(Some(child.id()));
+        let ok = wait_limited(child, CLONE_LIMIT, log);
+        st.set_child(None);
+        if !ok {
             let _ = std::fs::remove_dir_all(&dest);
             // Remove the host and owner folders too when they stay empty.
             let mut up = dest.parent();
