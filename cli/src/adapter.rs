@@ -103,10 +103,7 @@ fn command_for(lang: &Language) -> Result<Command> {
     // `cargo build --workspace` puts the Rust adapter beside acu. The Docker
     // `export` stage puts the Go, Rust and TypeScript adapters there, the
     // TypeScript one as a folder.
-    if let Some(dir) = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(Path::to_path_buf))
-    {
+    if let Some(dir) = std::env::current_exe().ok().and_then(|p| exe_dir(&p)) {
         if let Some(c) = beside_acu(&dir, &lang.adapter)? {
             return Ok(c);
         }
@@ -159,9 +156,47 @@ fn command_for(lang: &Language) -> Result<Command> {
     )
 }
 
+/// Returns the folder that holds the program at `exe`. It follows symbolic
+/// links, so an `acu` that a link on the PATH starts still finds the
+/// adapters beside the real program: macOS reports the link's own path. When
+/// the path does not resolve, it takes the path as given. On Windows it
+/// takes the path as given too, because a resolved path there starts with
+/// `\\?\`, which Node and Python may not read.
+fn exe_dir(exe: &Path) -> Option<PathBuf> {
+    let real = if cfg!(windows) {
+        exe.to_path_buf()
+    } else {
+        std::fs::canonicalize(exe).unwrap_or_else(|_| exe.to_path_buf())
+    };
+    real.parent().map(Path::to_path_buf)
+}
+
+/// Returns the command that runs a Python program: the first of `python3`
+/// and `python` on the PATH. On Windows the launcher `py -3` comes first,
+/// because Windows may hold a `python3` that only opens the Microsoft Store.
+/// With none on the PATH it returns the first, so the start fails with a
+/// message that names it.
+fn python_command() -> Command {
+    let order: &[&[&str]] = if cfg!(windows) {
+        &[&["py", "-3"], &["python"], &["python3"]]
+    } else {
+        &[&["python3"], &["python"]]
+    };
+    let pick = order
+        .iter()
+        .find(|c| on_path(c[0]))
+        .copied()
+        .unwrap_or(order[0]);
+    let mut c = Command::new(pick[0]);
+    c.args(&pick[1..]);
+    c
+}
+
 /// Finds the program for an adapter in the folder that holds acu. It returns
 /// `None` when nothing named acu-adapter-<name> sits there. A file runs as
-/// a program. A folder must hold a Node package: acu runs `node` with the
+/// a program. A file acu-adapter-<name>.pyz, a Python zip application, runs
+/// with Python (see [`python_command`]); the release for Windows ships the
+/// Python adapter in that form. A folder must hold a Node package: acu runs `node` with the
 /// entry point from the package's `bin` field, or with `dist/src/main.js`
 /// when `bin` names none. It fails when the folder holds no package.json or
 /// no entry point.
@@ -170,6 +205,12 @@ fn beside_acu(acu_dir: &Path, adapter: &str) -> Result<Option<Command>> {
     let path = acu_dir.join(&exe);
     if path.is_file() || path.with_extension("exe").is_file() {
         return Ok(Some(Command::new(path)));
+    }
+    let pyz = acu_dir.join(format!("{exe}.pyz"));
+    if pyz.is_file() {
+        let mut c = python_command();
+        c.arg(pyz);
+        return Ok(Some(c));
     }
     if !path.is_dir() {
         return Ok(None);
@@ -218,7 +259,7 @@ fn install_hint(adapter: &str) -> &'static str {
         "go" => "go install github.com/revslaughter/atlas-carries-us/adapters/go/cmd/acu-adapter-go@latest",
         "typescript" => "npm install --global ./adapters/typescript from a checkout, after npm run build -w adapters/typescript",
         "rust" => "cargo install --path adapters/rust from a checkout",
-        "python" => "a launcher that runs python3 -m acu_adapter_python with adapters/python on PYTHONPATH",
+        "python" => "acu-adapter-python, or acu-adapter-python.pyz on Windows, from a release archive beside acu; or a launcher that runs python3 -m acu_adapter_python with adapters/python on PYTHONPATH",
         _ => "see the adapter's own docs",
     }
 }
@@ -368,6 +409,50 @@ mod tests {
         std::fs::create_dir(dir.path().join("acu-adapter-typescript")).unwrap();
         let err = beside_acu(dir.path(), "typescript").unwrap_err();
         assert!(err.to_string().contains("holds no package.json"), "{err}");
+    }
+
+    #[test]
+    fn a_zip_application_beside_acu_runs_with_python() {
+        let dir = folder();
+        let pyz = dir.path().join("acu-adapter-python.pyz");
+        write(&pyz, "");
+        let c = beside_acu(dir.path(), "python").unwrap().unwrap();
+        let p = parts(&c);
+        assert!(
+            ["py", "python", "python3"].contains(&p[0].as_str()),
+            "{p:?}"
+        );
+        assert_eq!(p.last().unwrap(), &pyz.display().to_string());
+    }
+
+    #[test]
+    fn a_program_beside_acu_wins_over_a_zip_application() {
+        let dir = folder();
+        let exe = dir.path().join("acu-adapter-python");
+        write(&exe, "");
+        write(&dir.path().join("acu-adapter-python.pyz"), "");
+        let c = beside_acu(dir.path(), "python").unwrap().unwrap();
+        assert_eq!(parts(&c), vec![exe.display().to_string()]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_to_acu_finds_the_folder_of_the_real_program() {
+        let dir = folder();
+        let real = dir.path().join("real").join("acu");
+        write(&real, "");
+        let link_dir = dir.path().join("bin");
+        std::fs::create_dir(&link_dir).unwrap();
+        std::os::unix::fs::symlink(&real, link_dir.join("acu")).unwrap();
+        let want = std::fs::canonicalize(dir.path().join("real")).unwrap();
+        assert_eq!(exe_dir(&link_dir.join("acu")), Some(want));
+    }
+
+    #[test]
+    fn a_path_that_does_not_resolve_keeps_its_folder() {
+        let dir = folder();
+        let missing = dir.path().join("gone").join("acu");
+        assert_eq!(exe_dir(&missing), Some(dir.path().join("gone")));
     }
 
     #[test]
