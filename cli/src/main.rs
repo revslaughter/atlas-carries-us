@@ -189,16 +189,13 @@ fn load_input(input: &Input) -> Result<Vec<u8>> {
 }
 
 /// Opens the map that `serve` and `mcp` show: a finished atlas.json, read
-/// again whenever the file changes, or the result of the adapters and the
-/// config, which the MCP write tools can change.
+/// again whenever the file changes, or the checked result of the adapters
+/// and the config, which the MCP write tools can change.
 fn open_atlas(input: &Input, read_only: bool) -> Result<mcp::Atlas> {
     if let Some(d) = &input.data {
-        let doc = read_json(d)?;
-        let rep = assemble::check(&doc);
-        rep.print();
-        if !rep.errors.is_empty() {
-            bail!("{} does not pass the check", d.display());
-        }
+        // Report problems but serve the file anyway, as `serve -d` always
+        // has: a later `acu extract` may fix it, and the page reads it again.
+        assemble::check(&read_json(d)?).print();
         let root = std::env::current_dir().context("find the current folder")?;
         return mcp::Atlas::from_file(d, &root);
     }

@@ -382,6 +382,42 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
     }
 
     #[test]
+    fn a_served_file_stays_read_only_and_reloads_when_it_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("atlas.json");
+        std::fs::write(&path, serde_json::to_vec(&fixture_doc()).unwrap()).unwrap();
+        let atlas = Atlas::from_file(&path, dir.path()).unwrap();
+        assert!(!atlas.writable());
+        assert!(atlas.why_read_only().unwrap().contains("-c atlas.yaml"));
+        assert_eq!(
+            atlas.snapshot().unwrap().doc["symbols"]
+                .as_array()
+                .unwrap()
+                .len(),
+            7
+        );
+        let mut doc = fixture_doc();
+        doc["symbols"].as_array_mut().unwrap().pop();
+        // Make sure the time stamp moves, even on a coarse file system.
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
+        let later = SystemTime::now() + std::time::Duration::from_secs(5);
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(later)
+            .unwrap();
+        assert_eq!(
+            atlas.snapshot().unwrap().doc["symbols"]
+                .as_array()
+                .unwrap()
+                .len(),
+            6
+        );
+    }
+
+    #[test]
     fn read_only_refuses_writes() {
         let (dir, _) = fixture();
         let run = AdapterRun {
