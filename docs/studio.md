@@ -259,12 +259,19 @@ A save takes the same path as a draft from an MCP write tool
    change again. A save that reaches a map that a new extraction has just
    replaced also fails with 409, for the same remedy.
 3. It rewrites only the changed section. A list save (regions or tour)
-   follows the rules below.
+   follows the rules below. Each line that acu leaves keeps its own line
+   ending, CR LF or LF. A new line takes the ending of most lines in the
+   file.
 4. It checks the new config against the config schema and runs the check of
    `acu extract`. A step whose target matches nothing, or a layout that
    names a missing region, fails with status 422 and the reason. acu then
    writes nothing.
-5. It replaces the file in one step, through a temporary file.
+5. It replaces the file in one step, through a temporary file. On Linux
+   and macOS, a file with more than one hard link keeps its links: acu
+   first writes the temporary file, then copies the new text into the file
+   itself, so every name shows the change. A reader at that moment can see
+   part of the old text. A copy that fails halfway leaves the temporary
+   file, and the message names it.
 
 In a list save, acu keeps comments by these rules:
 
@@ -429,10 +436,8 @@ sources for each guard.
    `Content-Security-Policy: default-src 'self'`, a random default port, a
    size cap on a clone, a restricted mode for untrusted code, and
    `GOTOOLCHAIN=local` for the Go adapter. Issue #44 tracks them.
-10. A file whose lines end partly in CR LF and partly in LF comes back from
-    a save with one ending: the ending of most of its lines.
-11. A save writes a new file and renames it over `atlas.yaml`. Another hard
-    link to the old file keeps the old text. Issue #45 tracks both.
+10. On Windows, a save writes a new file and renames it over `atlas.yaml`.
+    Another hard link to the old file keeps the old text.
 
 ## Later: a hosted service
 

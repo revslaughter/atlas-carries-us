@@ -152,9 +152,11 @@ keeps no other guide files yet, so the write tools change that one file.
    a file over 2 MB, and a file that neither git tracks (`git ls-files`)
    nor the map names.
 2. The write tools change only the `atlas.yaml` that the server started
-   with, and nothing else: no source file, no other config. A file whose
-   lines end in CR LF keeps that ending. A file that mixes CR LF and LF
-   comes back with the ending of most of its lines (issue #45).
+   with, and nothing else: no source file, no other config. Each line that
+   a write leaves keeps its own line ending, CR LF or LF. A new line takes
+   the ending of most lines in the file. On Linux and macOS, a file with
+   more than one hard link keeps its links; see
+   [`studio.md`](studio.md#how-a-save-works), step 5.
 3. One `acu` process writes one draft at a time. Two processes that serve
    the same `atlas.yaml` do not wait for each other: each writes the whole
    file, and the later write wins. Run one server per config.
