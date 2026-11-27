@@ -284,6 +284,7 @@ async function httpSession(name, child, addr) {
 
   // The Host rule of acu serve on a loopback address (issue #43).
   const [hostName, port] = addr.split(":");
+  /** Sends one GET with any Host, which fetch cannot set, and returns the status and body. */
   const asHost = (h, path, headers = {}) =>
     new Promise((ok, fail) => {
       const req = request({ host: hostName, port: Number(port), path, headers: { ...headers, Host: h } }, res => {

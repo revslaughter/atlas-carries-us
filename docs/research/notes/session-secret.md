@@ -377,8 +377,8 @@ Notes:
    (5.1, 5.2, 1.6.2).
 2. A forward changes the port that the browser sees. With
    `ssh -L 8000:127.0.0.1:4321`, the browser sends `Host: localhost:8000`.
-   VS Code also picks another local port when another process holds the first one
-   ([VS Code port forwarding](https://code.visualstudio.com/docs/debugtest/port-forwarding)).
+   VS Code also picks another local port when another process holds the
+   first one ([VS Code port forwarding](https://code.visualstudio.com/docs/debugtest/port-forwarding)).
    A check that demands `:4321` fails there.
 3. A browser leaves out the default port. A page at `https://name.example/`
    sends `Host: name.example`, with no `:443`
@@ -533,8 +533,8 @@ Notes:
    GET that another site starts
    ([MDN Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#samesitesamesite-value)).
    The cost: every GET call of the API must change nothing. Writes from
-   another site still meet the `Origin`, Fetch Metadata and custom-header guards
-   ([`docs/studio.md`](../../studio.md#decisions-on-the-token-and-the-host)).
+   another site still meet the `Origin`, Fetch Metadata and custom-header
+   guards ([`docs/studio.md`](../../studio.md#decisions-on-the-token-and-the-host)).
 
 ### 6.8 Order of checks
 

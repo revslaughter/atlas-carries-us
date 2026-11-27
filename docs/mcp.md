@@ -15,7 +15,7 @@ labels it until a person checks it.
 | `acu serve -c atlas.yaml --read-only` | HTTP | off |
 | `acu mcp -c atlas.yaml --read-only` | Standard input and output | off |
 | `acu serve -d atlas.json`, `acu mcp -d atlas.json` | Either | off |
-| `acu serve -c atlas.yaml --addr 0.0.0.0:4321` | HTTP, reachable from other computers | off, unless `--allow-remote-writes` |
+| `acu serve -c atlas.yaml --addr 192.168.1.5:4321` | HTTP, reachable from other computers | off, unless `--allow-remote-writes` |
 | `acu studio` | HTTP at `/mcp`, beside the studio ([`studio.md`](studio.md)) | on, once a project opens |
 
 1. Both commands run the adapters first, as `acu extract` does, so the tools
@@ -24,10 +24,13 @@ labels it until a person checks it.
    it, to `/mcp` on that address. On an address that other computers can
    reach (any address but a loopback one), anyone on the network could call
    the write tools, so they stay off and `acu` says so.
-   `--allow-remote-writes` turns them on there. Give the computer's own
-   address, such as `--addr 192.168.1.5:4321`. On `0.0.0.0`, `/mcp` and
-   the API answer only a `Host` of `127.0.0.1`, `localhost` or `[::1]`
-   with the port, so a client on another computer gets 403.
+   `--allow-remote-writes` turns them on there. For a client on another
+   computer, give the computer's own address, such as
+   `--addr 192.168.1.5:4321`. On `0.0.0.0`, `/mcp` and the API answer only
+   a `Host` of `127.0.0.1`, `localhost`, `[::1]` or `0.0.0.0`, each with
+   the port. So a client on another computer gets 403. A container that
+   listens on `0.0.0.0` still works through a port that the host
+   forwards to `127.0.0.1`.
    `acu serve -c` also offers the studio's editor at the same address
    ([`studio.md`](studio.md)); its saves and the write tools share one path.
 3. `acu mcp` writes the protocol to standard output and every message to
@@ -105,7 +108,8 @@ inherit it. An exported variable would stay in your shell, and every other
 program that the shell starts would inherit it.
 
 ```sh
-(umask 077; openssl rand -hex 32 > ~/.acu-token)   # once; only you can read it
+(umask 077; openssl rand -hex 32 > ~/.acu-token)   # once
+chmod 600 ~/.acu-token                             # also for an old file
 ACU_TOKEN="$(cat ~/.acu-token)" acu serve -c atlas.yaml
 ```
 
