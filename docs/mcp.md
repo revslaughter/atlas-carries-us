@@ -24,7 +24,10 @@ labels it until a person checks it.
    it, to `/mcp` on that address. On an address that other computers can
    reach (any address but a loopback one), anyone on the network could call
    the write tools, so they stay off and `acu` says so.
-   `--allow-remote-writes` turns them on there.
+   `--allow-remote-writes` turns them on there. Give the computer's own
+   address, such as `--addr 192.168.1.5:4321`. On `0.0.0.0`, `/mcp` and
+   the API answer only a `Host` of `127.0.0.1`, `localhost` or `[::1]`
+   with the port, so a client on another computer gets 403.
    `acu serve -c` also offers the studio's editor at the same address
    ([`studio.md`](studio.md)); its saves and the write tools share one path.
 3. `acu mcp` writes the protocol to standard output and every message to
@@ -70,7 +73,7 @@ A client that connects over HTTP takes the address of a running
    ```text
    acu: serving the map at http://127.0.0.1:4321/?token=<token> and MCP at http://127.0.0.1:4321/mcp, writes on  (Ctrl-C stops)
    acu: open the address above, with its token; an MCP client sends the header "Authorization: Bearer <token>"; for an MCP client's config, ACU_TOKEN fixes the token across restarts
-   acu: pages answer only the loopback names of port 4321; for a forwarded name, start acu serve again with --allow-host <name[:port]>
+   acu: pages answer only this server's own names on port 4321; for a forwarded name, start acu serve again with --allow-host <name[:port]>
    ```
 
 2. Give the client the header `Authorization: Bearer <token>`. `/mcp`
@@ -102,8 +105,7 @@ inherit it. An exported variable would stay in your shell, and every other
 program that the shell starts would inherit it.
 
 ```sh
-openssl rand -hex 32 > ~/.acu-token        # once; keep the file private
-chmod 600 ~/.acu-token
+(umask 077; openssl rand -hex 32 > ~/.acu-token)   # once; only you can read it
 ACU_TOKEN="$(cat ~/.acu-token)" acu serve -c atlas.yaml
 ```
 
@@ -254,8 +256,8 @@ keeps no other guide files yet, so the write tools change that one file.
 6. Every HTTP call needs the session token as `Authorization: Bearer
    <token>`. The viewer's cookie does not count. acu checks the `Host`,
    the `Origin` and then the token, in the API's order, before the MCP
-   library reads the request. So another process or user on
-   the computer cannot call the tools without the token.
+   library reads the request. So another process or user on the computer
+   cannot call the tools without the token.
 7. A write applies the config to the adapters' output from the start of the
    run. After a change to `languages` or `entryPoints`, or to the code,
    restart the server.

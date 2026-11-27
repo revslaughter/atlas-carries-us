@@ -141,7 +141,7 @@ impl Secret {
 fn random_hex() -> Result<String, String> {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).map_err(|e| {
-        format!("the system gave no random bytes for the session token ({e}); try again, or check the system's random source")
+        format!("the system gave no random bytes for the session secret ({e}); try again, or check the system's random source")
     })?;
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }

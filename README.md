@@ -223,10 +223,9 @@ relative path in it resolves against the folder that holds it.
 it prints, such as `http://127.0.0.1:4321/?token=<token>`. Then pick a
 folder or paste an HTTPS address of a repository. The studio proposes an
 `atlas.yaml` from the languages it finds, runs the adapters, and opens the
-map. Then you edit the regions and the tour
-in the browser: record the current view as a step, write its text, and drag
-the steps into order. Each save goes into `atlas.yaml`, with its comments
-kept. [`docs/studio.md`](docs/studio.md) explains each step. The sections
+map. Then you edit the regions and the tour in the browser: record the
+current view as a step, write its text, and drag the steps into order. Each
+save goes into `atlas.yaml`, with its comments kept. [`docs/studio.md`](docs/studio.md) explains each step. The sections
 below describe the file itself.
 
 ### The smallest config
@@ -339,14 +338,15 @@ check when it loads the file.
 | `serve` | `--addr <host:port>` | `127.0.0.1:4321` | The address to listen on. |
 | `serve`, `mcp` | `--read-only` | off | Turn off the MCP tools that write `atlas.yaml`. |
 | `serve`, `mcp` | `--root <folder>` | current folder | With `-d`: the mapped repository, where the MCP tool `read_source` reads files. |
-| `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. |
+| `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. Give the computer's own address, such as `192.168.1.5:4321`: on `0.0.0.0`, `/mcp` and the API answer only loopback names. |
 | `serve` | `--allow-host <name[:port]>` | none | On a loopback address, also show the map's pages and data to this forwarded name, such as `localhost:9000` behind `ssh -L`, or the forwarded name that GitHub Codespaces may send, such as `<codespace>-4321.app.github.dev`. A refused page's 403 names the `Host` that acu received; give that value. May repeat. The API and MCP keep their own names. |
 
 `acu serve` and `acu studio` print an address that holds a session token,
 such as `http://127.0.0.1:4321/?token=<token>`. Open that address. The API
-and the MCP server answer only requests that carry the token. The
-environment variable `ACU_TOKEN` fixes the token, so that it stays the same
-across restarts. [`docs/studio.md`](docs/studio.md#the-session-token)
+and the MCP server answer only requests that carry the token. For an MCP
+client's config, the environment variable `ACU_TOKEN` fixes the token
+across restarts. Set it on the command line of `acu serve`, not with
+`export`. [`docs/studio.md`](docs/studio.md#the-session-token)
 explains the token, and [`docs/mcp.md`](docs/mcp.md#connect-a-client) shows
 how an MCP client sends it.
 

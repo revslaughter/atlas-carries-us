@@ -124,8 +124,9 @@ server, for example to open a folder with `trust: true`.
     restart, because the old cookie no longer counts: open the new address
     that acu printed.
 15. On a forwarded name (see `--allow-host` below), the map and its data
-    show, but the editor does not. Open the printed loopback address for
-    the editor.
+    show, but the editor does not. For the editor, forward the same port to
+    the same name, such as `ssh -L 4321:127.0.0.1:4321 host`, and open the
+    printed address.
 
 `acu mcp` speaks over standard input and output and needs no token.
 [`mcp.md`](mcp.md#connect-a-client) shows how an MCP client sends the
@@ -145,7 +146,7 @@ message names the `Host` that acu received. Copy that value into
 `--allow-host`. acu prints the rule at start:
 
 ```text
-acu: pages answer only the loopback names of port 4321; for a forwarded name, start acu serve again with --allow-host <name[:port]>
+acu: pages answer only this server's own names on port 4321; for a forwarded name, start acu serve again with --allow-host <name[:port]>
 ```
 
 A forward that keeps the name and the port needs nothing more. For example,
@@ -603,6 +604,11 @@ the sources for each guard.
    site. With `Strict`, the browser could then leave the cookie out of the
    request after the 303. With `Lax`, a write from another site still
    meets the `Origin`, Fetch Metadata and `X-Acu-Studio` guards.
+5. `Lax` has a cost. A link on another site sends the cookie with a
+   top-level GET, such as a link to `/api/config`. The answer goes to the
+   person's own tab, and the other site cannot read it. So every GET call
+   of the API must change nothing. Today `state`, `config` and `job` only
+   read. A new call that changes something must take POST.
 
 ## Limits
 

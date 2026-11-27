@@ -156,7 +156,7 @@ fn start_lines(studio: &Studio, addr: SocketAddr, what: &str, writes: &str) -> V
         } else {
             format!(" and {}", studio.allow_hosts().join(", "))
         };
-        v.push(format!("acu: pages answer only the loopback names of port {}{names}; for a forwarded name, start acu serve again with --allow-host <name[:port]>", addr.port()));
+        v.push(format!("acu: pages answer only this server's own names on port {}{names}; for a forwarded name, start acu serve again with --allow-host <name[:port]>", addr.port()));
     }
     v
 }
@@ -528,9 +528,9 @@ mod tests {
         let (app, stop) = app(s);
         let task = tokio::spawn(async move { axum::serve(listener, app).await });
         let init = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}"#;
-        let ask_as = |host: String, auth: Option<String>| {
+        let send = |method: &'static str, host: String, auth: Option<String>| {
             let mut req = format!(
-                "POST /mcp HTTP/1.1\r\nHost: {host}\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n",
+                "{method} /mcp HTTP/1.1\r\nHost: {host}\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n",
                 init.len()
             );
             if let Some(a) = auth {
@@ -547,6 +547,7 @@ mod tests {
                 String::from_utf8_lossy(&all).to_string()
             }
         };
+        let ask_as = |host: String, auth: Option<String>| send("POST", host, auth);
         let ask = |auth: Option<String>| ask_as(addr.to_string(), auth);
         let status = |r: &str| r[9..12].to_string();
         // A foreign Host or Origin meets 403 before acu says a word about
@@ -559,6 +560,22 @@ mod tests {
         // A loopback name with another port fails too.
         let r = ask_as(format!("127.0.0.1:{}", addr.port() + 1), None).await;
         assert_eq!(status(&r), "403", "{r}");
+        // HEAD and OPTIONS meet the same guards, and no CORS grant.
+        for m in ["HEAD", "OPTIONS"] {
+            let r = send(m, addr.to_string(), None).await;
+            assert_eq!(status(&r), "401", "{m}: {r}");
+            let r = send(
+                m,
+                addr.to_string(),
+                Some("Basic x\r\nOrigin: http://evil.example".into()),
+            )
+            .await;
+            assert_eq!(status(&r), "403", "{m}: {r}");
+            assert!(
+                !r.to_ascii_lowercase().contains("access-control-allow"),
+                "{m}: {r}"
+            );
+        }
         let r = ask(None).await;
         assert_eq!(status(&r), "401");
         assert!(

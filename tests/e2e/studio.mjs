@@ -178,7 +178,9 @@ async function main() {
   const firstVisit = [];
   const onAnswer = r => firstVisit.push(`${r.status()} ${new URL(r.url()).pathname}`);
   page.on("response", onAnswer);
+  const logged = page.waitForEvent("console", m => /status of 401/.test(m.text()));
   await page.goto(base);
+  await logged;
   await page.waitForFunction(() => /session token/.test(document.getElementById("loading")?.textContent ?? ""));
   page.off("response", onAnswer);
   check(!firstVisit.some(a => a.includes("/api/")), "without the token, the page calls no API", firstVisit.join("\n"));
@@ -189,7 +191,8 @@ async function main() {
   );
   check((await page.locator('meta[name="acu-api"]').count()) === 0, "without the token, the page lacks the API mark");
   check(await page.isHidden("#setup"), "without the token, the setup screen stays shut");
-  // The browser logs the data's 401; drop that one line, keep any other.
+  // The browser logged the data's 401 (awaited above); drop that one line,
+  // keep any other.
   const refusedLog = errors.findIndex(e => /status of 401/.test(e));
   if (refusedLog >= 0) errors.splice(refusedLog, 1);
 

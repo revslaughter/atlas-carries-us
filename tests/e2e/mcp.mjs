@@ -300,7 +300,8 @@ async function httpSession(name, child, addr) {
     `${name} over HTTP: a page for a foreign Host gets 403 with the flag to add`,
     evil.body,
   );
-  const fwd = await asHost("fwd.example:9999", "/");
+  // With the token: the mark still stays off, because the API refuses that name.
+  const fwd = await asHost("fwd.example:9999", "/", { Authorization: `Bearer ${token}` });
   check(
     fwd.status === 200 && !fwd.body.includes("acu-api"),
     `${name} over HTTP: an allowed name sees the map, without the API mark`,

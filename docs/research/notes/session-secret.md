@@ -527,10 +527,13 @@ Notes:
    ([MDN Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#samesitesamesite-value)).
 2. The viewer's page itself needs no token in `acu serve`. Its later
    fetches to `/api/` and `/data/atlas.json` go from the page's own origin,
-   so they carry the Strict cookie. So the first visit works either way.
+   so they carry the cookie. So the first visit works either way.
 3. acu chose `SameSite=Lax` in the end, so the first visit from a link
-   keeps the cookie after the 303 in every browser. Writes from another
-   site still meet the `Origin`, Fetch Metadata and custom-header guards
+   keeps the cookie after the 303. `Lax` sends a cookie with a top-level
+   GET that another site starts
+   ([MDN Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#samesitesamesite-value)).
+   The cost: every GET call of the API must change nothing. Writes from
+   another site still meet the `Origin`, Fetch Metadata and custom-header guards
    ([`docs/studio.md`](../../studio.md#decisions-on-the-token-and-the-host)).
 
 ### 6.8 Order of checks
