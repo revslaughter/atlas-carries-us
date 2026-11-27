@@ -146,8 +146,20 @@ fn mcp_refusal(r: studio::Reply, headers: &header::HeaderMap) -> Response {
 /// address, how to admit a forwarded name.
 fn start_lines(studio: &Studio, addr: SocketAddr, what: &str, writes: &str) -> Vec<String> {
     let token = studio.secret.token();
+    // A browser cannot open 0.0.0.0 or [::]; name the loopback address of
+    // the same family, which the server also answers.
+    let shown = if addr.ip().is_unspecified() {
+        let ip: std::net::IpAddr = if addr.is_ipv6() {
+            std::net::Ipv6Addr::LOCALHOST.into()
+        } else {
+            std::net::Ipv4Addr::LOCALHOST.into()
+        };
+        SocketAddr::new(ip, addr.port())
+    } else {
+        addr
+    };
     let mut v = vec![
-        format!("acu: serving {what} at http://{addr}/?token={token} and MCP at http://{addr}/mcp, {writes}  (Ctrl-C stops)"),
+        format!("acu: serving {what} at http://{shown}/?token={token} and MCP at http://{shown}/mcp, {writes}  (Ctrl-C stops)"),
         format!("acu: open the address above, with its token; an MCP client sends the header \"Authorization: Bearer {token}\"; for an MCP client's config, {} fixes the token across restarts", crate::secret::ENV),
     ];
     if studio.mode == studio::Mode::Serve && studio.checks_pages() {
@@ -175,7 +187,7 @@ async fn route(req: Request, studio: Arc<Studio>) -> Response {
         if let Err(r) = studio.check_page_host(req.headers()) {
             return json_reply(r);
         }
-        if let Some(r) = exchange_token(&studio, &path, req.uri().query()) {
+        if let Some(r) = exchange_token(&studio, &path, req.uri().query(), req.headers()) {
             return r;
         }
         // The studio's data holds the open project, so it needs the token.
@@ -189,10 +201,23 @@ async fn route(req: Request, studio: Arc<Studio>) -> Response {
         let atlas = studio.live.get().ok();
         // Only a page that the API would answer learns of the API: its own
         // Host and the token. A page through a forwarded name, or without
-        // the token, never calls the API and logs no refused request.
+        // the token, never calls the API and logs no refused request. In
+        // acu serve with writes on, a page at the own Host without the
+        // token gets the hint mark, so the viewer can say why the editor
+        // stays off.
         let h = req.headers();
-        let api = studio.check_host(h).is_ok() && studio.check_token(h).is_ok();
-        return respond(&path, atlas.as_deref(), api);
+        let own = studio.check_host(h).is_ok();
+        let mark = if own && studio.check_token(h).is_ok() {
+            Some(API_MARK)
+        } else if own
+            && studio.mode == studio::Mode::Serve
+            && atlas.as_ref().is_some_and(|a| a.writable())
+        {
+            Some(TOKEN_MARK)
+        } else {
+            None
+        };
+        return respond(&path, atlas.as_deref(), mark);
     };
     // Refuse a foreign request before reading its body.
     if let Err(r) = studio.admit(req.method(), req.headers()) {
@@ -214,10 +239,23 @@ async fn route(req: Request, studio: Arc<Studio>) -> Response {
 
 /// Exchanges a `?token=` in a page address for the session cookie: a good
 /// token gets the cookie and a redirect to the address without it; a wrong
-/// one gets 401. An address without the token gets `None`.
-fn exchange_token(studio: &Studio, path: &str, query: Option<&str>) -> Option<Response> {
+/// one gets 401. A forwarded name gets 403, because its API refuses every
+/// call, and the token should not pass through a forward. An address
+/// without the token gets `None`.
+fn exchange_token(
+    studio: &Studio,
+    path: &str,
+    query: Option<&str>,
+    headers: &header::HeaderMap,
+) -> Option<Response> {
     let (token, rest) = crate::secret::take_token(query?);
     let token = token?;
+    if studio.check_host(headers).is_err() {
+        return Some(json_reply(studio::fail(
+            StatusCode::FORBIDDEN,
+            "acu takes the token only at the server's own address; open the address that acu printed, on the computer that runs acu",
+        )));
+    }
     if !studio.secret.matches(&token) {
         return Some(json_reply(studio::fail(
             StatusCode::UNAUTHORIZED,
@@ -261,8 +299,9 @@ fn json_reply((status, body): studio::Reply) -> Response {
 }
 
 /// Answers one request: the data at `DATA_PATH`, else a file of the viewer.
-/// With `api`, the viewer's page carries [`API_MARK`].
-fn respond(path: &str, atlas: Option<&Atlas>, api: bool) -> Response {
+/// The viewer's page carries `mark` ([`API_MARK`] or [`TOKEN_MARK`]) when
+/// one comes.
+fn respond(path: &str, atlas: Option<&Atlas>, mark: Option<&str>) -> Response {
     let path = path.trim_start_matches('/');
     if path == DATA_PATH {
         let bytes = match atlas {
@@ -282,10 +321,9 @@ fn respond(path: &str, atlas: Option<&Atlas>, api: bool) -> Response {
     match VIEWER.get_file(path) {
         Some(f) => {
             let mime = mime_guess::from_path(path).first_or_octet_stream();
-            let body = if path == "index.html" && api {
-                mark_api(f.contents())
-            } else {
-                f.contents().to_vec()
+            let body = match mark {
+                Some(m) if path == "index.html" => add_mark(f.contents(), m),
+                _ => f.contents().to_vec(),
             };
             reply(StatusCode::OK, mime.as_ref(), body)
         }
@@ -303,10 +341,15 @@ fn respond(path: &str, atlas: Option<&Atlas>, api: bool) -> Response {
 /// calls the API and never logs a failed request.
 pub const API_MARK: &str = "<meta name=\"acu-api\" content=\"1\" />";
 
-/// Adds [`API_MARK`] to the viewer's page, right after `<head>`.
-fn mark_api(page: &[u8]) -> Vec<u8> {
+/// The tag that tells the viewer of `acu serve` that the editor would work
+/// but the request lacked the session token. The viewer then calls no API
+/// and says how to get the editor.
+pub const TOKEN_MARK: &str = "<meta name=\"acu-api\" content=\"token\" />";
+
+/// Adds a mark to the viewer's page, right after `<head>`.
+fn add_mark(page: &[u8], mark: &str) -> Vec<u8> {
     let text = String::from_utf8_lossy(page);
-    text.replacen("<head>", &format!("<head>{API_MARK}"), 1)
+    text.replacen("<head>", &format!("<head>{mark}"), 1)
         .into_bytes()
 }
 
@@ -432,6 +475,38 @@ mod tests {
         let open = server(studio::Mode::Serve, "0.0.0.0:4321");
         let r = get(open, "anything.example", "/index.html", false).await;
         assert_eq!(r.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn acu_serve_with_writes_hints_at_the_token_and_forwards_take_none() {
+        let (_dir, atlas) = crate::mcp::atlas::tests::fixture();
+        assert!(atlas.writable());
+        let s = Arc::new(
+            Studio::new(
+                Arc::new(Live::of(Arc::new(atlas))),
+                studio::Mode::Serve,
+                "127.0.0.1:4321".parse().unwrap(),
+                None,
+                None,
+                studio::tests::secret(),
+            )
+            .with_allow_hosts(vec!["fwd.example:9999".into()]),
+        );
+        // Own Host without the token: the hint mark, not the API mark.
+        let page = page_text(get(s.clone(), "127.0.0.1:4321", "/", false).await).await;
+        assert!(page.contains(TOKEN_MARK) && !page.contains(API_MARK));
+        let page = page_text(get(s.clone(), "127.0.0.1:4321", "/", true).await).await;
+        assert!(page.contains(API_MARK) && !page.contains(TOKEN_MARK));
+        // A forwarded name gets neither mark, and takes no token.
+        let page = page_text(get(s.clone(), "fwd.example:9999", "/", false).await).await;
+        assert!(!page.contains("acu-api"));
+        let r = get(s, "fwd.example:9999", &format!("/?token={TEST}"), false).await;
+        assert_eq!(r.status(), StatusCode::FORBIDDEN);
+        assert!(r.headers().get(header::SET_COOKIE).is_none());
+        // Without writes, acu serve gives no hint: no editor to miss.
+        let ro = server(studio::Mode::Serve, "127.0.0.1:4321");
+        let page = page_text(get(ro, "127.0.0.1:4321", "/", false).await).await;
+        assert!(!page.contains("acu-api"));
     }
 
     #[tokio::test]
@@ -600,6 +675,16 @@ mod tests {
 
     #[test]
     fn the_start_lines_give_the_token_and_the_forwarding_hint() {
+        // An address that answers every interface prints the loopback one.
+        let any: SocketAddr = "0.0.0.0:4321".parse().unwrap();
+        let s = server(studio::Mode::Serve, "0.0.0.0:4321");
+        assert!(start_lines(&s, any, "the map", "writes off")[0]
+            .contains("http://127.0.0.1:4321/?token="));
+        let any6: SocketAddr = "[::]:4321".parse().unwrap();
+        let s = server(studio::Mode::Serve, "[::]:4321");
+        assert!(
+            start_lines(&s, any6, "the map", "writes off")[0].contains("http://[::1]:4321/?token=")
+        );
         let addr: SocketAddr = "127.0.0.1:4321".parse().unwrap();
         let s = server(studio::Mode::Serve, "127.0.0.1:4321");
         let v = start_lines(&s, addr, "the map", "writes on");
@@ -623,7 +708,7 @@ mod tests {
     fn the_served_page_carries_the_api_mark_and_the_built_one_does_not() {
         let page = VIEWER.get_file("index.html").unwrap().contents();
         assert!(!String::from_utf8_lossy(page).contains("acu-api"));
-        let served = String::from_utf8(mark_api(page)).unwrap();
+        let served = String::from_utf8(add_mark(page, API_MARK)).unwrap();
         assert_eq!(served.matches(API_MARK).count(), 1);
     }
 }

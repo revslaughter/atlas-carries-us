@@ -204,7 +204,9 @@ impl Studio {
             .get(header::HOST)
             .and_then(|h| h.to_str().ok())
             .unwrap_or("");
-        if self.hosts().iter().any(|h| h.eq_ignore_ascii_case(host)) {
+        // A browser sends one Host; two make the name unclear, so neither counts.
+        let one = headers.get_all(header::HOST).iter().count() == 1;
+        if one && self.hosts().iter().any(|h| h.eq_ignore_ascii_case(host)) {
             return Ok(());
         }
         Err(fail(
@@ -230,7 +232,8 @@ impl Studio {
             .get(header::HOST)
             .and_then(|h| h.to_str().ok())
             .unwrap_or("");
-        if !host.is_empty() && self.allow_hosts.iter().any(|h| host_matches(h, host)) {
+        let one = headers.get_all(header::HOST).iter().count() == 1;
+        if one && !host.is_empty() && self.allow_hosts.iter().any(|h| host_matches(h, host)) {
             return Ok(());
         }
         let hint = match self.mode {
@@ -839,6 +842,17 @@ pub mod tests {
             .contains("--allow-host myhost.example:8081"));
         assert!(serve.check_page_host(&host("evil.example:4321")).is_err());
         assert!(serve.check_page_host(&HeaderMap::new()).is_err());
+        // Two Host headers count as none, whatever they name.
+        let mut two = host("127.0.0.1:4321");
+        two.append(header::HOST, HeaderValue::from_static("127.0.0.1:4321"));
+        assert!(serve.check_host(&two).is_err());
+        assert!(serve.check_page_host(&two).is_err());
+        let mut two = host("myhost.example:8080");
+        two.append(
+            header::HOST,
+            HeaderValue::from_static("myhost.example:8080"),
+        );
+        assert!(serve.check_page_host(&two).is_err());
         // The API keeps its own names; a forwarded name reaches no call.
         assert_eq!(
             serve

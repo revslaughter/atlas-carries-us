@@ -55,10 +55,25 @@ export interface Answer<T = any> {
   data: T;
 }
 
+/** What a call says when acu refuses it for want of the session token: a restart or a lost cookie. */
+export const SESSION_ENDED =
+  "acu: the session ended, because acu restarted or the browser dropped the cookie. Keep this tab open: open the address that acu printed in a new tab, then come back here and try again.";
+
+/** Says whether the page carries the hint that the editor needs the session token (acu serve without the cookie). */
+export function lacksToken(): boolean {
+  return document.querySelector('meta[name="acu-api"]')?.getAttribute("content") === "token";
+}
+
+/** Gives the answer of a failed call: a 401 gets {@link SESSION_ENDED}, any other keeps the server's error. */
+export function failure(status: number, data: any): any {
+  return status === 401 ? { ...(data ?? {}), error: SESSION_ENDED } : data;
+}
+
 /** Reads the server's state, or returns null when no API answers, as on a static site that lacks the page mark. */
 export async function loadState(): Promise<ServerState | null> {
   // acu serve and acu studio mark the page; a static site has no API to ask.
-  if (!document.querySelector('meta[name="acu-api"]')) return null;
+  const mark = document.querySelector('meta[name="acu-api"]');
+  if (!mark || mark.getAttribute("content") !== "1") return null;
   try {
     const res = await fetch("api/state", { headers: { Accept: "application/json" } });
     if (!res.ok || !(res.headers.get("content-type") ?? "").includes("application/json")) return null;
@@ -86,7 +101,7 @@ export async function call<T = any>(path: string, body?: unknown): Promise<Answe
     } catch {
       data = { error: `acu: the server answered ${res.status} without JSON` };
     }
-    return { ok: res.ok, status: res.status, data };
+    return { ok: res.ok, status: res.status, data: res.ok ? data : failure(res.status, data) };
   } catch {
     return {
       ok: false,

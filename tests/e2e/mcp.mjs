@@ -381,7 +381,23 @@ async function httpSession(name, child, addr) {
   const errors = [];
   page.on("console", m => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", e => errors.push(String(e)));
+  // Without the token, the map shows with a note in place of the editor,
+  // and the page calls no API.
+  const calls = [];
+  const onRequest = r => calls.push(new URL(r.url()).pathname);
+  page.on("request", onRequest);
+  await page.goto(`http://${addr}/`);
+  await page.waitForFunction(() => window.atlas, null, { timeout: 15000 });
+  page.off("request", onRequest);
+  check(await page.isVisible("#tokenNote"), `${name} over HTTP: without the token, the note replaces the editor`);
+  check(await page.isHidden("#editBtn"), `${name} over HTTP: without the token, the Edit button stays hidden`);
+  check(
+    !calls.some(c => c.startsWith("/api/")),
+    `${name} over HTTP: without the token, the page calls no API`,
+    calls.join("\n"),
+  );
   await page.goto(`http://${addr}/?token=${token}`);
+  check(await page.isHidden("#tokenNote"), `${name} over HTTP: with the token, the note stays hidden`);
   await page.waitForFunction(() => window.atlas, null, { timeout: 15000 });
   await page.click("#tourBtn");
   await page.waitForTimeout(300);
