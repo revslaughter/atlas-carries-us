@@ -18,6 +18,12 @@ pub fn mark(by: &str) -> Value {
 
 /// Says what a write did, for the model to read.
 fn report(what: &str, by: &str, w: &Written) -> String {
+    if w.how == "unchanged" {
+        return format!(
+            "The draft of {what} matches what {} holds, so nothing changed.",
+            w.path.display()
+        );
+    }
     let mut out = format!(
         "Wrote {what} to {} ({}), marked as drafted by {by}. The served map shows it now; a person removes the drafted mark after checking the text.",
         w.path.display(),

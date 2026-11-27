@@ -293,7 +293,7 @@ local tools may use it too.
 | `GET /api/config` | none | The file's `revision` and `path`; `writable` and `why`; `project`, `regions`, `layout` and `tour` as written; `resolved.tour` and `resolved.regions` as acu resolved them; every unit with its path and region; the map's warnings. |
 | `GET /api/job` | none | The last job: `id`, `kind` (`extract`, `open` or `clone`), `state` (`running`, `done` or `failed`), `log`, `error`, and the `path` that the job opened or cloned. |
 | `POST /api/tour` | `revision`, `tour` | Replaces the tour. Answers the new `revision`, `how` (`in place`, `section`, or `unchanged` when the save changed nothing) and `warnings`. |
-| `POST /api/regions` | `revision`, `regions`, optional `layout`, optional `tour` | Replaces the regions; with `layout`, also the layout (`null` removes it); with `tour`, also the tour, in the same write. |
+| `POST /api/regions` | `revision`, `regions`, optional `layout`, optional `tour` | Replaces the regions; with `layout`, also the layout (`null` removes it); with `tour`, also the tour, in the same write. Answers as `POST /api/tour` does. |
 | `POST /api/project` | `revision`, `name`, `description`, `descriptionDrafted` | Sets the project's name and description; a missing or null `descriptionDrafted` removes the mark. |
 | `POST /api/match` | `paths` | The IDs of the units that the globs match, and the globs that do not parse. |
 | `POST /api/extract` | none | Starts a job that runs the adapters again on the open config. |

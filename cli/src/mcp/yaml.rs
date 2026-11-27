@@ -485,10 +485,8 @@ fn splice(
             }
             let tail = prev;
             // First, each new item that equals an old item takes that item's
-            // lines. Then each changed item takes the comments above the old
-            // item with its ID, else with its title; by position
-            // only when the list kept its length, so an insert or a delete
-            // never hands one item's comment to another.
+            // lines. Then each changed item pairs with an old item by score
+            // (see `shared_fields`) and keeps that item's comments.
             let mut used = vec![false; old.len()];
             let mut pick: Vec<Option<(usize, bool)>> = vec![None; items.len()];
             for (k, it) in items.iter().enumerate() {
@@ -500,7 +498,8 @@ fn splice(
             // Pair each changed item with the old item that shares the most
             // fields with it (an equal ID outweighs all the rest), best pairs
             // first, the nearer place breaking a tie. An item that shares
-            // nothing with any old item takes no old comment.
+            // nothing with any old item, or only one field other than `id`
+            // and `title`, takes no old comment.
             let mut pairs: Vec<(usize, usize, usize)> = Vec::new();
             for (k, it) in items.iter().enumerate() {
                 if pick[k].is_some() {

@@ -467,7 +467,7 @@ function render(focus?: string) {
     </div>
     <p class="ed-file">${esc(S.path)}</p>
     ${S.revision ? "" : `<p class="ed-msg bad" role="alert" tabindex="-1"><b>Problem.</b> ${esc(S.msg?.text ?? "acu could not read atlas.yaml.")} Fix the file, then reload this page.</p>`}
-    <div class="ed-tabs" role="tablist" ${S.saving ? "inert" : ""}>${tabs
+    <div class="ed-tabs" role="tablist" ${S.busy ? "inert" : ""}>${tabs
       .map(
         ([t, name, ch]) =>
           `<button role="tab" class="ed-tab" id="edTab-${t}" aria-controls="edPanel" tabindex="${S.tab === t ? 0 : -1}" data-act="tab" data-tab="${t}" aria-selected="${S.tab === t}">${name}<span class="ed-dot" ${ch ? "" : "hidden"}> •<span class="sr"> (changed)</span></span></button>`,
@@ -619,7 +619,7 @@ async function save() {
       S.saving = false;
       const said = String(a.data?.error ?? "The save failed").replace(/\.?$/, ".");
       S.msg = {
-        text: a.status === 409 ? said + " Discard changes reads the file again." : said,
+        text: a.status === 409 ? said + " To read it, choose Discard changes." : said,
         bad: true,
       };
       render(".ed-msg");
@@ -660,7 +660,9 @@ async function extract() {
     S.job = job;
     const pre = root.querySelector(".ed-log");
     if (pre) pre.textContent = logText(job);
-    else render();
+    // The tabs stay inert during a run, so the extract tab stays on show;
+    // a redraw on another tab would take the reader's focus.
+    else if (S.tab === "extract") render();
   });
   S.busy = false;
   announce(j?.state === "done" ? "The adapters finished. The page reloads." : "The adapters failed.");
