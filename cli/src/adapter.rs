@@ -52,11 +52,15 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
 /// its commit.
 pub fn source(config_dir: &Path, lang: &Language) -> Result<Source> {
     let root = config_dir.join(lang.root.as_deref().unwrap_or("."));
-    let root = root
-        .canonicalize()
-        .with_context(|| format!("find the {} root {}", lang.adapter, root.display()))?;
+    let root = plain(
+        root.canonicalize()
+            .with_context(|| format!("find the {} root {}", lang.adapter, root.display()))?,
+    );
+    // On Windows, git writes `C:/a/b`; the root takes the same form, so an
+    // adapter can find the root inside the repository root.
     let repo_root = git(&root, &["rev-parse", "--show-toplevel"])
         .map(PathBuf::from)
+        .map(|p| plain(p.canonicalize().unwrap_or(p)))
         .unwrap_or_else(|| root.clone());
     let commit = git(&root, &["rev-parse", "HEAD"]);
     Ok(Source {
@@ -64,6 +68,59 @@ pub fn source(config_dir: &Path, lang: &Language) -> Result<Source> {
         repo_root,
         commit,
     })
+}
+
+/// Returns a path in the form that most programs read. On Windows,
+/// `canonicalize` gives `\\?\C:\a\b`, and Windows reads no `/` after that
+/// prefix, so an adapter that joins a file name with `/` fails to open it.
+/// acu drops the prefix when the plain form names the same folder (see
+/// [`plain_windows`]). On other systems the path stays as it is.
+fn plain(p: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    if let Some(s) = p.to_str().and_then(plain_windows) {
+        return PathBuf::from(s);
+    }
+    p
+}
+
+/// Returns the plain form of a Windows path that starts with `\\?\` and a
+/// drive, such as `C:\a\b` for `\\?\C:\a\b`, when that form names the same
+/// file. Gives `None` for any other path: a network share, a volume name, a
+/// path of 260 characters or more, or a path with a name that Windows reads
+/// differently without the prefix (a trailing dot or space, or a device
+/// name such as `NUL`).
+#[cfg_attr(not(windows), allow(dead_code))]
+fn plain_windows(s: &str) -> Option<&str> {
+    let rest = s.strip_prefix(r"\\?\")?;
+    let b = rest.as_bytes();
+    let drive = b.len() >= 3 && b[0].is_ascii_alphabetic() && b[1] == b':' && b[2] == b'\\';
+    if !drive || rest.len() >= 260 || rest.contains('/') {
+        return None;
+    }
+    let names_stay = rest[3..]
+        .split('\\')
+        .filter(|n| !n.is_empty())
+        .all(|n| !n.ends_with(['.', ' ']) && !device_name(n));
+    names_stay.then_some(rest)
+}
+
+/// Reports whether Windows reads a file name as a device without the `\\?\`
+/// prefix: `CON`, `PRN`, `AUX`, `NUL`, or `COM` or `LPT` with one digit,
+/// also with an extension, such as `nul.txt`.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn device_name(name: &str) -> bool {
+    let stem = name.split('.').next().unwrap_or(name).trim_end();
+    let upper = stem.to_ascii_uppercase();
+    if matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL") {
+        return true;
+    }
+    let digit = |rest: &str| {
+        let mut c = rest.chars();
+        matches!((c.next(), c.next()), (Some(d), None) if d.is_ascii_digit() || "¹²³".contains(d))
+    };
+    ["COM", "LPT"]
+        .iter()
+        .any(|p| upper.strip_prefix(p).is_some_and(digit))
 }
 
 /// Picks the program that runs an adapter, in this order: the config's
@@ -524,5 +581,51 @@ mod tests {
         let two = json!({"bin": {"one": "c.js", "two": "d.js"}});
         assert_eq!(package_bin(&two, exe), None);
         assert_eq!(package_bin(&json!({}), exe), None);
+    }
+
+    #[test]
+    fn a_windows_drive_path_loses_its_verbatim_prefix() {
+        assert_eq!(
+            plain_windows(r"\\?\D:\a\atlas\adapters\python\testdata\fixture"),
+            Some(r"D:\a\atlas\adapters\python\testdata\fixture")
+        );
+        assert_eq!(plain_windows(r"\\?\C:\"), Some(r"C:\"));
+        assert_eq!(
+            plain_windows(r"\\?\c:\Users\me\com10"),
+            Some(r"c:\Users\me\com10")
+        );
+        assert_eq!(
+            plain_windows(r"\\?\C:\a\console.log"),
+            Some(r"C:\a\console.log")
+        );
+    }
+
+    #[test]
+    fn a_path_whose_plain_form_differs_keeps_its_prefix() {
+        let long = format!(r"\\?\C:\{}", "a".repeat(260));
+        for p in [
+            r"C:\a\b",
+            r"\\?\UNC\server\share\a",
+            r"\\?\Volume{0b1c2d3e-0000-0000-0000-000000000000}\a",
+            r"\\?\C:\a\con",
+            r"\\?\C:\a\NUL.txt",
+            r"\\?\C:\a\Com1\b",
+            r"\\?\C:\a\lpt²",
+            r"\\?\C:\a\b.",
+            r"\\?\C:\a\b \c",
+            r"\\?\C:\a/b",
+            long.as_str(),
+        ] {
+            assert_eq!(plain_windows(p), None, "{p}");
+        }
+    }
+
+    #[test]
+    fn plain_leaves_other_systems_paths_alone() {
+        if cfg!(not(windows)) {
+            let p = PathBuf::from(r"\\?\C:\a");
+            assert_eq!(plain(p.clone()), p);
+        }
+        assert_eq!(plain(PathBuf::from("/a/b")), PathBuf::from("/a/b"));
     }
 }
