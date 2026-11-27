@@ -116,11 +116,14 @@ pub fn folders(s: &Studio, args: &Map<String, Value>) -> Reply {
             )
         }
     };
+    // Read at most one entry past the limit: a folder with millions of
+    // entries must not cost the studio its memory.
     let mut list: Vec<(String, PathBuf)> = rd
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
         .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
         .filter(|(n, _)| !hidden(n))
+        .take(MAX_FOLDERS + 1)
         .collect();
     list.sort();
     let more = list.len() > MAX_FOLDERS;
@@ -172,10 +175,19 @@ pub struct Detected {
 
 /// Reads a small text file, or returns nothing.
 fn small(p: &Path) -> String {
-    match std::fs::metadata(p) {
-        Ok(m) if m.len() < 1 << 20 => std::fs::read_to_string(p).unwrap_or_default(),
-        _ => String::new(),
+    use std::io::Read;
+    // A plain file only, never followed through a link: a repository could
+    // point a marker file at /dev/zero or at a file outside it. The read
+    // stops at 1 MB whatever the file claims.
+    let plain = std::fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_file());
+    if !plain {
+        return String::new();
     }
+    let mut out = String::new();
+    if let Ok(f) = std::fs::File::open(p) {
+        let _ = f.take(1 << 20).read_to_string(&mut out);
+    }
+    out
 }
 
 /// Reports whether a manifest names a dependency as a whole word: `click`
@@ -282,11 +294,12 @@ pub fn detect(dir: &Path) -> Detected {
                 .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
                 .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
                 .filter(|(n, _)| !hidden(n))
+                .take(200)
                 .collect()
         })
         .unwrap_or_default();
     subs.sort();
-    for (n, p) in subs.iter().take(200) {
+    for (n, p) in &subs {
         look(p, n, &mut d);
     }
     d.languages
@@ -763,6 +776,42 @@ pub fn kill_pgid(pid: u32) {
     let _ = pid;
 }
 
+/// Checks the folders from the workspace down to `parent`: none may form a
+/// symbolic link or hold a git repository, and the real path must stay in
+/// the workspace. Else a repository cloned before could carry a link that
+/// sends a later clone anywhere the user can write.
+fn inside_workspace(ws: &Path, parent: &Path) -> Result<(), String> {
+    let refuse = |why: String| {
+        Err(format!(
+            "acu: {why}, so acu refuses to clone there; remove it, or clone another address"
+        ))
+    };
+    let rel = parent.strip_prefix(ws).unwrap_or(parent);
+    let mut at = ws.to_path_buf();
+    for part in rel.components() {
+        at.push(part);
+        match std::fs::symlink_metadata(&at) {
+            Ok(m) if m.file_type().is_symlink() => {
+                return refuse(format!("{} is a symbolic link", at.display()))
+            }
+            Ok(_) if at.join(".git").exists() => {
+                return refuse(format!("{} holds a git repository", at.display()))
+            }
+            _ => {}
+        }
+    }
+    if let (Ok(w), Ok(p)) = (ws.canonicalize(), parent.canonicalize()) {
+        if !p.starts_with(&w) {
+            return refuse(format!(
+                "{} leads outside {}",
+                parent.display(),
+                w.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Names the staging folder of a clone: the final name with a leading dot,
 /// so the folder picker hides it and no repository name (which never starts
 /// with a dot) can collide with it.
@@ -847,12 +896,14 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
             })?;
         }
         let parent = dest.parent().unwrap_or(&ws).to_path_buf();
+        inside_workspace(&ws, &parent)?;
         std::fs::create_dir_all(&parent).map_err(|e| {
             format!(
                 "acu: create {}: {e}; check that acu may write there",
                 parent.display()
             )
         })?;
+        inside_workspace(&ws, &parent)?;
         log(&format!(
             "acu: cloning {} into {}",
             target.url,
@@ -1048,6 +1099,33 @@ mod tests {
         let seen = seen.into_inner().unwrap();
         assert_eq!(seen[0], "started");
         assert!(seen.iter().any(|l| l.contains("too long")), "{seen:?}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_clone_never_lands_through_a_link_or_inside_a_clone() {
+        let dir = tempfile::tempdir().unwrap();
+        let ws = dir.path().join("ws");
+        std::fs::create_dir_all(ws.join("evil.example/evil/a/.git")).unwrap();
+        std::fs::create_dir_all(dir.path().join("outside")).unwrap();
+        std::os::unix::fs::symlink(dir.path().join("outside"), ws.join("evil.example/link"))
+            .unwrap();
+        let err = inside_workspace(&ws, &ws.join("evil.example/link/x")).unwrap_err();
+        assert!(err.contains("symbolic link"), "{err}");
+        let err = inside_workspace(&ws, &ws.join("evil.example/evil/a/sub")).unwrap_err();
+        assert!(err.contains("git repository"), "{err}");
+        assert!(inside_workspace(&ws, &ws.join("github.com/owner")).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn marker_files_never_follow_links_or_read_without_end() {
+        let dir = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink("/dev/zero", dir.path().join("setup.cfg")).unwrap();
+        assert_eq!(small(&dir.path().join("setup.cfg")), "");
+        write(&dir.path().join("a.py"), "print(1)\n");
+        let d = detect(dir.path());
+        assert_eq!(d.languages.len(), 1);
     }
 
     #[test]

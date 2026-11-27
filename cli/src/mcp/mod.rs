@@ -454,6 +454,7 @@ pub fn http_service(
     let origins = vec![
         format!("http://localhost:{port}"),
         format!("http://127.0.0.1:{port}"),
+        format!("http://[::1]:{port}"),
         format!("http://{host}:{port}"),
     ];
     let config = StreamableHttpServerConfig::default()

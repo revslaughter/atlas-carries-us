@@ -235,7 +235,11 @@ impl Studio {
             let json = headers
                 .get(header::CONTENT_TYPE)
                 .and_then(|v| v.to_str().ok())
-                .is_some_and(|v| v.starts_with("application/json"));
+                .is_some_and(|v| {
+                    // The media type alone, before any parameter such as charset.
+                    let media = v.split(';').next().unwrap_or("").trim();
+                    media.eq_ignore_ascii_case("application/json")
+                });
             if !json {
                 return Err(fail(
                     StatusCode::UNSUPPORTED_MEDIA_TYPE,
@@ -544,6 +548,20 @@ pub mod tests {
             s.admit(&Method::POST, &h).unwrap_err().0,
             StatusCode::FORBIDDEN
         );
+        let mut h = own(true);
+        h.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/jsonp"),
+        );
+        assert_eq!(
+            s.admit(&Method::POST, &h).unwrap_err().0,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        h.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json; charset=utf-8"),
+        );
+        assert!(s.admit(&Method::POST, &h).is_ok());
         let mut h = own(true);
         h.insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"));
         assert_eq!(
