@@ -362,8 +362,10 @@ Notes:
    entry names one: `Some(port) => host.port == Some(port), None => true`.
    An empty list admits every host. A missing `Host` (and no `:authority`)
    gets 400 (`tower.rs`, `host_is_allowed` and `parse_host_header`).
-3. acu's `http_service` passes `localhost`, `127.0.0.1` and `::1` without a
-   port (`cli/src/mcp/mod.rs`). So `/mcp` admits those names on any port.
+3. Before this change, acu's `http_service` passed `localhost`,
+   `127.0.0.1` and `::1` without a port (`cli/src/mcp/mod.rs`), so `/mcp`
+   admitted those names on any port. acu now passes each name with the
+   port, from the same list as the API (`Studio::hosts`).
    The studio's own check names the port (`cli/src/studio/mod.rs`,
    `hosts`).
 
@@ -526,11 +528,16 @@ Notes:
 2. The viewer's page itself needs no token in `acu serve`. Its later
    fetches to `/api/` and `/data/atlas.json` go from the page's own origin,
    so they carry the Strict cookie. So the first visit works either way.
+3. acu chose `SameSite=Lax` in the end, so the first visit from a link
+   keeps the cookie after the 303 in every browser. Writes from another
+   site still meet the `Origin`, Fetch Metadata and custom-header guards
+   ([`docs/studio.md`](../../studio.md#decisions-on-the-token-and-the-host)).
 
 ### 6.8 Order of checks
 
-1. Host, then token, then Origin, then the changing-call guards, then the
-   body. A foreign `Host` gets 403 and learns nothing about the token.
+1. Host, then Origin, then token, then the changing-call guards, then the
+   body. A foreign `Host` or `Origin` gets 403 and learns nothing about the
+   token. acu applies this order to `/api/` and to `/mcp`.
 2. Exchange `?token=` only after the Host check (3.3.2).
 3. Never answer `OPTIONS` with `Access-Control-Allow-*`, with or without a
    token (contrast 1.5.3).

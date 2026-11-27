@@ -69,40 +69,49 @@ A client that connects over HTTP takes the address of a running
 
    ```text
    acu: serving the map at http://127.0.0.1:4321/?token=<token> and MCP at http://127.0.0.1:4321/mcp, writes on  (Ctrl-C stops)
-   acu: open the address above, with its token; an MCP client sends the header "Authorization: Bearer <token>"; set ACU_TOKEN to keep one token across restarts
-   acu: pages answer only the loopback names of port 4321; for a forwarded name, start acu serve again with --allow-host <name:port>
+   acu: open the address above, with its token; an MCP client sends the header "Authorization: Bearer <token>"; for an MCP client's config, ACU_TOKEN fixes the token across restarts
+   acu: pages answer only the loopback names of port 4321; for a forwarded name, start acu serve again with --allow-host <name[:port]>
    ```
 
 2. Give the client the header `Authorization: Bearer <token>`. `/mcp`
-   takes only this header; the viewer's cookie does not open it. A call
-   without the header, or with a wrong token, gets status 401 and the error
-   "acu: the MCP request lacks the session token; send the header
-   Authorization: Bearer <token> with the token that acu printed". The
-   answer carries `WWW-Authenticate: Bearer realm="acu"`, and adds
-   `, error="invalid_token"` when the call sent a wrong token. acu offers
-   no sign-in: a client that looks for one under `/.well-known/oauth-*`
-   gets 404. Give the token by hand.
-3. Use `http://127.0.0.1:<port>/mcp`, as acu prints it, in a client's
+   takes only this header. The viewer's cookie does not open it.
+3. A call without the header, or with a wrong token, gets status 401. The
+   error reads "acu: the MCP request lacks the session token; send the
+   header Authorization: Bearer <token> with the token that acu printed".
+   - The answer carries `WWW-Authenticate: Bearer realm="acu"`.
+   - A sent but wrong token adds `, error="invalid_token"`.
+   - acu offers no sign-in. A client that looks for one under
+     `/.well-known/oauth-*` gets 404. Give the token by hand.
+4. A foreign `Host` or `Origin` gets 403 before acu looks at the token.
+   That answer carries no `WWW-Authenticate`.
+5. Use `http://127.0.0.1:<port>/mcp`, as acu prints it, in a client's
    config. The name `localhost` may lead to another process that listens
    on `[::1]`.
 
 acu makes a new random token at each start: 32 random bytes, written as 64
-hex digits. A client config that holds the token then stops working after
-a restart. To keep one token, set the environment variable `ACU_TOKEN`
-before you start acu. acu removes it from its own environment at start, so
-the adapters and the tools that they run never inherit it. It takes 32 to 512 characters, each a letter, a digit,
-`-`, `.`, `_` or `~`. acu refuses any other value and does not start.
+hex digits. So a client config that holds the token stops working after a
+restart. To keep one token, set the environment variable `ACU_TOKEN` for
+`acu serve`. It takes 32 to 512 characters, each a letter, a digit, `-`,
+`.`, `_` or `~`. An empty value counts as unset. acu refuses any other
+value and does not start.
+
+Set the variable on the command line of `acu serve` alone, not with
+`export`. Then only that one process gets it. acu removes it from its own
+environment at start, so the adapters and the tools that they run never
+inherit it. An exported variable would stay in your shell, and every other
+program that the shell starts would inherit it.
 
 ```sh
-export ACU_TOKEN="$(openssl rand -hex 32)"   # once; keep it somewhere safe
-acu serve -c atlas.yaml
+openssl rand -hex 32 > ~/.acu-token        # once; keep the file private
+chmod 600 ~/.acu-token
+ACU_TOKEN="$(cat ~/.acu-token)" acu serve -c atlas.yaml
 ```
 
 Claude Code adds the server with the header:
 
 ```sh
 claude mcp add --transport http atlas http://127.0.0.1:4321/mcp \
-  --header "Authorization: Bearer $ACU_TOKEN"
+  --header "Authorization: Bearer $(cat ~/.acu-token)"
 ```
 
 VS Code reads `.vscode/mcp.json`. An input keeps the token out of the
@@ -111,7 +120,12 @@ file:
 ```json
 {
   "inputs": [
-    { "id": "acu-token", "type": "promptString", "description": "acu session token", "password": true }
+    {
+      "id": "acu-token",
+      "type": "promptString",
+      "description": "acu session token",
+      "password": true
+    }
   ],
   "servers": {
     "atlas": {
@@ -232,13 +246,15 @@ keeps no other guide files yet, so the write tools change that one file.
    So does an address that other computers can reach, without
    `--allow-remote-writes`.
 5. The HTTP endpoint accepts only requests whose `Host` names a loopback
-   name or the address it listens on, each with the server's port, and
-   refuses a request whose `Origin` names another site. A web page elsewhere cannot reach it.
+   name or the address it listens on, each with the server's port. It
+   refuses a request whose `Origin` names another site. So a web page
+   elsewhere cannot reach it.
    `--allow-host` changes nothing here: a forwarded name reaches the map's
    pages, never `/mcp`.
 6. Every HTTP call needs the session token as `Authorization: Bearer
-   <token>`. The viewer's cookie does not count. acu checks the token
-   before the MCP library reads the request. So another process or user on
+   <token>`. The viewer's cookie does not count. acu checks the `Host`,
+   the `Origin` and then the token, in the API's order, before the MCP
+   library reads the request. So another process or user on
    the computer cannot call the tools without the token.
 7. A write applies the config to the adapters' output from the start of the
    run. After a change to `languages` or `entryPoints`, or to the code,
@@ -248,12 +264,22 @@ keeps no other guide files yet, so the write tools change that one file.
 
 `tests/e2e/mcp.mjs` acts as a scripted client. It speaks JSON-RPC to
 `acu mcp` on the chi and Cobra examples, calls every tool, and checks the
-answers against facts of the code. It then starts `acu serve` and reads the
-session token from its standard error. It checks that a client without the
-token gets 401. It drafts a tour step over HTTP with
-`Authorization: Bearer <token>`, opens the served map in Chromium at
-`/?token=<token>`, and checks for the "Machine-drafted" label.
-`scripts/check.sh` runs it:
+answers against facts of the code. Then it runs `acu serve` with
+`--allow-host Fwd.Example:9999`, and reads the session token from its
+standard error. Over HTTP it checks these:
+
+1. A client without the token gets 401.
+2. A foreign `Origin` on `/mcp` gets exactly 403.
+3. A foreign `Host` gets 403, and the message holds the `--allow-host`
+   hint.
+4. The allowed name gets the page with 200, without the API mark, and its
+   data with 200.
+5. The allowed name gets 403 on `/api/`, even with the token.
+6. The allowed name with another port gets 403.
+
+It then drafts a tour step with `Authorization: Bearer <token>`, opens the
+served map in Chromium at `/?token=<token>`, and checks for the
+"Machine-drafted" label. `scripts/check.sh` runs it:
 
 ```sh
 node tests/e2e/mcp.mjs ./target/release/acu out/mcp

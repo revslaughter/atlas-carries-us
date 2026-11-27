@@ -467,13 +467,15 @@ Nov 2026. [`docs/studio.md`](../../studio.md) describes the guards.
 ### 6.2 `acu studio`
 
 1. Bind to loopback only: done. `acu studio` refuses any other address.
-2. Check `Host`: done in `acu studio`. `acu serve` checks the API only, so
-   a rebinding page can read a served map. Open: a follow-up issue tracks
-   a `Host` check for `acu serve`.
+2. Check `Host`: done in `acu studio`, and in `acu serve` on a loopback
+   address, for every page, the data, the API and `/mcp` (issue #43).
+   `--allow-host` admits a forwarded name for pages and data only.
 3. Check `Origin`: done.
 4. Fetch Metadata and a required `Origin` on changing calls: done for
    `/api/`. Open for `/mcp`.
-5. Session secret: open.
+5. Session secret: done (issue #42). The API takes a cookie or a bearer
+   token; `/mcp` takes the bearer token only. See
+   [`docs/studio.md`](../../studio.md#the-session-token).
 6. Custom header and `application/json`: done for `/api/`. Open for
    `/mcp`.
 7. No `Access-Control-Allow-Origin`, 403 on a cross-site preflight: done.
@@ -481,8 +483,9 @@ Nov 2026. [`docs/studio.md`](../../studio.md) describes the guards.
 9. Security headers: `nosniff`, `no-referrer` and `frame-ancestors` done on
    the viewer's pages and the API. Open: `default-src 'self'`, and all
    three headers on `/mcp`.
-10. Guards on `/mcp`: partly done. The MCP library checks `Host` and
-    `Origin`. Open: Fetch Metadata and the custom header.
+10. Guards on `/mcp`: partly done. acu checks `Host`, `Origin` and the
+    bearer token before the MCP library, which checks `Host` and `Origin`
+    again. Open: Fetch Metadata and the custom header.
 11. Random default port: open. The port stays 4321.
 
 ### 6.3 Folder browser

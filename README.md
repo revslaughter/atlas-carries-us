@@ -62,10 +62,11 @@ docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.
 
 1. The image runs `acu` in `/work`. Mount your project there.
 2. Give `--addr 0.0.0.0:4321` so that the port reaches the host.
-3. Open <http://127.0.0.1:4321/>. On an address that other computers can
-   reach, the map's pages answer without a token. The API and the MCP server
-   still need the session token that `acu` prints
-   ([`docs/studio.md`](docs/studio.md#the-session-token)).
+3. Open <http://127.0.0.1:4321/>. The map's pages answer without a token.
+   The API and the MCP server need the session token that `acu` prints
+   ([`docs/studio.md`](docs/studio.md#the-session-token)). On `0.0.0.0`,
+   the write tools stay off without `--allow-remote-writes`, so the editor
+   does not show.
 
 ### Route B: programs for your own system
 
@@ -218,10 +219,11 @@ relative path in it resolves against the folder that holds it.
 
 ### Set up in the browser
 
-`acu studio` writes the config for you. Run it, open the address that it
-prints, such as `http://127.0.0.1:4321/?token=<token>`, and pick a folder or paste an HTTPS address of a
-repository. The studio proposes an `atlas.yaml` from the languages it finds,
-runs the adapters, and opens the map. Then you edit the regions and the tour
+`acu studio` writes the config for you. Run it, and open the address that
+it prints, such as `http://127.0.0.1:4321/?token=<token>`. Then pick a
+folder or paste an HTTPS address of a repository. The studio proposes an
+`atlas.yaml` from the languages it finds, runs the adapters, and opens the
+map. Then you edit the regions and the tour
 in the browser: record the current view as a step, write its text, and drag
 the steps into order. Each save goes into `atlas.yaml`, with its comments
 kept. [`docs/studio.md`](docs/studio.md) explains each step. The sections
@@ -338,10 +340,10 @@ check when it loads the file.
 | `serve`, `mcp` | `--read-only` | off | Turn off the MCP tools that write `atlas.yaml`. |
 | `serve`, `mcp` | `--root <folder>` | current folder | With `-d`: the mapped repository, where the MCP tool `read_source` reads files. |
 | `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. |
-| `serve` | `--allow-host <name[:port]>` | none | On a loopback address, also show the map's pages and data to this forwarded name, such as `localhost:9000` behind `ssh -L`, or `<codespace>-4321.app.github.dev` in GitHub Codespaces. May repeat. The API and MCP keep their own names. |
+| `serve` | `--allow-host <name[:port]>` | none | On a loopback address, also show the map's pages and data to this forwarded name, such as `localhost:9000` behind `ssh -L`, or the forwarded name that GitHub Codespaces may send, such as `<codespace>-4321.app.github.dev`. A refused page's 403 names the `Host` that acu received; give that value. May repeat. The API and MCP keep their own names. |
 
 `acu serve` and `acu studio` print an address that holds a session token,
-such as `http://127.0.0.1:4321/?token=<token>`. Open that address; the API
+such as `http://127.0.0.1:4321/?token=<token>`. Open that address. The API
 and the MCP server answer only requests that carry the token. The
 environment variable `ACU_TOKEN` fixes the token, so that it stays the same
 across restarts. [`docs/studio.md`](docs/studio.md#the-session-token)
@@ -436,7 +438,7 @@ The examples need no setup of your own.
 | A tour step points at nothing | The code moved. Fix the step's `name`, `path` or `id`. |
 | The port stays busy | Give `acu serve --addr 127.0.0.1:<another port>`. |
 | `the request lacks the session token` | Open the address with `?token=` that `acu` printed. An MCP client sends `Authorization: Bearer <token>`. |
-| `the server answers only requests for its own address` | Open `127.0.0.1` or `localhost` with the port that `acu` printed. For a forwarded name, start `acu serve` again with `--allow-host <name:port>`. |
+| `the server answers only requests for its own address` | Open `127.0.0.1` or `localhost` with the port that `acu` printed. For a forwarded name, start `acu serve` again with `--allow-host` and the `Host` that the message names. |
 
 ## Develop
 
