@@ -810,15 +810,27 @@ fn flow(v: &Value) -> String {
     }
 }
 
-/// Counts the top-level fields that two list items share, with an equal
-/// `id` counting for a hundred, so a region pairs with its old self first.
+/// Scores how well two list items match: the number of top-level fields
+/// they share, with an equal `id` counting for a hundred, so a region pairs
+/// with its old self first. Items that share neither `id` nor `title` must
+/// share two fields; one shared field, such as `open: { view: overview }`,
+/// says nothing, and scores 0.
 fn shared_fields(a: &Value, b: &Value) -> usize {
     let (Some(a), Some(b)) = (a.as_object(), b.as_object()) else {
         return 0;
     };
-    a.iter()
+    let shared: Vec<&String> = a
+        .iter()
         .filter(|(k, v)| b.get(*k) == Some(v))
-        .map(|(k, _)| if k == "id" { 100 } else { 1 })
+        .map(|(k, _)| k)
+        .collect();
+    let strong = shared.iter().any(|k| *k == "id" || *k == "title");
+    if !strong && shared.len() < 2 {
+        return 0;
+    }
+    shared
+        .iter()
+        .map(|k| if *k == "id" { 100 } else { 1 })
         .sum()
 }
 
@@ -1060,6 +1072,26 @@ mod tests {
         .unwrap();
         assert!(
             out.contains("# About B.\n  - title: \"B renamed\""),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn one_shared_view_pairs_no_comments() {
+        // A new step that shares only its view with a deleted step takes
+        // none of that step's comments.
+        let text = "version: 1\ntour:\n  # About gone.\n  - title: Gone\n    # Inner note.\n    open: { view: overview }\n    text: g\n";
+        let fresh = json!({"title": "New", "text": "n", "open": {"view": "overview"}});
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![fresh],
+            },
+        )
+        .unwrap();
+        assert!(
+            !out.contains("About gone") && !out.contains("Inner note"),
             "{out}"
         );
     }

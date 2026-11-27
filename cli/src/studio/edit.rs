@@ -213,7 +213,7 @@ pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
                 },
             )?;
             text = t;
-            if h == "section" {
+            if h == "section" || how == "unchanged" {
                 how = h;
             }
         }
@@ -226,7 +226,7 @@ pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
                 },
             )?;
             text = t;
-            if h == "section" {
+            if h == "section" || how == "unchanged" {
                 how = h;
             }
         }

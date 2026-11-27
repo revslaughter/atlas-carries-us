@@ -118,7 +118,8 @@ The studio proposes a first `atlas.yaml` from what the folder holds:
    `.git/config` as text; it runs no git before you confirm trust.
 4. **Name.** The folder's name becomes `project.name`.
 
-Detection looks at no more than 200 subfolders. It reads a marker file only
+Detection looks at no more than 200 subfolders, the first that the system
+lists. It reads a marker file only
 up to 1 MB, and it never follows a symbolic link to one. An `atlas.yaml` over
 1 MB shows as empty in the proposal.
 
@@ -273,11 +274,13 @@ In a list save, acu keeps comments by these rules:
    belong to that entry. They move with it.
 3. An entry equal to an old entry keeps its old lines and the comments above
    them.
-4. A changed entry keeps the comments above the old entry with the same ID.
-   For a step, which has no ID, acu matches the same title.
-5. When no old entry matches, a changed entry takes the comments of the old
-   entry at its place. acu does this only when the list kept its length.
-   So an insert or a deletion never moves one entry's comment to another.
+4. A changed entry pairs with the old entry that shares the most fields
+   with it. An equal ID counts most. A pair needs an equal ID, an equal
+   title, or two equal fields; one shared field, such as the same view,
+   forms no pair.
+5. A changed entry keeps the comments above its old entry, and the comments
+   inside it: acu rewrites only the keys that changed.
+6. A new entry that pairs with no old entry takes no comments.
 
 ## The API
 
@@ -289,7 +292,7 @@ local tools may use it too.
 | `GET /api/state` | none | The mode (`serve` or `studio`), whether a map shows, whether writes work and why not, the open project, the last job, and the picker's root and workspace. |
 | `GET /api/config` | none | The file's `revision` and `path`; `writable` and `why`; `project`, `regions`, `layout` and `tour` as written; `resolved.tour` and `resolved.regions` as acu resolved them; every unit with its path and region; the map's warnings. |
 | `GET /api/job` | none | The last job: `id`, `kind` (`extract`, `open` or `clone`), `state` (`running`, `done` or `failed`), `log`, `error`, and the `path` that the job opened or cloned. |
-| `POST /api/tour` | `revision`, `tour` | Replaces the tour. Answers the new `revision`, `how` and `warnings`. |
+| `POST /api/tour` | `revision`, `tour` | Replaces the tour. Answers the new `revision`, `how` (`in place`, `section`, or `unchanged` when the save changed nothing) and `warnings`. |
 | `POST /api/regions` | `revision`, `regions`, optional `layout`, optional `tour` | Replaces the regions; with `layout`, also the layout (`null` removes it); with `tour`, also the tour, in the same write. |
 | `POST /api/project` | `revision`, `name`, `description`, `descriptionDrafted` | Sets the project's name and description; a missing or null `descriptionDrafted` removes the mark. |
 | `POST /api/match` | `paths` | The IDs of the units that the globs match, and the globs that do not parse. |
@@ -352,7 +355,8 @@ could still try to reach it. These guards stop that:
    included) before it checks it. A path must lie inside the root or the
    workspace. The picker lists folders only, never files. It hides names
    that start with a dot, and `node_modules`, `target`, `vendor`, `dist`,
-   `build`, `__pycache__` and `venv`. It lists at most 500 folders.
+   `build`, `__pycache__` and `venv`. It reads at most 500 folders, in the
+   order that the system lists them, and shows those sorted by name.
 7. **Clone address.** acu accepts an `https://` address with a plain host
    name and a path of plain names. It refuses anything else: another
    protocol, a user name, a query, `..`, a leading `-`.
@@ -395,17 +399,17 @@ sources for each guard.
    it again after the first ends.
 2. The studio holds no session token yet. Any process on your computer can
    call the API, and so can another user on a shared machine. Run the studio
-   only on a computer that you alone use. A follow-up adds a session secret,
+   only on a computer that you alone use. Issue #42 adds a session secret,
    as Jupyter uses.
 3. A local user who owns a folder under the root can swap that folder for a
    symbolic link. The swap can fall between acu's path check and its use of
    the path. Limit 2 covers this case: use the studio only on a computer
-   that you alone use.
+   that you alone use. Issue #45 tracks a fix.
 4. `acu serve` checks the `Host` of API calls only. On a loopback address, a
    page that uses DNS rebinding can read the served map's data and pages.
    For private code, use `acu studio`, or an address and port that a hostile
-   page cannot guess. A follow-up issue tracks a `Host` check for
-   `acu serve`, with an option for forwarded names.
+   page cannot guess. Issue #43 tracks a `Host` check for `acu serve`, with
+   an option for forwarded names.
 5. The MCP server at `/mcp` follows the open project: after you open another
    project or extract again, its tools read the new map. Before a project
    opens, every tool answers that no project shows yet.
@@ -424,7 +428,11 @@ sources for each guard.
 9. Some guards from the research note do not exist yet:
    `Content-Security-Policy: default-src 'self'`, a random default port, a
    size cap on a clone, a restricted mode for untrusted code, and
-   `GOTOOLCHAIN=local` for the Go adapter. Follow-up issues track them.
+   `GOTOOLCHAIN=local` for the Go adapter. Issue #44 tracks them.
+10. A file whose lines end partly in CR LF and partly in LF comes back from
+    a save with one ending: the ending of most of its lines.
+11. A save writes a new file and renames it over `atlas.yaml`. Another hard
+    link to the old file keeps the old text. Issue #45 tracks both.
 
 ## Later: a hosted service
 

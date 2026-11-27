@@ -48,6 +48,8 @@ interface RegionItem {
   origId: string | null;
   /** Counts the match requests, so an older reply never overwrites a newer one. */
   seq?: number;
+  /** True while a match request waits for its reply. */
+  pending?: boolean;
   /** The units that its paths match, as the server reports them. */
   matched?: string[];
   /** Patterns that do not parse. */
@@ -96,6 +98,8 @@ const S = {
   job: null as Job | null,
   /** True while a save or a job runs. */
   busy: false,
+  /** True while a save runs: the fields go inert, so no edit gets lost to the reload. */
+  saving: false,
   /** The server's state. */
   server: null as ServerState | null,
 };
@@ -437,6 +441,9 @@ function render(focus?: string) {
   // live role, so later redraws do not repeat it to a screen reader.
   const fresh = S.msg !== lastShown;
   lastShown = S.msg;
+  // A status message speaks through the page's own live region, which
+  // stays in place; a problem speaks through role=alert on its first show.
+  if (fresh && S.msg && !S.msg.bad) announce(S.msg.text);
   const c = changed();
   const tabs: [Tab, string, boolean][] = [
     ["tour", "Tour", c.tour],
@@ -460,15 +467,15 @@ function render(focus?: string) {
     </div>
     <p class="ed-file">${esc(S.path)}</p>
     ${S.revision ? "" : `<p class="ed-msg bad" role="alert" tabindex="-1"><b>Problem.</b> ${esc(S.msg?.text ?? "acu could not read atlas.yaml.")} Fix the file, then reload this page.</p>`}
-    <div class="ed-tabs" role="tablist" ${S.busy ? "inert" : ""}>${tabs
+    <div class="ed-tabs" role="tablist" ${S.saving ? "inert" : ""}>${tabs
       .map(
         ([t, name, ch]) =>
           `<button role="tab" class="ed-tab" id="edTab-${t}" aria-controls="edPanel" tabindex="${S.tab === t ? 0 : -1}" data-act="tab" data-tab="${t}" aria-selected="${S.tab === t}">${name}<span class="ed-dot" ${ch ? "" : "hidden"}> •<span class="sr"> (changed)</span></span></button>`,
       )
       .join("")}</div>
-    <div class="ed-body" role="tabpanel" tabindex="-1" id="edPanel" aria-labelledby="edTab-${S.tab}" ${S.busy ? "inert" : ""}>${body}</div>
+    <div class="ed-body" role="tabpanel" tabindex="-1" id="edPanel" aria-labelledby="edTab-${S.tab}" ${S.saving ? "inert" : ""}>${body}</div>
     <div class="ed-foot">
-      ${S.msg && S.revision ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" ${fresh ? `role="${S.msg.bad ? "alert" : "status"}"` : ""}>${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
+      ${S.msg && S.revision ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" ${fresh && S.msg.bad ? `role="alert"` : ""}>${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
       <div class="ed-row">
         <button class="btn primary" data-act="save" ${isDirty && !S.busy ? "" : "disabled"}>Save to atlas.yaml</button>
         <button class="btn" data-act="discard" ${isDirty && !S.busy ? "" : "disabled"}>Discard changes</button>
@@ -506,9 +513,13 @@ function queueMatch(r: RegionItem, delay = 250) {
   matchTimers.set(
     r.key,
     window.setTimeout(async () => {
+      matchTimers.delete(r.key);
       const seq = (r.seq = (r.seq ?? 0) + 1);
+      r.pending = true;
       const a = await call<{ units: string[]; errors: string[] }>("match", { paths: r.cfg.paths ?? [] });
-      if (!a.ok || seq !== r.seq) return;
+      if (seq !== r.seq) return;
+      r.pending = false;
+      if (!a.ok) return;
       r.matched = a.data.units;
       r.bad = a.data.errors;
       const names = r.matched.map(id => S.units.find(u => u.id === id)?.path ?? id);
@@ -553,7 +564,10 @@ async function save() {
     .concat(em.orphanSteps(cfgs, deletedIds()))
     .concat(
       S.regions.flatMap((r, i) =>
-        r.bad?.length ? [`Fix the path patterns of region ${i + 1}: ${r.bad.join("; ")}.`] : [],
+        // A reply still on its way may clear the problem, so only a settled one counts.
+        r.bad?.length && !matchTimers.has(r.key) && !r.pending
+          ? [`Fix the path patterns of region ${i + 1}: ${r.bad.join("; ")}.`]
+          : [],
       ),
     );
   if (issues.length) {
@@ -572,6 +586,7 @@ async function save() {
   const c = { ...changed(), tour: f.keys.tour !== S.saved.tour };
   const withTour = c.regions && c.tour;
   S.busy = true;
+  S.saving = true;
   S.msg = { text: "Saving…" };
   render();
   const steps: [boolean, string, () => object][] = [
@@ -601,9 +616,10 @@ async function save() {
     const a = await call(path, { revision: S.revision, ...body() });
     if (!a.ok) {
       S.busy = false;
+      S.saving = false;
       const said = String(a.data?.error ?? "The save failed").replace(/\.?$/, ".");
       S.msg = {
-        text: a.status === 409 ? said + " Choose Discard changes to read the file again." : said,
+        text: a.status === 409 ? said + " Discard changes reads the file again." : said,
         bad: true,
       };
       render(".ed-msg");

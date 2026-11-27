@@ -153,7 +153,8 @@ keeps no other guide files yet, so the write tools change that one file.
    nor the map names.
 2. The write tools change only the `atlas.yaml` that the server started
    with, and nothing else: no source file, no other config. A file whose
-   lines end in CR LF keeps that ending.
+   lines end in CR LF keeps that ending. A file that mixes CR LF and LF
+   comes back with the ending of most of its lines (issue #45).
 3. One `acu` process writes one draft at a time. Two processes that serve
    the same `atlas.yaml` do not wait for each other: each writes the whole
    file, and the later write wins. Run one server per config.

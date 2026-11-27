@@ -890,6 +890,15 @@ pub fn clone(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
     };
     s.start_job("clone", move |st, log| {
         let dest = ws.join(&target.rel);
+        // Before anything looks at or removes a folder on the way: a link
+        // there would send the look or the removal outside the workspace.
+        inside_workspace(&ws, dest.parent().unwrap_or(&ws))?;
+        if std::fs::symlink_metadata(&dest).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err(format!(
+                "acu: {} is a symbolic link, so acu refuses to clone there; remove it, or clone another address",
+                dest.display()
+            ));
+        }
         if dest.join(".git").exists() {
             log(&format!(
                 "acu: {} holds a clone already; acu opens it as it is",
