@@ -74,7 +74,7 @@ pub async fn serve(studio: Arc<Studio>) -> Result<()> {
         studio::Mode::Serve => "the map",
     };
     let stopper = studio.clone();
-    let (app, stop_mcp) = app(studio, addr);
+    let (app, stop_mcp) = app(studio);
     for line in start_lines(&stopper, addr, what, writes) {
         eprintln!("{line}");
     }
@@ -88,22 +88,28 @@ pub async fn serve(studio: Arc<Studio>) -> Result<()> {
     Ok(())
 }
 
-/// Makes the server's routes: the MCP server at `/mcp` behind the token
-/// check, and [`route`] for every other address. Also returns the function
-/// that stops the MCP server's sessions.
-fn app(studio: Arc<Studio>, addr: SocketAddr) -> (Router, impl FnOnce() + Send + 'static) {
-    let (mcp, stop_mcp) = crate::mcp::http_service(studio.live.clone(), addr);
+/// Makes the server's routes: the MCP server at `/mcp` behind the guards,
+/// and [`route`] for every other address. Also returns the function that
+/// stops the MCP server's sessions. Call it after the bind, so the host
+/// list holds the real port.
+fn app(studio: Arc<Studio>) -> (Router, impl FnOnce() + Send + 'static) {
+    let (mcp, stop_mcp) = crate::mcp::http_service(studio.live.clone(), studio.hosts());
     let guard = studio.clone();
-    // The MCP library checks Host and Origin itself; acu adds the token,
-    // as a bearer token only.
+    // The same order as the API: Host, then Origin, each with 403, then
+    // the bearer token with 401. The MCP library checks Host and Origin
+    // again with the same list.
     let mcp = Router::new()
         .fallback_service(mcp)
         .layer(middleware::from_fn(move |req: Request, next: Next| {
             let studio = guard.clone();
             async move {
-                match studio.check_bearer(req.headers()) {
+                let h = req.headers();
+                if let Err(r) = studio.check_host(h).and_then(|_| studio.check_origin(h)) {
+                    return json_reply(r);
+                }
+                match studio.check_bearer(h) {
                     Ok(()) => next.run(req).await,
-                    Err(r) => mcp_refusal(r, req.headers()),
+                    Err(r) => mcp_refusal(r, h),
                 }
             }
         }));
@@ -142,7 +148,7 @@ fn start_lines(studio: &Studio, addr: SocketAddr, what: &str, writes: &str) -> V
     let token = studio.secret.token();
     let mut v = vec![
         format!("acu: serving {what} at http://{addr}/?token={token} and MCP at http://{addr}/mcp, {writes}  (Ctrl-C stops)"),
-        format!("acu: open the address above, with its token; an MCP client sends the header \"Authorization: Bearer {token}\"; set {} to keep one token across restarts", crate::secret::ENV),
+        format!("acu: open the address above, with its token; an MCP client sends the header \"Authorization: Bearer {token}\"; for an MCP client's config, {} fixes the token across restarts", crate::secret::ENV),
     ];
     if studio.mode == studio::Mode::Serve && studio.checks_pages() {
         let names = if studio.allow_hosts().is_empty() {
@@ -150,14 +156,14 @@ fn start_lines(studio: &Studio, addr: SocketAddr, what: &str, writes: &str) -> V
         } else {
             format!(" and {}", studio.allow_hosts().join(", "))
         };
-        v.push(format!("acu: pages answer only the loopback names of port {}{names}; for a forwarded name, start acu serve again with --allow-host <name:port>", addr.port()));
+        v.push(format!("acu: pages answer only the loopback names of port {}{names}; for a forwarded name, start acu serve again with --allow-host <name[:port]>", addr.port()));
     }
     v
 }
 
 /// Sends a request under `/api/` to the studio, and any other to
-/// [`respond`]. A page address with `?token=` trades the token for a
-/// cookie first.
+/// [`respond`]. A page address with `?token=` exchanges the token for
+/// the cookie first.
 async fn route(req: Request, studio: Arc<Studio>) -> Response {
     let path = req.uri().path().to_string();
     // Every page needs a known Host in the studio, and in acu serve on a
@@ -169,7 +175,7 @@ async fn route(req: Request, studio: Arc<Studio>) -> Response {
         if let Err(r) = studio.check_page_host(req.headers()) {
             return json_reply(r);
         }
-        if let Some(r) = trade_token(&studio, &path, req.uri().query()) {
+        if let Some(r) = exchange_token(&studio, &path, req.uri().query()) {
             return r;
         }
         // The studio's data holds the open project, so it needs the token.
@@ -181,9 +187,11 @@ async fn route(req: Request, studio: Arc<Studio>) -> Response {
     }
     let Some(call) = path.strip_prefix("/api/") else {
         let atlas = studio.live.get().ok();
-        // Only a page with the token learns of the API, so a page without
-        // it never calls the API and logs no refused request.
-        let api = studio.check_token(req.headers()).is_ok();
+        // Only a page that the API would answer learns of the API: its own
+        // Host and the token. A page through a forwarded name, or without
+        // the token, never calls the API and logs no refused request.
+        let h = req.headers();
+        let api = studio.check_host(h).is_ok() && studio.check_token(h).is_ok();
         return respond(&path, atlas.as_deref(), api);
     };
     // Refuse a foreign request before reading its body.
@@ -204,13 +212,13 @@ async fn route(req: Request, studio: Arc<Studio>) -> Response {
     json_reply(r)
 }
 
-/// Trades a `?token=` in a page address for the session cookie: a good
+/// Exchanges a `?token=` in a page address for the session cookie: a good
 /// token gets the cookie and a redirect to the address without it; a wrong
 /// one gets 401. An address without the token gets `None`.
-fn trade_token(studio: &Studio, path: &str, query: Option<&str>) -> Option<Response> {
+fn exchange_token(studio: &Studio, path: &str, query: Option<&str>) -> Option<Response> {
     let (token, rest) = crate::secret::take_token(query?);
     let token = token?;
-    if !studio.secret.matches(token) {
+    if !studio.secret.matches(&token) {
         return Some(json_reply(studio::fail(
             StatusCode::UNAUTHORIZED,
             "the address holds a wrong or old token; open the address that acu printed last",
@@ -228,15 +236,18 @@ fn trade_token(studio: &Studio, path: &str, query: Option<&str>) -> Option<Respo
     } else {
         format!("{path}?{rest}")
     };
-    let mut r = reply(StatusCode::SEE_OTHER, "text/plain", Vec::new());
-    let h = r.headers_mut();
-    if let (Ok(loc), Ok(cookie)) = (
+    let (Ok(loc), Ok(cookie)) = (
         header::HeaderValue::from_str(&to),
         header::HeaderValue::from_str(&studio.secret.set_cookie(studio.addr().port())),
-    ) {
-        h.insert(header::LOCATION, loc);
-        h.insert(header::SET_COOKIE, cookie);
-    }
+    ) else {
+        return Some(json_reply(studio::fail(
+            StatusCode::BAD_REQUEST,
+            "the address holds characters that acu cannot repeat in a redirect; open the address that acu printed",
+        )));
+    };
+    let mut r = reply(StatusCode::SEE_OTHER, "text/plain", Vec::new());
+    r.headers_mut().insert(header::LOCATION, loc);
+    r.headers_mut().insert(header::SET_COOKIE, cookie);
     Some(r)
 }
 
@@ -317,7 +328,7 @@ fn reply(status: StatusCode, mime: &str, body: Vec<u8>) -> Response {
 mod tests {
     use super::*;
     use crate::mcp::Live;
-    use crate::secret::tests::TEST;
+    use crate::secret::tests::{COOKIE, TEST};
 
     /// Makes a server of the given mode with no project, on `addr`.
     fn server(mode: studio::Mode, addr: &str) -> Arc<Studio> {
@@ -339,7 +350,7 @@ mod tests {
             .uri(uri)
             .header(header::HOST, host);
         if cookie {
-            b = b.header(header::COOKIE, format!("acu-token-4321={TEST}"));
+            b = b.header(header::COOKIE, format!("acu-token-4321={COOKIE}"));
         }
         route(b.body(Body::empty()).unwrap(), studio).await
     }
@@ -411,6 +422,10 @@ mod tests {
         assert_eq!(r.status(), StatusCode::OK);
         let r = get(forwarded.clone(), "localhost:9998", "/index.html", false).await;
         assert_eq!(r.status(), StatusCode::FORBIDDEN);
+        // With the cookie, a forwarded page still lacks the API mark: the
+        // API refuses that name.
+        let r = get(forwarded.clone(), "localhost:9999", "/", true).await;
+        assert!(!page_text(r).await.contains(API_MARK));
         // The API keeps its own names, token or not.
         let r = get(forwarded, "localhost:9999", "/api/state", true).await;
         assert_eq!(r.status(), StatusCode::FORBIDDEN);
@@ -433,9 +448,10 @@ mod tests {
         assert_eq!(r.headers()[header::LOCATION], "/");
         assert_eq!(
             r.headers()[header::SET_COOKIE],
-            format!("acu-token-4321={TEST}; Path=/; HttpOnly; SameSite=Strict").as_str()
+            format!("acu-token-4321={COOKIE}; Path=/; HttpOnly; SameSite=Lax").as_str()
         );
         assert_eq!(r.headers()[header::REFERRER_POLICY], "no-referrer");
+        assert_eq!(r.headers()[header::CACHE_CONTROL], "no-store");
         let r = get(
             s.clone(),
             "localhost:4321",
@@ -453,6 +469,23 @@ mod tests {
         )
         .await;
         assert_eq!(r.headers()[header::LOCATION], "/");
+        let r = get(
+            s.clone(),
+            "127.0.0.1:4321",
+            &format!("/a\\b?token={TEST}"),
+            false,
+        )
+        .await;
+        assert_eq!(r.headers()[header::LOCATION], "/");
+        // The last token counts, and a percent escape decodes.
+        let r = get(
+            s.clone(),
+            "127.0.0.1:4321",
+            &format!("/?token=wrong&token={}", TEST.replace('a', "%61")),
+            false,
+        )
+        .await;
+        assert_eq!(r.status(), StatusCode::SEE_OTHER);
         let r = get(s.clone(), "127.0.0.1:4321", "/?token=wrong", false).await;
         assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
         assert!(r.headers().get(header::SET_COOKIE).is_none());
@@ -492,12 +525,12 @@ mod tests {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         s.set_addr(addr);
-        let (app, stop) = app(s, addr);
+        let (app, stop) = app(s);
         let task = tokio::spawn(async move { axum::serve(listener, app).await });
         let init = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}"#;
-        let ask = |auth: Option<String>| {
+        let ask_as = |host: String, auth: Option<String>| {
             let mut req = format!(
-                "POST /mcp HTTP/1.1\r\nHost: {addr}\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n",
+                "POST /mcp HTTP/1.1\r\nHost: {host}\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n",
                 init.len()
             );
             if let Some(a) = auth {
@@ -514,7 +547,18 @@ mod tests {
                 String::from_utf8_lossy(&all).to_string()
             }
         };
+        let ask = |auth: Option<String>| ask_as(addr.to_string(), auth);
         let status = |r: &str| r[9..12].to_string();
+        // A foreign Host or Origin meets 403 before acu says a word about
+        // the token.
+        let r = ask_as("evil.example:4321".into(), None).await;
+        assert_eq!(status(&r), "403", "{r}");
+        assert!(!r.to_ascii_lowercase().contains("www-authenticate"), "{r}");
+        let r = ask(Some("Basic x\r\nOrigin: http://evil.example".into())).await;
+        assert_eq!(status(&r), "403", "{r}");
+        // A loopback name with another port fails too.
+        let r = ask_as(format!("127.0.0.1:{}", addr.port() + 1), None).await;
+        assert_eq!(status(&r), "403", "{r}");
         let r = ask(None).await;
         assert_eq!(status(&r), "401");
         assert!(
@@ -526,7 +570,7 @@ mod tests {
         assert!(r.contains("error=\"invalid_token\""), "{r}");
         // The cookie that opens the API does not open MCP.
         let r = ask(Some(format!(
-            "Basic x\r\nCookie: acu-token-{}={TEST}",
+            "Basic x\r\nCookie: acu-token-{}={COOKIE}",
             addr.port()
         )))
         .await;

@@ -66,12 +66,35 @@ const stop = () => child.kill();
 process.on("exit", stop);
 
 async function main() {
-  for (let i = 0; i < 100 && !serverLog.includes("serving"); i++) await new Promise(r => setTimeout(r, 100));
+  // Wait for both start lines in full; standard error arrives in pieces.
+  const startRe = /\?token=([0-9a-f]{64}) [^\n]*\n[^\n]*Authorization: Bearer ([0-9a-f]{64})[^\n]*\n/;
+  for (let i = 0; i < 300 && !startRe.test(serverLog); i++) await new Promise(r => setTimeout(r, 100));
   check(serverLog.includes("serving the studio"), "acu studio starts", serverLog);
-  token = serverLog.match(/\?token=([0-9a-f]{64}) /)?.[1] ?? "";
+  const lines = serverLog.match(startRe);
+  token = lines?.[1] ?? "";
   check(token !== "", "acu prints the address with a 64-digit token", serverLog);
-  check(serverLog.includes(`Authorization: Bearer ${token}`), "acu prints the header for MCP clients", serverLog);
-  const cookie = `acu-token-${port}=${token}`;
+  check(lines?.[2] === token, "acu prints the header for MCP clients", serverLog);
+
+  // The session token: the exchange first, for the cookie's value.
+  const host = { Host: `127.0.0.1:${port}` };
+  const wrongExchange = await raw("GET", "/?token=nope", host);
+  check(
+    wrongExchange.status === 401 && !wrongExchange.headers["set-cookie"],
+    "a wrong token in the address gets no cookie",
+    wrongExchange.status,
+  );
+  const exchange = await raw("GET", `/?token=${token}`, host);
+  const setCookie = String(exchange.headers["set-cookie"] ?? "");
+  const cookie = setCookie.split(";")[0];
+  const cookieValue = cookie.split("=")[1] ?? "";
+  check(
+    exchange.status === 303 &&
+      exchange.headers.location === "/" &&
+      new RegExp(`^acu-token-${port}=[0-9a-f]{64}; Path=/; HttpOnly; SameSite=Lax$`).test(setCookie),
+    "the token in the address becomes a cookie",
+    JSON.stringify(exchange.headers),
+  );
+  check(cookieValue !== token, "the cookie holds its own value, not the token", setCookie);
   own = {
     Host: `127.0.0.1:${port}`,
     Origin: `http://127.0.0.1:${port}`,
@@ -79,9 +102,6 @@ async function main() {
     "Content-Type": "application/json",
     "X-Acu-Studio": "1",
   };
-
-  // The session token.
-  const host = { Host: `127.0.0.1:${port}` };
   const noToken = await raw("GET", "/api/state", host);
   check(
     noToken.status === 401 && /token/.test(JSON.parse(noToken.body).error),
@@ -90,46 +110,31 @@ async function main() {
   );
   const noTokenPost = await raw("POST", "/api/folders", { ...own, Cookie: "" }, "{}");
   check(noTokenPost.status === 401, "a changing call without the token is refused", noTokenPost.status);
-  const wrongCookie = await raw("GET", "/api/state", { ...host, Cookie: `acu-token-${port}=${"0".repeat(64)}` });
-  check(wrongCookie.status === 401, "a wrong cookie is refused", wrongCookie.status);
-  const otherPort = await raw("GET", "/api/state", { ...host, Cookie: `acu-token-${port + 1}=${token}` });
+  const tokenCookie = await raw("GET", "/api/state", { ...host, Cookie: `acu-token-${port}=${token}` });
+  check(tokenCookie.status === 401, "the token itself in the cookie is refused", tokenCookie.status);
+  const otherPort = await raw("GET", "/api/state", { ...host, Cookie: `acu-token-${port + 1}=${cookieValue}` });
   check(otherPort.status === 401, "the cookie of another port is refused", otherPort.status);
+  const withCookie = await raw("GET", "/api/state", { ...host, Cookie: cookie });
+  check(withCookie.status === 200, "the cookie reaches the API", withCookie.status);
   const bearer = await raw("GET", "/api/state", { ...host, Authorization: `Bearer ${token}` });
   check(bearer.status === 200, "a bearer token reaches the API", bearer.status);
   const noTokenData = await raw("GET", "/data/atlas.json", host);
   check(noTokenData.status === 401, "the studio's data needs the token", noTokenData.status);
-  const noTokenMcp = await raw(
-    "POST",
-    "/mcp",
-    { ...host, "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
-    "{}",
-  );
+  const mcpHeaders = { ...host, "Content-Type": "application/json", Accept: "application/json, text/event-stream" };
+  const noTokenMcp = await raw("POST", "/mcp", mcpHeaders, "{}");
   check(noTokenMcp.status === 401, "MCP without the token is refused", noTokenMcp.status);
   check(
     noTokenMcp.headers["www-authenticate"] === 'Bearer realm="acu"',
     "MCP names the bearer scheme",
     noTokenMcp.headers["www-authenticate"],
   );
-  const cookieMcp = await raw(
-    "POST",
-    "/mcp",
-    { ...host, Cookie: cookie, "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
-    "{}",
-  );
+  const cookieMcp = await raw("POST", "/mcp", { ...mcpHeaders, Cookie: cookie }, "{}");
   check(cookieMcp.status === 401, "the cookie alone does not open MCP", cookieMcp.status);
-  const wrongTrade = await raw("GET", "/?token=nope", host);
+  const foreignMcp = await raw("POST", "/mcp", { ...mcpHeaders, Origin: "http://evil.example" }, "{}");
   check(
-    wrongTrade.status === 401 && !wrongTrade.headers["set-cookie"],
-    "a wrong token in the address gets no cookie",
-    wrongTrade.status,
-  );
-  const trade = await raw("GET", `/?token=${token}`, host);
-  check(
-    trade.status === 303 &&
-      trade.headers.location === "/" &&
-      String(trade.headers["set-cookie"]) === `${cookie}; Path=/; HttpOnly; SameSite=Strict`,
-    "the token in the address becomes a cookie",
-    JSON.stringify(trade.headers),
+    foreignMcp.status === 403 && !foreignMcp.headers["www-authenticate"],
+    "MCP refuses another site with 403 before the token",
+    foreignMcp.status,
   );
 
   // The guards.
@@ -162,25 +167,33 @@ async function main() {
   const errors = [];
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 }, colorScheme: "dark" });
   page.on("pageerror", e => errors.push("page error: " + e.message));
-  // The stale save below answers 409 on purpose, and the first visit
-  // without the token answers 401 on purpose; the browser logs those.
-  let expect401 = true;
+  // The stale save below answers 409 on purpose; the browser logs that one.
   page.on(
     "console",
-    m =>
-      m.type() === "error" &&
-      !/status of 409/.test(m.text()) &&
-      !(expect401 && /status of 401/.test(m.text())) &&
-      errors.push("console: " + m.text()),
+    m => m.type() === "error" && !/status of 409/.test(m.text()) && errors.push("console: " + m.text()),
   );
 
-  // Without the token, the page says what to do.
+  // Without the token, the page calls no API and says what to do. The one
+  // refused request: the data, with 401.
+  const firstVisit = [];
+  const onAnswer = r => firstVisit.push(`${r.status()} ${new URL(r.url()).pathname}`);
+  page.on("response", onAnswer);
   await page.goto(base);
   await page.waitForFunction(() => /session token/.test(document.getElementById("loading")?.textContent ?? ""));
+  page.off("response", onAnswer);
+  check(!firstVisit.some(a => a.includes("/api/")), "without the token, the page calls no API", firstVisit.join("\n"));
+  check(
+    firstVisit.filter(a => a.startsWith("401")).join() === "401 /data/atlas.json",
+    "without the token, only the data answers 401",
+    firstVisit.join("\n"),
+  );
+  check((await page.locator('meta[name="acu-api"]').count()) === 0, "without the token, the page lacks the API mark");
   check(await page.isHidden("#setup"), "without the token, the setup screen stays shut");
+  // The browser logs the data's 401; drop that one line, keep any other.
+  const refusedLog = errors.findIndex(e => /status of 401/.test(e));
+  if (refusedLog >= 0) errors.splice(refusedLog, 1);
 
   // Set up the project from the printed address.
-  expect401 = false;
   await page.goto(`${base}?token=${token}`);
   check(page.url() === base, "the redirect drops the token from the address bar", page.url());
   await page.waitForSelector("#setup:not([hidden]) .su-folder");

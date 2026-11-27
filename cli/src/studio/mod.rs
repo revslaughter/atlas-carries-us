@@ -175,9 +175,9 @@ impl Studio {
         }
     }
 
-    /// Lists the `Host` values that the API accepts: the loopback names and
-    /// the listening address, each with the port.
-    fn hosts(&self) -> Vec<String> {
+    /// Lists the `Host` values that the API and the MCP server accept: the
+    /// loopback names and the listening address, each with the port.
+    pub fn hosts(&self) -> Vec<String> {
         let addr = self.addr();
         let port = addr.port();
         let ip = addr.ip();
@@ -236,7 +236,7 @@ impl Studio {
         let hint = match self.mode {
             Mode::Serve => format!(
                 "the server answers only requests for its own address; open it at the address that acu printed, or start acu serve again with --allow-host {} for a forwarded name",
-                if host.is_empty() { "<name:port>" } else { host }
+                if host.is_empty() { "<name[:port]>" } else { host }
             ),
             Mode::Studio => "the server answers only requests for its own address; open it at the address that acu printed".to_string(),
         };
@@ -267,26 +267,34 @@ impl Studio {
         ))
     }
 
+    /// Checks that a request's `Origin`, when it sends one, names this
+    /// server.
+    pub fn check_origin(&self, headers: &HeaderMap) -> Result<(), Reply> {
+        let Some(origin) = headers.get(header::ORIGIN) else {
+            return Ok(());
+        };
+        let o = origin.to_str().unwrap_or("");
+        if self
+            .hosts()
+            .iter()
+            .any(|h| o.eq_ignore_ascii_case(&format!("http://{h}")))
+        {
+            return Ok(());
+        }
+        Err(fail(
+            StatusCode::FORBIDDEN,
+            "the server refuses requests from other sites; open it at the address that acu printed",
+        ))
+    }
+
     /// Checks that a request may reach the API: its `Host` names this
     /// server, its `Origin` (when sent) names this server, it carries the
     /// session token, and a changing request carries the guard header and
     /// a JSON body.
     pub fn admit(&self, method: &Method, headers: &HeaderMap) -> Result<(), Reply> {
         self.check_host(headers)?;
-        let hosts = self.hosts();
-        if let Some(origin) = headers.get(header::ORIGIN) {
-            let o = origin.to_str().unwrap_or("");
-            if !hosts
-                .iter()
-                .any(|h| o.eq_ignore_ascii_case(&format!("http://{h}")))
-            {
-                return Err(fail(
-                    StatusCode::FORBIDDEN,
-                    "the studio refuses requests from other sites; open the studio at the address that acu printed",
-                ));
-            }
-        }
-        // After Origin, so a page on another site always meets 403.
+        self.check_origin(headers)?;
+        // After Origin, so a request that names another site meets 403.
         self.check_token(headers)?;
         if method != Method::GET && method != Method::HEAD {
             // Fetch Metadata: a browser marks a request from another site.
@@ -497,7 +505,14 @@ pub fn parse_allow_host(v: &str) -> Result<String, String> {
     };
     let name = if let Some(inner) = name.strip_prefix('[').and_then(|n| n.strip_suffix(']')) {
         let ip: std::net::Ipv6Addr = inner.parse().map_err(|_| bad())?;
-        format!("[{ip}]")
+        match ip.to_ipv4_mapped() {
+            // A browser writes an IPv4-mapped address in hex groups.
+            Some(_) => {
+                let g = ip.segments();
+                format!("[::ffff:{:x}:{:x}]", g[6], g[7])
+            }
+            None => format!("[{ip}]"),
+        }
     } else {
         let ok = !name.is_empty()
             && name.len() <= 253
@@ -506,7 +521,7 @@ pub fn parse_allow_host(v: &str) -> Result<String, String> {
             && !name.contains("..")
             && name
                 .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'.');
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_'));
         if !ok {
             return Err(bad());
         }
@@ -633,7 +648,7 @@ pub mod tests {
 
     /// The session token of every test studio.
     pub fn secret() -> Secret {
-        Secret::parse(crate::secret::tests::TEST).unwrap()
+        Secret::fixed(crate::secret::tests::TEST, crate::secret::tests::COOKIE)
     }
 
     /// Makes a studio over a slot, for the address 127.0.0.1:4321.
@@ -654,7 +669,7 @@ pub mod tests {
         h.insert(header::HOST, HeaderValue::from_static("127.0.0.1:4321"));
         h.insert(
             header::COOKIE,
-            HeaderValue::from_str(&format!("acu-token-4321={}", crate::secret::tests::TEST))
+            HeaderValue::from_str(&format!("acu-token-4321={}", crate::secret::tests::COOKIE))
                 .unwrap(),
         );
         h.insert(
@@ -763,7 +778,8 @@ pub mod tests {
         );
         h.insert(
             header::COOKIE,
-            HeaderValue::from_static("acu-token-4321=0123456789abcdef0123456789abcdee"),
+            HeaderValue::from_str(&format!("acu-token-4321={}", crate::secret::tests::TEST))
+                .unwrap(),
         );
         assert_eq!(
             s.admit(&Method::GET, &h).unwrap_err().0,
@@ -869,6 +885,11 @@ pub mod tests {
             "x-4321.app.github.dev"
         );
         assert_eq!(parse_allow_host("[::1]").unwrap(), "[::1]");
+        assert_eq!(
+            parse_allow_host("[::ffff:10.0.0.5]:80").unwrap(),
+            "[::ffff:a00:5]:80"
+        );
+        assert_eq!(parse_allow_host("my_app:8080").unwrap(), "my_app:8080");
         assert!(host_matches("x.example:443", "x.example"));
         assert!(host_matches("x.example:80", "X.Example"));
         assert!(host_matches("x.example", "x.example"));

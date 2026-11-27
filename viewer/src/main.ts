@@ -61,7 +61,7 @@ function storedTheme(): string | null {
 
 /** What the page says when acu refuses the data for want of the session token. */
 const TOKEN_REFUSED =
-  "acu refused this page: it lacks the session token. Open the address that acu printed, with its ?token= part.";
+  "acu refused the map data: this page lacks the session token, or holds an old one. Open the address that acu printed last, with its ?token= part.";
 
 /**
  * Starts the viewer: sets the theme, waits for the fonts (at most 2.5

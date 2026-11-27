@@ -73,9 +73,10 @@ enum Cmd {
         /// can reach. Without it, they work on a loopback address only.
         #[arg(long)]
         allow_remote_writes: bool,
-        /// On a loopback address, also show the map to this forwarded name
-        /// and port, such as myhost.example:8080. May repeat.
-        #[arg(long, value_name = "NAME:PORT", value_parser = studio::parse_allow_host)]
+        /// On a loopback address, also show the map's pages and data to this
+        /// forwarded name, with its port unless the browser sends none, such
+        /// as myhost.example:8080. May repeat.
+        #[arg(long, value_name = "NAME[:PORT]", value_parser = studio::parse_allow_host)]
         allow_host: Vec<String>,
     },
     /// Run the MCP server over standard input and output, for desktop clients.
@@ -141,15 +142,21 @@ struct McpArgs {
 }
 
 /// Parses the command line and runs it; a failure exits with status 1.
+/// First it reads `ACU_TOKEN` and removes it from acu's environment, for
+/// every command, while acu runs one thread only. So no adapter, build
+/// script or git that acu starts inherits the token.
 fn main() {
-    if let Err(e) = run(Cli::parse()) {
+    let token = std::env::var(secret::ENV);
+    std::env::remove_var(secret::ENV);
+    if let Err(e) = run(Cli::parse(), token) {
         eprintln!("acu: {e:#}");
         std::process::exit(1);
     }
 }
 
-/// Runs the command that the command line names.
-fn run(cli: Cli) -> Result<()> {
+/// Runs the command that the command line names. `token` holds what
+/// `ACU_TOKEN` held at start, for `serve` and `studio`.
+fn run(cli: Cli, token: Result<String, std::env::VarError>) -> Result<()> {
     match cli.cmd {
         Cmd::Extract { input, out, pretty } => {
             let doc = extract(&input.config)?;
@@ -179,7 +186,7 @@ fn run(cli: Cli) -> Result<()> {
             allow_remote_writes,
             mut allow_host,
         } => {
-            let secret = secret::Secret::from_env().map_err(anyhow::Error::msg)?;
+            let secret = secret::Secret::from_value(token).map_err(anyhow::Error::msg)?;
             if !allow_host.is_empty() && !addr.ip().is_loopback() {
                 eprintln!("acu: {addr} answers any name, so --allow-host changes nothing; drop it, or listen on a loopback address");
             }
@@ -201,7 +208,7 @@ fn run(cli: Cli) -> Result<()> {
             root,
             workspace,
         } => {
-            let secret = secret::Secret::from_env().map_err(anyhow::Error::msg)?;
+            let secret = secret::Secret::from_value(token).map_err(anyhow::Error::msg)?;
             if !addr.ip().is_loopback() {
                 bail!("the studio listens on a loopback address only, such as 127.0.0.1:4321; use acu serve to share a map");
             }

@@ -14,6 +14,7 @@
 
 import { chromium } from "playwright";
 import { spawn, spawnSync } from "node:child_process";
+import { request } from "node:http";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -248,7 +249,9 @@ async function httpRun(name) {
   const config = copyConfig(name, name + "-http");
   const port = 20000 + Math.floor(Math.random() * 20000);
   const addr = `127.0.0.1:${port}`;
-  const child = spawn(acu, ["serve", "-c", config, "--addr", addr], { stdio: ["ignore", "ignore", "pipe"] });
+  const child = spawn(acu, ["serve", "-c", config, "--addr", addr, "--allow-host", "Fwd.Example:9999"], {
+    stdio: ["ignore", "ignore", "pipe"],
+  });
   try {
     await httpSession(name, child, addr);
   } finally {
@@ -261,9 +264,10 @@ async function httpSession(name, child, addr) {
   let stderr = "";
   await new Promise((res, rej) => {
     const t = setTimeout(() => rej(new Error("acu serve did not start:\n" + stderr)), 120000);
+    // Wait for all three start lines in full; standard error arrives in pieces.
     child.stderr.on("data", d => {
       stderr += d;
-      if (stderr.includes("serving the map")) {
+      if (/serving the map at [^\n]*\n[^\n]*Bearer [0-9a-f]{64}[^\n]*\n[^\n]*--allow-host[^\n]*\n/.test(stderr)) {
         clearTimeout(t);
         res();
       }
@@ -272,6 +276,42 @@ async function httpSession(name, child, addr) {
   });
   const token = stderr.match(/\?token=([0-9a-f]{64}) /)?.[1] ?? "";
   check(token !== "", `${name} over HTTP: acu serve prints the address with the token`, stderr);
+  check(
+    stderr.includes(" and fwd.example:9999;"),
+    `${name} over HTTP: the start line names the forwarded name`,
+    stderr,
+  );
+
+  // The Host rule of acu serve on a loopback address (issue #43).
+  const [hostName, port] = addr.split(":");
+  const asHost = (h, path, headers = {}) =>
+    new Promise((ok, fail) => {
+      const req = request({ host: hostName, port: Number(port), path, headers: { ...headers, Host: h } }, res => {
+        let body = "";
+        res.on("data", d => (body += d));
+        res.on("end", () => ok({ status: res.statusCode, body }));
+      });
+      req.on("error", fail);
+      req.end();
+    });
+  const evil = await asHost("evil.example", "/");
+  check(
+    evil.status === 403 && evil.body.includes("--allow-host evil.example"),
+    `${name} over HTTP: a page for a foreign Host gets 403 with the flag to add`,
+    evil.body,
+  );
+  const fwd = await asHost("fwd.example:9999", "/");
+  check(
+    fwd.status === 200 && !fwd.body.includes("acu-api"),
+    `${name} over HTTP: an allowed name sees the map, without the API mark`,
+    fwd.status,
+  );
+  const fwdData = await asHost("fwd.example:9999", "/data/atlas.json");
+  check(fwdData.status === 200, `${name} over HTTP: an allowed name reads the data`, fwdData.status);
+  const fwdApi = await asHost("fwd.example:9999", "/api/state", { Authorization: `Bearer ${token}` });
+  check(fwdApi.status === 403, `${name} over HTTP: an allowed name reaches no API call, token or not`, fwdApi.status);
+  const otherPort = await asHost("fwd.example:9998", "/");
+  check(otherPort.status === 403, `${name} over HTTP: the allowed name with another port gets 403`, otherPort.status);
   const auth = { authorization: `Bearer ${token}` };
   const url = `http://${addr}/mcp`;
   let session = null;
@@ -312,7 +352,7 @@ async function httpSession(name, child, addr) {
     },
     body: JSON.stringify({ jsonrpc: "2.0", id: 9, method: "tools/list", params: {} }),
   });
-  check(foreign.status >= 400, `${name} over HTTP: a foreign origin gets refused (status ${foreign.status})`);
+  check(foreign.status === 403, `${name} over HTTP: a foreign origin gets 403 (status ${foreign.status})`);
 
   const draft = await post({
     jsonrpc: "2.0",
