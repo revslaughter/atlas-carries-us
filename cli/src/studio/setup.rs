@@ -776,20 +776,15 @@ fn kill_group(child: &mut std::process::Child) {
 /// number while any member lives. Once none lives, the system may give the
 /// number to a new process, so acu signals a group only while it tracks a
 /// running clone; a short window stays between the clone's end and the
-/// moment acu stops tracking it. acu runs the system's `kill` program
-/// rather than call the C library's `kill`, because acu holds no `unsafe`
-/// code and a foreign call needs it.
+/// moment acu stops tracking it. acu asks the shell's built-in `kill`,
+/// which every Unix system has at /bin/sh, rather than a `kill` program,
+/// which a slim container may lack, or the C library, which needs `unsafe`
+/// code that acu does not hold.
 pub fn kill_pgid(pid: u32) {
     #[cfg(unix)]
     {
-        // The system's own program where it sits at a usual place; else,
-        // as on NixOS, the `kill` that the PATH names.
-        let program = ["/bin/kill", "/usr/bin/kill"]
-            .into_iter()
-            .find(|p| Path::new(p).is_file())
-            .unwrap_or("kill");
-        let _ = Command::new(program)
-            .args(["-s", "KILL", "--", &format!("-{pid}")])
+        let _ = Command::new("/bin/sh")
+            .args(["-c", &format!("kill -9 -{pid}")])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .status();
@@ -1114,7 +1109,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_slow_child_stops_at_the_limit_with_its_children() {
-        let mut cmd = Command::new("sh");
+        let mut cmd = Command::new("/bin/sh");
         let child = own_group(&mut cmd)
             .args(["-c", "echo started >&2; sleep 30 & sleep 30"])
             .stderr(std::process::Stdio::piped())
