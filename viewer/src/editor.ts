@@ -30,6 +30,8 @@ interface StepItem {
   view: View | null;
   /** The name of the recorded view, which the title field shows as a hint. */
   hint?: string;
+  /** The step as the file held it, as JSON; absent for a new step. */
+  orig?: string;
 }
 
 /** One region in the editor. */
@@ -97,6 +99,9 @@ const S = {
   /** The server's state. */
   server: null as ServerState | null,
 };
+
+/** The message that a render last showed. */
+let lastShown: { text: string; bad?: boolean } | null = null;
 
 /** Counts keys for new entries. */
 let keys = 0;
@@ -214,7 +219,12 @@ async function load(): Promise<boolean> {
   S.fileIds = (d.regions as RegionCfg[]).map(r => r.id);
   S.fileRows = rows;
   const resolved: View[] = (d.resolved?.tour ?? []).map((s: any) => s.open);
-  S.tour = (d.tour as StepCfg[]).map((cfg, i) => ({ key: ++keys, cfg, view: resolved[i] ?? null }));
+  S.tour = (d.tour as StepCfg[]).map((cfg, i) => ({
+    key: ++keys,
+    cfg,
+    view: resolved[i] ?? null,
+    orig: JSON.stringify(cfg),
+  }));
   S.regions = (d.regions as RegionCfg[]).map(cfg => ({
     key: ++keys,
     cfg,
@@ -423,6 +433,10 @@ function extractTab(): string {
 
 /** Draws the whole drawer, and puts the focus back on the element that `focus` selects. */
 function render(focus?: string) {
+  // A message speaks once: only the render that first shows it gives it a
+  // live role, so later redraws do not repeat it to a screen reader.
+  const fresh = S.msg !== lastShown;
+  lastShown = S.msg;
   const c = changed();
   const tabs: [Tab, string, boolean][] = [
     ["tour", "Tour", c.tour],
@@ -446,15 +460,15 @@ function render(focus?: string) {
     </div>
     <p class="ed-file">${esc(S.path)}</p>
     ${S.revision ? "" : `<p class="ed-msg bad" role="alert" tabindex="-1"><b>Problem.</b> ${esc(S.msg?.text ?? "acu could not read atlas.yaml.")} Fix the file, then reload this page.</p>`}
-    <div class="ed-tabs" role="tablist">${tabs
+    <div class="ed-tabs" role="tablist" ${S.busy ? "inert" : ""}>${tabs
       .map(
         ([t, name, ch]) =>
           `<button role="tab" class="ed-tab" id="edTab-${t}" aria-controls="edPanel" tabindex="${S.tab === t ? 0 : -1}" data-act="tab" data-tab="${t}" aria-selected="${S.tab === t}">${name}<span class="ed-dot" ${ch ? "" : "hidden"}> •<span class="sr"> (changed)</span></span></button>`,
       )
       .join("")}</div>
-    <div class="ed-body" role="tabpanel" tabindex="-1" id="edPanel" aria-labelledby="edTab-${S.tab}">${body}</div>
+    <div class="ed-body" role="tabpanel" tabindex="-1" id="edPanel" aria-labelledby="edTab-${S.tab}" ${S.busy ? "inert" : ""}>${body}</div>
     <div class="ed-foot">
-      ${S.msg && S.revision ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
+      ${S.msg && S.revision ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" ${fresh ? `role="${S.msg.bad ? "alert" : "status"}"` : ""}>${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
       <div class="ed-row">
         <button class="btn primary" data-act="save" ${isDirty && !S.busy ? "" : "disabled"}>Save to atlas.yaml</button>
         <button class="btn" data-act="discard" ${isDirty && !S.busy ? "" : "disabled"}>Discard changes</button>
@@ -522,33 +536,40 @@ function record() {
   else S.tour.push(item);
   S.open = item.key;
   S.msg = { text: "You added a step. Write its title and text, then save." };
-  announce(S.msg.text);
   render(`[data-field="title"][data-key="${item.key}"]`);
 }
 
 /** Saves the changed sections in order (project, regions, tour), then reloads the page to show the new map. */
 async function save() {
   const f = forms();
+  const cfgs = S.tour.map(s => s.cfg);
   const issues = em
     .problems(
-      f.tour as StepCfg[],
+      cfgs,
       S.regions.map(r => r.cfg),
       S.project.name,
+      i => JSON.stringify(S.tour[i].cfg) !== S.tour[i].orig,
     )
-    .concat(em.orphanSteps(f.tour as StepCfg[], deletedIds()));
+    .concat(em.orphanSteps(cfgs, deletedIds()))
+    .concat(
+      S.regions.flatMap((r, i) =>
+        r.bad?.length ? [`Fix the path patterns of region ${i + 1}: ${r.bad.join("; ")}.`] : [],
+      ),
+    );
   if (issues.length) {
     S.msg = { text: issues.join(" "), bad: true };
     render(".ed-msg");
     return;
   }
-  // A renamed region and the steps that open it save in one write.
+  // A renamed region and the steps that open it save in one write. The
+  // rename reaches the request only; the editor's steps take it after the
+  // save works, so a failed save leaves them as the person left them.
   const ren = renames();
   if (ren.size) {
-    S.tour = S.tour.map(x => ({ ...x, cfg: em.renameSteps([x.cfg], ren)[0] }));
-    Object.assign(f, { tour: S.tour.map(x => em.clean(x.cfg)) });
+    Object.assign(f, { tour: em.renameSteps(cfgs, ren).map(c => em.clean(c)) });
     f.keys.tour = JSON.stringify(f.tour);
   }
-  const c = changed();
+  const c = { ...changed(), tour: f.keys.tour !== S.saved.tour };
   const withTour = c.regions && c.tour;
   S.busy = true;
   S.msg = { text: "Saving…" };
@@ -580,9 +601,9 @@ async function save() {
     const a = await call(path, { revision: S.revision, ...body() });
     if (!a.ok) {
       S.busy = false;
-      const stale = a.status === 409;
+      const said = String(a.data?.error ?? "The save failed").replace(/\.?$/, ".");
       S.msg = {
-        text: (a.data?.error ?? "The save failed.") + (stale ? " Discard your changes to read the file again." : ""),
+        text: a.status === 409 ? said + " Choose Discard changes to read the file again." : said,
         bad: true,
       };
       render(".ed-msg");
@@ -590,6 +611,9 @@ async function save() {
     }
     S.revision = a.data.revision;
     S.saved[path as "tour" | "regions" | "project"] = f.keys[path as "tour" | "regions" | "project"];
+    if ((path === "regions" && withTour) || path === "tour") {
+      S.tour.forEach(x => (x.cfg = em.renameSteps([x.cfg], ren)[0]));
+    }
     if (path === "regions") {
       if (withTour) S.saved.tour = f.keys.tour;
       // The file now names the regions by their new IDs, in the new layout.
@@ -668,8 +692,12 @@ async function onClick(e: Event) {
       S.msg = {
         text: `You deleted ${list === "tour" ? "a step" : "a region"}. Discard your changes to bring it back.`,
       };
-      announce(S.msg.text);
-      render(".ed-list .ed-head, [data-act='record'], [data-act='add-region']");
+      // Focus goes to the entry that took its place, else the one above,
+      // else the button that adds one.
+      const next = arr[at] ?? arr[at - 1];
+      render(
+        next ? `.ed-head[data-key="${next.key}"]` : list === "tour" ? "[data-act='record']" : "[data-act='add-region']",
+      );
       return;
     }
     case "record":
@@ -723,7 +751,6 @@ async function onClick(e: Event) {
       S.msg = {
         text: `acu suggested ${S.regions.length} regions from the folders, marked as drafted. Rename them by job, then save.`,
       };
-      announce(S.msg.text);
       render(".ed-list .ed-head");
       return;
     }
@@ -733,7 +760,7 @@ async function onClick(e: Event) {
     case "discard":
       S.open = -1;
       S.msg = (await load()) ? { text: "You discarded your changes." } : S.msg;
-      render();
+      render(".ed-tab[aria-selected='true']");
       return;
     case "extract":
       await extract();
@@ -906,6 +933,8 @@ function onDrop(e: DragEvent) {
 /** Opens the drawer, reading atlas.yaml first. */
 export async function openEditor() {
   root.hidden = false;
+  // On a narrow screen the docs panel would cover the drawer.
+  document.body.classList.add("editing");
   document.getElementById("editBtn")?.setAttribute("aria-pressed", "true");
   keep(S.tab);
   if (!S.revision) await load();
@@ -915,6 +944,7 @@ export async function openEditor() {
 /** Closes the drawer; unsaved changes stay until the page reloads. */
 export function closeEditor() {
   root.hidden = true;
+  document.body.classList.remove("editing");
   keep(null);
   const b = document.getElementById("editBtn");
   b?.setAttribute("aria-pressed", "false");

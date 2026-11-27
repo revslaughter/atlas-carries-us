@@ -133,7 +133,7 @@ function render(focus?: string) {
   root.innerHTML = `<div class="su-box">
     <div class="ed-top"><h2>Set up a map</h2>${back}</div>
     <p class="ed-lead">Pick the code to map. acu proposes an atlas.yaml, writes it into that folder, and runs the adapters. Then you edit the regions and the tour on the map.</p>
-    ${pick}
+    <div ${S.busy ? "inert" : ""}>${pick}</div>
     ${S.msg ? `<p class="ed-msg ${S.msg.bad ? "bad" : ""}" tabindex="-1" role="${S.msg.bad ? "alert" : "status"}">${S.msg.bad ? "<b>Problem.</b> " : ""}${esc(S.msg.text)}</p>` : ""}
     ${S.log.length ? `<pre class="ed-log">${esc(S.log.join("\n"))}</pre>` : ""}
   </div>`;

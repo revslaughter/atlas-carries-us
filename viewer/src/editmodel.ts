@@ -284,12 +284,20 @@ export function parsePaths(text: string): string[] {
 }
 
 /** Lists what a step or region still needs before a save, as sentences for the reader. */
-export function problems(tour: StepCfg[], regions: RegionCfg[], projectName: string): string[] {
+export function problems(
+  tour: StepCfg[],
+  regions: RegionCfg[],
+  projectName: string,
+  touched: (i: number) => boolean = () => true,
+): string[] {
   const out: string[] = [];
   if (!projectName.trim()) out.push("Give the project a name.");
+  // Only steps that the person added or changed: a step that the file
+  // already holds with an empty text passes the schema, so it stays.
   tour.forEach((s, i) => {
-    if (!s.title.trim()) out.push(`Give step ${i + 1} a title.`);
-    if (!s.text.trim()) out.push(`Give step ${i + 1} a text.`);
+    if (!touched(i)) return;
+    if (!(s.title ?? "").trim()) out.push(`Give step ${i + 1} a title.`);
+    if (!(s.text ?? "").trim()) out.push(`Give step ${i + 1} a text.`);
   });
   const seen = new Set<string>();
   regions.forEach((r, i) => {

@@ -43,21 +43,30 @@ function fill(template: string, vars: Record<string, string | number | undefined
   return template.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? String(vars[k]) : m));
 }
 
+/**
+ * Returns a URL only when it starts with http: or https:, else null. The
+ * link templates and autolinks come from atlas.yaml, which a cloned
+ * repository can write, so a javascript: or data: URL never reaches a link.
+ */
+export function webURL(u: string | null | undefined): string | null {
+  return u && /^https?:\/\//i.test(u.trim()) ? u : null;
+}
+
 /** A URL for a file, a line or a range, from the project's link templates. */
 export function sourceURL(path: string, line?: number, endLine?: number): string | null {
   const l = env.project.links;
   if (!l) return null;
   const vars = { repo: env.project.repo, commit: env.commit, path, line, endLine };
-  if (line && endLine && endLine > line && l.range) return fill(l.range, vars);
-  if (line && l.line) return fill(l.line, vars);
-  return l.file ? fill(l.file, vars) : null;
+  if (line && endLine && endLine > line && l.range) return webURL(fill(l.range, vars));
+  if (line && l.line) return webURL(fill(l.line, vars));
+  return l.file ? webURL(fill(l.file, vars)) : null;
 }
 
 /** A URL for a folder, from the project's folder template, or null. */
 export function folderURL(path: string): string | null {
   const l = env.project.links;
   if (!l?.folder) return null;
-  return fill(l.folder, { repo: env.project.repo, commit: env.commit, path });
+  return webURL(fill(l.folder, { repo: env.project.repo, commit: env.commit, path }));
 }
 
 /** An anchor to source, or plain text when the project has no links. */
@@ -83,7 +92,9 @@ function autolinkPlain(text: string): string {
     const url = best.url
       .replace(/\$(\d)/g, (_, d) => m[Number(d)] ?? "")
       .replace(/\{(repo|commit)\}/g, (_, k) => (k === "repo" ? (env.project.repo ?? "") : env.commit));
-    out += esc(text.slice(pos, best.i)) + `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(m[0])}</a>`;
+    out +=
+      esc(text.slice(pos, best.i)) +
+      (webURL(url) ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(m[0])}</a>` : esc(m[0]));
     pos = best.i + m[0].length;
   }
   return out + esc(text.slice(pos));

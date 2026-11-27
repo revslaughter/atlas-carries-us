@@ -152,6 +152,17 @@ test("problems name what a save still needs", () => {
   ]);
 });
 
+test("problems skip untouched steps and survive missing fields", () => {
+  const tour = [
+    { title: "Kept", text: "", open: { view: "overview" } } as em.StepCfg,
+    { open: { view: "overview" } } as unknown as em.StepCfg,
+  ];
+  assert.deepEqual(
+    em.problems(tour, [], "P", i => i === 1),
+    ["Give step 2 a title.", "Give step 2 a text."],
+  );
+});
+
 test("clean drops empty fields", () => {
   assert.deepEqual(em.clean({ id: "a", name: "A", paths: [], description: "", color: 0, default: undefined }), {
     id: "a",

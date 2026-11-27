@@ -330,7 +330,7 @@ impl Atlas {
         match (out, stale.into_inner()) {
             (Ok(w), _) => Ok(w),
             (Err(_), Some(now)) => Err(SaveError::Stale(format!(
-                "acu: atlas.yaml changed on disk since you opened it (now revision {now}); reload the editor, then make the change again"
+                "acu: atlas.yaml changed on disk since you opened it (now revision {now}); read the file again, then make the change again"
             ))),
             // Decided under the lock, by what the write itself saw.
             (Err(e), None) if conflict.get() => Err(SaveError::Stale(e)),
@@ -482,8 +482,9 @@ fn assemble_checked(run: &AdapterRun, cfg: &config::Config) -> Result<Snapshot, 
     rep.warnings.extend(check.warnings);
     if !rep.errors.is_empty() {
         return Err(format!(
-            "{} problems: {}",
+            "{} problem{}: {}",
             rep.errors.len(),
+            if rep.errors.len() == 1 { "" } else { "s" },
             rep.errors.join("; ")
         ));
     }

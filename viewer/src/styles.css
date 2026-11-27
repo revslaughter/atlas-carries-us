@@ -1191,6 +1191,9 @@ label.ed-check {
 }
 
 @media (max-width: 860px) {
+  body.editing #panel {
+    display: none;
+  }
   #app {
     grid-template-columns: 1fr;
   }
