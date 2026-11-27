@@ -2,7 +2,8 @@
 //! first atlas.yaml for a folder, open a project (and write its new config),
 //! and clone a repository over HTTPS. The folder picker sees only the
 //! browse root and the clone workspace; names that start with a dot stay
-//! hidden.
+//! hidden. It opens a picked folder once, without following a link at any
+//! step, and works relative to that [`Folder`].
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -11,6 +12,7 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use serde_json::{json, Map, Value};
 
+use super::folder::Folder;
 use super::{edit, fail, Reply, Studio};
 
 /// The most folders that one listing returns.
@@ -45,9 +47,10 @@ pub fn default_workspace() -> Option<PathBuf> {
     Some(cache.join("acu").join("repos"))
 }
 
-/// Resolves a folder from a request and checks that it lies inside the
-/// browse root or the clone workspace.
-fn allowed(s: &Studio, raw: Option<&str>) -> Result<PathBuf, Reply> {
+/// Resolves a folder from a request, checks that it lies inside the browse
+/// root or the clone workspace, and opens it from there down without
+/// following a link.
+fn allowed(s: &Studio, raw: Option<&str>) -> Result<Folder, Reply> {
     let root = s.browse_root.clone().ok_or_else(|| {
         fail(
             StatusCode::FORBIDDEN,
@@ -70,12 +73,12 @@ fn allowed(s: &Studio, raw: Option<&str>) -> Result<PathBuf, Reply> {
             format!("find {}: {e}; pick another folder", p.display()),
         )
     })?;
-    let inside = p.starts_with(&root)
-        || s.workspace
-            .as_ref()
-            .and_then(|w| w.canonicalize().ok())
-            .is_some_and(|w| p.starts_with(w));
-    if !inside {
+    let workspace = s.workspace.as_ref().and_then(|w| w.canonicalize().ok());
+    let base = if p.starts_with(&root) {
+        root.clone()
+    } else if let Some(w) = workspace.filter(|w| p.starts_with(w)) {
+        w
+    } else {
         return Err(fail(
             StatusCode::FORBIDDEN,
             format!(
@@ -84,14 +87,24 @@ fn allowed(s: &Studio, raw: Option<&str>) -> Result<PathBuf, Reply> {
                 root.display()
             ),
         ));
-    }
+    };
     if !p.is_dir() {
         return Err(fail(
             StatusCode::BAD_REQUEST,
             format!("{} is a file, not a folder; pick a folder", p.display()),
         ));
     }
-    Ok(p)
+    // The path held no link when acu resolved it. A link now means that
+    // someone swapped a folder on the way since then.
+    Folder::open(&base, &p).map_err(|e| {
+        fail(
+            StatusCode::FORBIDDEN,
+            format!(
+                "open {}: {e}; a folder on the way changed or became a link, so pick the folder again",
+                p.display()
+            ),
+        )
+    })
 }
 
 /// Reports whether a folder name stays out of listings and detection.
@@ -107,46 +120,42 @@ pub fn folders(s: &Studio, args: &Map<String, Value>) -> Reply {
         Err(r) => return r,
     };
     let root = s.browse_root.clone().unwrap_or_default();
-    let rd = match std::fs::read_dir(&dir) {
-        Ok(r) => r,
+    // Read at most one entry past the limit: a folder with millions of
+    // entries must not cost the studio its memory.
+    let mut list = match dir.names(true, |n| !hidden(n), MAX_FOLDERS + 1) {
+        Ok(l) => l,
         Err(e) => {
             return fail(
                 StatusCode::FORBIDDEN,
-                format!("read {}: {e}; pick another folder", dir.display()),
+                format!("read {}: {e}; pick another folder", dir.path().display()),
             )
         }
     };
-    // Read at most one entry past the limit: a folder with millions of
-    // entries must not cost the studio its memory.
-    let mut list: Vec<(String, PathBuf)> = rd
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
-        .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
-        .filter(|(n, _)| !hidden(n))
-        .take(MAX_FOLDERS + 1)
-        .collect();
     list.sort();
     let more = list.len() > MAX_FOLDERS;
     list.truncate(MAX_FOLDERS);
     let entries: Vec<Value> = list
         .iter()
-        .map(|(n, p)| {
-            json!({ "name": n, "path": p.display().to_string(),
-                    "config": p.join("atlas.yaml").is_file(), "git": p.join(".git").exists() })
+        .map(|n| {
+            let sub = dir.sub(n);
+            json!({ "name": n, "path": dir.path().join(n).display().to_string(),
+                    "config": sub.as_ref().is_some_and(|f| f.is_file("atlas.yaml")),
+                    "git": sub.as_ref().is_some_and(|f| f.exists(".git")) })
         })
         .collect();
-    let parent = dir
+    let path = dir.path();
+    let parent = path
         .parent()
-        .filter(|_| dir != root)
+        .filter(|_| path != root)
         .filter(|p| p.starts_with(&root))
         .map(|p| p.display().to_string());
     (
         StatusCode::OK,
         json!({
-            "path": dir.display().to_string(),
+            "path": path.display().to_string(),
             "parent": parent,
-            "config": dir.join("atlas.yaml").is_file(),
-            "git": dir.join(".git").exists(),
+            "config": dir.is_file("atlas.yaml"),
+            "git": dir.exists(".git"),
             "folders": entries,
             "more": more,
         }),
@@ -173,23 +182,6 @@ pub struct Detected {
     pub plugins: Vec<&'static str>,
 }
 
-/// Reads a small text file, or returns nothing.
-fn small(p: &Path) -> String {
-    use std::io::Read;
-    // A plain file only, never followed through a link: a repository could
-    // point a marker file at /dev/zero or at a file outside it. The read
-    // stops at 1 MB whatever the file claims.
-    let plain = std::fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_file());
-    if !plain {
-        return String::new();
-    }
-    let mut out = String::new();
-    if let Ok(f) = std::fs::File::open(p) {
-        let _ = f.take(1 << 20).read_to_string(&mut out);
-    }
-    out
-}
-
 /// Reports whether a manifest names a dependency as a whole word: `click`
 /// matches `click>=8` but not `clickhouse-driver`.
 pub fn names(text: &str, dep: &str) -> bool {
@@ -202,8 +194,8 @@ pub fn names(text: &str, dep: &str) -> bool {
 }
 
 /// Looks at one folder's marker files and adds what they show.
-fn look(dir: &Path, rel: &str, d: &mut Detected) {
-    let has = |f: &str| dir.join(f).is_file();
+fn look(dir: &Folder, rel: &str, d: &mut Detected) {
+    let has = |f: &str| dir.is_file(f);
     let mut add = |adapter: &'static str| {
         let f = Found {
             adapter,
@@ -225,7 +217,7 @@ fn look(dir: &Path, rel: &str, d: &mut Detected) {
         }
     };
     if has("go.mod") {
-        let t = small(&dir.join("go.mod"));
+        let t = dir.read_small("go.mod");
         plug(
             &t,
             &[
@@ -238,12 +230,12 @@ fn look(dir: &Path, rel: &str, d: &mut Detected) {
         add("go");
     }
     if has("Cargo.toml") {
-        let t = small(&dir.join("Cargo.toml"));
+        let t = dir.read_small("Cargo.toml");
         plug(&t, &[("axum", "axum"), ("clap", "clap")]);
         add("rust");
     }
     if has("package.json") || has("tsconfig.json") {
-        let t = small(&dir.join("package.json"));
+        let t = dir.read_small("package.json");
         plug(
             &t,
             &[
@@ -260,14 +252,13 @@ fn look(dir: &Path, rel: &str, d: &mut Detected) {
         "setup.cfg",
         "requirements.txt",
     ];
-    let any_py = std::fs::read_dir(dir).is_ok_and(|rd| {
-        rd.filter_map(|e| e.ok())
-            .any(|e| e.file_name().to_string_lossy().ends_with(".py"))
-    });
+    let any_py = dir
+        .names(false, |n| n.ends_with(".py"), 1)
+        .is_ok_and(|n| !n.is_empty());
     if py_markers.iter().any(|m| has(m)) || any_py {
         let mut t = String::new();
         for m in py_markers {
-            t.push_str(&small(&dir.join(m)).to_lowercase());
+            t.push_str(&dir.read_small(m).to_lowercase());
         }
         plug(
             &t,
@@ -285,22 +276,15 @@ fn look(dir: &Path, rel: &str, d: &mut Detected) {
 
 /// Finds the languages in a folder and in its folders one level down, as a
 /// monorepo often holds them.
-pub fn detect(dir: &Path) -> Detected {
+pub fn detect(dir: &Folder) -> Detected {
     let mut d = Detected::default();
     look(dir, ".", &mut d);
-    let mut subs: Vec<(String, PathBuf)> = std::fs::read_dir(dir)
-        .map(|rd| {
-            rd.filter_map(|e| e.ok())
-                .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
-                .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
-                .filter(|(n, _)| !hidden(n))
-                .take(200)
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut subs = dir.names(true, |n| !hidden(n), 200).unwrap_or_default();
     subs.sort();
-    for (n, p) in &subs {
-        look(p, n, &mut d);
+    for n in &subs {
+        if let Some(sub) = dir.sub(n) {
+            look(&sub, n, &mut d);
+        }
     }
     d.languages
         .sort_by(|a, b| (a.adapter, &a.root).cmp(&(b.adapter, &b.root)));
@@ -312,12 +296,12 @@ pub fn detect(dir: &Path) -> Detected {
 /// folder's `.git/config`, when it points at GitHub or GitLab. It reads the
 /// file as text and runs no git, because the person has not yet said that
 /// they trust the folder.
-fn remote(dir: &Path) -> Option<(String, &'static str)> {
-    let cfg = dir.join(".git").join("config");
-    if !cfg.is_file() {
+fn remote(dir: &Folder) -> Option<(String, &'static str)> {
+    let git = dir.sub(".git")?;
+    if !git.is_file("config") {
         return None;
     }
-    origin_url(&small(&cfg)).and_then(|u| repo_of(&u))
+    origin_url(&git.read_small("config")).and_then(|u| repo_of(&u))
 }
 
 /// Finds the `url` of `[remote "origin"]` in the text of a git config. It
@@ -367,8 +351,9 @@ fn q(s: &str) -> String {
 }
 
 /// Writes the first atlas.yaml for a folder from what it holds.
-pub fn proposal(dir: &Path, d: &Detected) -> String {
+pub fn proposal(dir: &Folder, d: &Detected) -> String {
     let name = dir
+        .path()
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "My project".into());
@@ -411,9 +396,9 @@ pub fn proposal(dir: &Path, d: &Detected) -> String {
 /// Returns the folder's atlas.yaml path, and refuses one that is a
 /// symbolic link: a cloned repository could point it at any file, and the
 /// editor's saves would then change that file.
-fn config_in(dir: &Path) -> Result<PathBuf, Reply> {
-    let file = dir.join("atlas.yaml");
-    if std::fs::symlink_metadata(&file).is_ok_and(|m| m.file_type().is_symlink()) {
+fn config_in(dir: &Folder) -> Result<PathBuf, Reply> {
+    let file = dir.path().join("atlas.yaml");
+    if dir.is_link("atlas.yaml") {
         return Err(fail(
             StatusCode::FORBIDDEN,
             format!(
@@ -432,25 +417,24 @@ pub fn propose(s: &Studio, args: &Map<String, Value>) -> Reply {
         Ok(d) => d,
         Err(r) => return r,
     };
-    let file = match config_in(&dir) {
-        Ok(f) => f,
-        Err(r) => return r,
-    };
+    if let Err(r) = config_in(&dir) {
+        return r;
+    }
     let d = detect(&dir);
     let langs: Vec<Value> = d
         .languages
         .iter()
         .map(|l| json!({ "adapter": l.adapter, "root": l.root }))
         .collect();
-    let (exists, text) = if file.is_file() {
-        (true, small(&file))
+    let (exists, text) = if dir.is_file("atlas.yaml") {
+        (true, dir.read_small("atlas.yaml"))
     } else {
         (false, proposal(&dir, &d))
     };
     (
         StatusCode::OK,
         json!({
-            "path": dir.display().to_string(),
+            "path": dir.path().display().to_string(),
             "exists": exists,
             "config": text,
             "languages": langs,
@@ -503,7 +487,7 @@ pub fn open(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
         Err(r) => return r,
     };
     let text = args.get("config").and_then(Value::as_str).map(String::from);
-    match (&text, file.is_file()) {
+    match (&text, dir.is_file("atlas.yaml")) {
         (Some(_), true) => {
             return fail(
                 StatusCode::CONFLICT,
@@ -518,7 +502,7 @@ pub fn open(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
                 StatusCode::NOT_FOUND,
                 format!(
                     "{} holds no atlas.yaml; send a config to write one",
-                    dir.display()
+                    dir.path().display()
                 ),
             )
         }
@@ -531,53 +515,31 @@ pub fn open(s: &Arc<Studio>, args: &Map<String, Value>) -> Reply {
     }
     s.start_job("open", move |st, log| {
         if let Some(t) = text {
-            create_new(&file, &t)?;
+            dir.create_new("atlas.yaml", &t).map_err(|e| {
+                format!(
+                    "acu: create {}: {e}; check that the folder is writable and holds no atlas.yaml",
+                    file.display()
+                )
+            })?;
             log(&format!("acu: wrote {}", file.display()));
         }
+        // The adapters and the editor take a path. Just before they start,
+        // check that the path still leads to the folder that acu opened,
+        // and that its atlas.yaml has not become a link.
+        dir.still_at_path().map_err(|e| {
+            format!(
+                "acu: {}: {e}; pick the folder again",
+                dir.path().display()
+            )
+        })?;
+        if dir.is_link("atlas.yaml") {
+            return Err(format!(
+                "acu: {} became a symbolic link; replace it with a file, then pick the folder again",
+                file.display()
+            ));
+        }
         edit::open_config(st, &file, log)?;
-        Ok(Some(dir.display().to_string()))
-    })
-}
-
-/// Writes a new file in one step and never replaces one: the text goes to
-/// a temporary file first, which then gets the final name through a hard
-/// link, which fails when that name exists. A crash leaves no half file.
-pub fn create_new(file: &Path, text: &str) -> Result<(), String> {
-    use std::io::Write;
-    let dir = file.parent().unwrap_or(Path::new("."));
-    let tmp = dir.join(format!(".atlas.yaml.acu-new-{}", std::process::id()));
-    let done = (|| -> std::io::Result<()> {
-        let mut f = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&tmp)?;
-        f.write_all(text.as_bytes())?;
-        f.sync_all()?;
-        match std::fs::hard_link(&tmp, file) {
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(e),
-            // A file system without hard links (exFAT, some network shares):
-            // write the final name directly, still never over a file.
-            Err(_) => {
-                let mut f = std::fs::OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(file)?;
-                f.write_all(text.as_bytes())?;
-                f.sync_all()
-            }
-            Ok(()) => Ok(()),
-        }?;
-        // Make the new name itself durable.
-        #[cfg(unix)]
-        std::fs::File::open(dir)?.sync_all()?;
-        Ok(())
-    })();
-    let _ = std::fs::remove_file(&tmp);
-    done.map_err(|e| {
-        format!(
-            "acu: create {}: {e}; check that the folder is writable and holds no atlas.yaml",
-            file.display()
-        )
+        Ok(Some(dir.path().display().to_string()))
     })
 }
 
@@ -997,6 +959,11 @@ mod tests {
         std::fs::write(p, text).unwrap();
     }
 
+    /// Opens a temporary folder as the picker would.
+    fn opened(p: &Path) -> Folder {
+        Folder::open(p, p).unwrap()
+    }
+
     /// Makes a studio whose browse root is a new temporary folder.
     fn studio_in() -> (tempfile::TempDir, Arc<Studio>) {
         let dir = tempfile::tempdir().unwrap();
@@ -1028,7 +995,7 @@ mod tests {
         write(&d.join("tools/gen.py"), "print(1)\n");
         write(&d.join("node_modules/x/package.json"), "{}");
         write(&d.join(".hidden/Cargo.toml"), "");
-        let got = detect(d);
+        let got = detect(&opened(d));
         let langs: Vec<(&str, &str)> = got
             .languages
             .iter()
@@ -1039,7 +1006,7 @@ mod tests {
             vec![("go", "."), ("python", "tools"), ("typescript", "web")]
         );
         assert_eq!(got.plugins, vec!["go-chi", "go-nethttp", "hono"]);
-        let text = proposal(d, &got);
+        let text = proposal(&opened(d), &got);
         check_text(&text).unwrap();
         assert!(
             text.contains("  - adapter: typescript\n    root: \"web\"\n"),
@@ -1051,7 +1018,8 @@ mod tests {
     #[test]
     fn an_empty_folder_still_gets_a_valid_proposal() {
         let dir = tempfile::tempdir().unwrap();
-        let text = proposal(dir.path(), &detect(dir.path()));
+        let f = opened(dir.path());
+        let text = proposal(&f, &detect(&f));
         check_text(&text).unwrap();
     }
 
@@ -1148,9 +1116,10 @@ mod tests {
     fn marker_files_never_follow_links_or_read_without_end() {
         let dir = tempfile::tempdir().unwrap();
         std::os::unix::fs::symlink("/dev/zero", dir.path().join("setup.cfg")).unwrap();
-        assert_eq!(small(&dir.path().join("setup.cfg")), "");
+        let f = opened(dir.path());
+        assert_eq!(f.read_small("setup.cfg"), "");
         write(&dir.path().join("a.py"), "print(1)\n");
-        let d = detect(dir.path());
+        let d = detect(&f);
         assert_eq!(d.languages.len(), 1);
     }
 
@@ -1217,8 +1186,9 @@ mod tests {
     fn a_new_config_never_replaces_a_file() {
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("atlas.yaml");
-        create_new(&f, "a\n").unwrap();
-        assert!(create_new(&f, "b\n").is_err());
+        let folder = opened(dir.path());
+        folder.create_new("atlas.yaml", "a\n").unwrap();
+        assert!(folder.create_new("atlas.yaml", "b\n").is_err());
         assert_eq!(std::fs::read_to_string(&f).unwrap(), "a\n");
         let left = std::fs::read_dir(dir.path()).unwrap().count();
         assert_eq!(left, 1);

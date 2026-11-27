@@ -364,6 +364,13 @@ could still try to reach it. These guards stop that:
    that start with a dot, and `node_modules`, `target`, `vendor`, `dist`,
    `build`, `__pycache__` and `venv`. It reads at most 500 folders, in the
    order that the system lists them, and shows those sorted by name.
+   After the check, acu opens the folder once: one name at a time from the
+   root or the workspace, with no link followed on the way. It lists the
+   folder, reads its marker files and its `atlas.yaml`, and writes a new
+   `atlas.yaml`, all through that open folder. So a folder that someone
+   swaps for a link after the check cannot send those calls elsewhere.
+   Just before the adapters start, acu checks that the path still leads to
+   the open folder. On Windows, the picker takes paths.
 7. **Clone address.** acu accepts an `https://` address with a plain host
    name and a path of plain names. It refuses anything else: another
    protocol, a user name, a query, `..`, a leading `-`.
@@ -408,10 +415,12 @@ sources for each guard.
    call the API, and so can another user on a shared machine. Run the studio
    only on a computer that you alone use. Issue #42 adds a session secret,
    as Jupyter uses.
-3. A local user who owns a folder under the root can swap that folder for a
-   symbolic link. The swap can fall between acu's path check and its use of
-   the path. Limit 2 covers this case: use the studio only on a computer
-   that you alone use. Issue #45 tracks a fix.
+3. A local user who owns a folder under the root can still swap that
+   folder for a symbolic link in one short window: after acu's last check
+   and before the adapters and the editor take the path (see guard 6). On
+   Windows, the picker takes paths, so the swap can fall anywhere between
+   the check and the use. Limit 2 covers both cases: use the studio only on
+   a computer that you alone use.
 4. `acu serve` checks the `Host` of API calls only. On a loopback address, a
    page that uses DNS rebinding can read the served map's data and pages.
    For private code, use `acu studio`, or an address and port that a hostile
