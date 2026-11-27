@@ -589,9 +589,10 @@ fn linked(meta: &std::fs::Metadata) -> bool {
 /// the change, as Vim and Emacs do for such a file. The temporary file
 /// `tmp` already holds the whole text, synced. acu opens the file by name,
 /// checks that it opened the file it checked before (`old`), and only then
-/// changes it. A reader during the copy can see part of the old text. A
-/// copy that fails halfway keeps `tmp` and names it, so the text stays
-/// safe.
+/// changes it. The open follows no link and does not wait, so a link or a
+/// pipe that took the name fails it. A reader during the copy can see part
+/// of the old text. A copy that fails halfway keeps `tmp` and names it, so
+/// the text stays safe.
 #[cfg(unix)]
 fn write_in_place(
     target: &Path,
@@ -599,10 +600,13 @@ fn write_in_place(
     old: &std::fs::Metadata,
     text: &str,
 ) -> Result<(), String> {
+    use rustix::fs::{Mode, OFlags};
     use std::os::unix::fs::MetadataExt;
-    let opened = std::fs::OpenOptions::new()
-        .write(true)
-        .open(target)
+    let flags =
+        OFlags::WRONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::NOCTTY | OFlags::CLOEXEC;
+    let opened = rustix::fs::open(target, flags, Mode::empty())
+        .map(std::fs::File::from)
+        .map_err(std::io::Error::from)
         .and_then(|f| f.metadata().map(|m| (f, m)));
     let mut file = match opened {
         Ok((f, now)) if (now.dev(), now.ino()) == (old.dev(), old.ino()) => f,
@@ -888,6 +892,24 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
         assert_eq!(err, CHANGED);
         assert_eq!(std::fs::read_to_string(&target).unwrap(), "other\n");
         assert!(!tmp.exists());
+        // A link or a pipe at the name fails the open at once.
+        std::fs::remove_file(&target).unwrap();
+        std::os::unix::fs::symlink(dir.path().join("aside"), &target).unwrap();
+        std::fs::write(&tmp, "new\n").unwrap();
+        assert!(write_in_place(&target, &tmp, &checked, "new\n").is_err());
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("aside")).unwrap(),
+            "old\n"
+        );
+        std::fs::remove_file(&target).unwrap();
+        let fifo = std::process::Command::new("mkfifo")
+            .arg(&target)
+            .status()
+            .is_ok_and(|s| s.success());
+        if fifo {
+            std::fs::write(&tmp, "new\n").unwrap();
+            assert!(write_in_place(&target, &tmp, &checked, "new\n").is_err());
+        }
     }
 
     #[test]
