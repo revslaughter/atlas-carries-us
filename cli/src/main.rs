@@ -208,7 +208,15 @@ fn run(cli: Cli) -> Result<()> {
                 .with_context(|| format!("find {}", workspace.display()))?;
             let live = Arc::new(mcp::Live::empty());
             if let Some(p) = project {
+                // Naming the project on the command line counts as trust;
+                // a linked atlas.yaml stays refused, as in the picker.
                 let file = if p.is_dir() { p.join("atlas.yaml") } else { p };
+                if std::fs::symlink_metadata(&file).is_ok_and(|m| m.file_type().is_symlink()) {
+                    bail!(
+                        "{} is a symbolic link; replace it with a file, then start the studio again",
+                        file.display()
+                    );
+                }
                 let loaded = config::load(&file)?;
                 let run = run_adapters(&loaded)?;
                 live.set(Arc::new(mcp::Atlas::from_config(&file, run, None)?));

@@ -193,10 +193,26 @@ pub struct Loaded {
     pub dir: PathBuf,
 }
 
+/// The byte-order mark that some editors put at the start of a file.
+pub const BOM: char = '\u{feff}';
+
+/// Parses the text of atlas.yaml into JSON values. It skips a leading
+/// byte-order mark, and it refuses a key that a mapping repeats, because
+/// YAML parsers keep only the last one and the first would vanish without a
+/// word.
+pub fn parse_yaml(text: &str) -> Result<Value, String> {
+    let text = text.strip_prefix(BOM).unwrap_or(text);
+    // serde_yaml_ng's own Value refuses a repeated key; serde_json's would
+    // keep the last one.
+    let v: serde_yaml_ng::Value = serde_yaml_ng::from_str(text).map_err(|e| e.to_string())?;
+    serde_json::to_value(v).map_err(|e| e.to_string())
+}
+
 /// Reads atlas.yaml, checks it against the config schema, and parses it.
 pub fn load(path: &Path) -> Result<Loaded> {
     let text = std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
-    let value: Value = serde_yaml_ng::from_str(&text)
+    let value: Value = parse_yaml(&text)
+        .map_err(|e| anyhow::anyhow!("{e}"))
         .with_context(|| format!("{} holds YAML that does not parse", path.display()))?;
     let problems = validate(&value, CONFIG_SCHEMA)?;
     if !problems.is_empty() {

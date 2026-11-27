@@ -212,6 +212,10 @@ pub const READ_ONLY: &str = "acu runs with --read-only; start it without the fla
 /// other computers can reach.
 pub const REMOTE: &str = "acu listens on an address that other computers can reach; start it with --allow-remote-writes to draft text";
 
+/// What a write answers when atlas.yaml changed on disk while acu checked
+/// the change.
+const CHANGED: &str = "acu: atlas.yaml changed on disk while acu checked the change, so acu wrote nothing; read the file again, then make the change again";
+
 /// What a write to a map that a newer map replaced answers.
 const RETIRED: &str =
     "acu: a newer map went on show meanwhile; read the file again, then make the change again";
@@ -311,7 +315,7 @@ impl Atlas {
         edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
     ) -> Result<Written, SaveError> {
         let stale = std::cell::Cell::new(None);
-        let retired = std::cell::Cell::new(false);
+        let conflict = std::cell::Cell::new(false);
         let out = self.write_marked(
             |text| {
                 let now = revision(text);
@@ -321,7 +325,7 @@ impl Atlas {
                 }
                 edit(text)
             },
-            &retired,
+            &conflict,
         );
         match (out, stale.into_inner()) {
             (Ok(w), _) => Ok(w),
@@ -329,7 +333,7 @@ impl Atlas {
                 "acu: atlas.yaml changed on disk since you opened it (now revision {now}); reload the editor, then make the change again"
             ))),
             // Decided under the lock, by what the write itself saw.
-            (Err(e), None) if retired.get() => Err(SaveError::Stale(e)),
+            (Err(e), None) if conflict.get() => Err(SaveError::Stale(e)),
             (Err(e), None) => Err(SaveError::Failed(e)),
         }
     }
@@ -390,13 +394,14 @@ impl Atlas {
         self.write_marked(edit, &std::cell::Cell::new(false))
     }
 
-    /// Writes as [`Atlas::write`] does, and sets `retired` when the write
-    /// failed because a newer map replaced this one, so a caller can tell
-    /// that case apart without reading the message.
+    /// Writes as [`Atlas::write`] does, and sets `conflict` when the write
+    /// failed because a newer map replaced this one or the file changed on
+    /// disk meanwhile, so a caller can tell those cases apart without
+    /// reading the message.
     fn write_marked(
         &self,
         edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
-        retired: &std::cell::Cell<bool>,
+        conflict: &std::cell::Cell<bool>,
     ) -> Result<Written, String> {
         if let Some(why) = self.why_read_only() {
             return Err(why.to_string());
@@ -406,7 +411,7 @@ impl Atlas {
         };
         let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
         if self.retired.load(Ordering::SeqCst) {
-            retired.set(true);
+            conflict.set(true);
             return Err(RETIRED.into());
         }
         // Write only the config file itself, and only inside its own folder.
@@ -422,7 +427,7 @@ impl Atlas {
         let text = std::fs::read_to_string(&target)
             .map_err(|e| format!("read {}: {e}; check the file", target.display()))?;
         let (new_text, how) = edit(&text)?;
-        let value: Value = serde_yaml_ng::from_str(&new_text)
+        let value: Value = config::parse_yaml(&new_text)
             .map_err(|e| format!("the new atlas.yaml does not parse, so acu wrote nothing: {e}"))?;
         let problems =
             config::validate(&value, config::CONFIG_SCHEMA).map_err(|e| e.to_string())?;
@@ -436,6 +441,14 @@ impl Atlas {
             .map_err(|e| format!("the change breaks the config, so acu wrote nothing: {e}"))?;
         let snap = assemble_checked(run, &cfg)
             .map_err(|e| format!("the change breaks the check, so acu wrote nothing: {e}"))?;
+        // A text editor may have saved while acu checked the change; then
+        // acu writes nothing, rather than lose that edit.
+        let now = std::fs::read_to_string(&target)
+            .map_err(|e| format!("read {}: {e}; check the file", target.display()))?;
+        if now != text {
+            conflict.set(true);
+            return Err(CHANGED.into());
+        }
         write_atomic(&target, &new_text)?;
         let warnings = snap.warnings.clone();
         *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
@@ -522,6 +535,11 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
             }
         }
     };
+    // The new file takes the old one's mode before it holds any text, so
+    // text that only its owner may read never sits in a wider file.
+    if let Ok(meta) = std::fs::metadata(target) {
+        let _ = std::fs::set_permissions(&tmp, meta.permissions());
+    }
     let done = file
         .write_all(text.as_bytes())
         .and_then(|_| file.sync_all())
@@ -531,16 +549,19 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
         let _ = std::fs::remove_file(&tmp);
         return Err(e);
     }
-    if let Ok(meta) = std::fs::metadata(target) {
-        let _ = std::fs::set_permissions(&tmp, meta.permissions());
-    }
     std::fs::rename(&tmp, target).map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
         format!(
             "replace {}: {e}; check that acu may write there",
             target.display()
         )
-    })
+    })?;
+    // Make the new name itself durable.
+    #[cfg(unix)]
+    if let Ok(d) = std::fs::File::open(dir) {
+        let _ = d.sync_all();
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -707,6 +728,49 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
         live.install(atlas.clone(), || false).unwrap();
         assert!(!lock.is_poisoned());
         assert!(atlas.write(|t| Ok((t.to_string(), "test"))).is_ok());
+    }
+
+    #[test]
+    fn a_hand_edit_during_a_save_is_not_lost() {
+        let (dir, atlas) = fixture();
+        let path = dir.path().join("atlas.yaml");
+        let (_, rev) = atlas.config_text().unwrap();
+        let p2 = path.clone();
+        let out = atlas.save(&rev, move |t| {
+            // The person saves in a text editor while acu checks the change.
+            std::fs::write(&p2, t.replace("Two units.", "Edited by hand.")).unwrap();
+            Ok((t.replace("name: Shop", "name: Shop 2"), "test"))
+        });
+        assert!(matches!(out, Err(SaveError::Stale(_))), "{:?}", out.err());
+        let now = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            now.contains("Edited by hand.") && !now.contains("Shop 2"),
+            "{now}"
+        );
+    }
+
+    #[test]
+    fn a_file_with_a_repeated_key_does_not_load() {
+        let (dir, _) = fixture();
+        let path = dir.path().join("atlas.yaml");
+        let text = format!(
+            "{FIXTURE_CONFIG}tour:\n  - title: Only\n    open: {{ view: overview }}\n    text: x\n"
+        );
+        std::fs::write(&path, text).unwrap();
+        assert!(config::load(&path).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_write_keeps_an_owner_only_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("atlas.yaml");
+        std::fs::write(&target, "old\n").unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o600)).unwrap();
+        write_atomic(&target, "new\n").unwrap();
+        let mode = std::fs::metadata(&target).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
     }
 
     #[test]

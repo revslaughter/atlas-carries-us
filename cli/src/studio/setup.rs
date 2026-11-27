@@ -462,7 +462,7 @@ pub fn propose(s: &Studio, args: &Map<String, Value>) -> Reply {
 /// Checks a new config's text: it must parse, pass the config schema, and
 /// read as a config.
 pub fn check_text(text: &str) -> Result<(), String> {
-    let v: Value = serde_yaml_ng::from_str(text)
+    let v: Value = crate::config::parse_yaml(text)
         .map_err(|e| format!("acu: the config does not parse: {e}; fix it and try again"))?;
     let problems = crate::config::validate(&v, crate::config::CONFIG_SCHEMA)
         .map_err(|e| format!("acu: {e}"))?;
@@ -637,9 +637,31 @@ pub fn clone_target(url: &str) -> Result<CloneTarget, String> {
 /// How long a clone may take before acu stops it.
 const CLONE_LIMIT: std::time::Duration = std::time::Duration::from_secs(600);
 
-/// The oldest git that acu clones with: 2.45.1 fixed a code execution in
-/// clone (CVE-2024-32002).
+/// The gits that acu clones with: 2.45.1 or later, or the point release of
+/// an older line that got the same fixes. The releases of May 2024 fixed
+/// several flaws in clone (CVE-2024-32002, -32004, -32020, -32021 and
+/// -32465); acu also passes --no-recurse-submodules, which alone blocks the
+/// first of them.
 const GIT_MIN: (u32, u32, u32) = (2, 45, 1);
+
+/// The older lines that got those fixes, and the first fixed release of
+/// each.
+const GIT_FIXED: &[(u32, u32, u32)] = &[
+    (2, 39, 4),
+    (2, 40, 2),
+    (2, 41, 1),
+    (2, 42, 2),
+    (2, 43, 4),
+    (2, 44, 1),
+];
+
+/// Reports whether a git version holds the clone fixes of May 2024.
+pub fn git_safe(v: (u32, u32, u32)) -> bool {
+    v >= GIT_MIN
+        || GIT_FIXED
+            .iter()
+            .any(|f| f.0 == v.0 && f.1 == v.1 && v.2 >= f.2)
+}
 
 /// Reads the three numbers of `git version 2.47.1` and similar text.
 pub fn git_version(text: &str) -> Option<(u32, u32, u32)> {
@@ -658,9 +680,9 @@ fn git_new_enough() -> Result<(), String> {
         .map_err(|e| format!("acu: start git: {e}; install git and try again"))?;
     let text = String::from_utf8_lossy(&out.stdout);
     match git_version(&text) {
-        Some(v) if v >= GIT_MIN => Ok(()),
+        Some(v) if git_safe(v) => Ok(()),
         _ => Err(format!(
-            "acu: {} is too old to clone safely; install git 2.45.1 or later",
+            "acu: {} lacks the clone fixes of May 2024; install git 2.45.1 or later, or 2.39.4, 2.40.2, 2.41.1, 2.42.2, 2.43.4 or 2.44.1",
             text.trim()
         )),
     }
@@ -1157,7 +1179,10 @@ mod tests {
             Some((2, 39, 3))
         );
         assert_eq!(git_version("git version 2.50"), Some((2, 50, 0)));
-        assert!(git_version("git version 2.45.0").unwrap() < GIT_MIN);
+        assert!(!git_safe(git_version("git version 2.45.0").unwrap()));
+        assert!(git_safe((2, 45, 1)) && git_safe((2, 50, 0)));
+        assert!(git_safe((2, 43, 4)) && git_safe((2, 39, 5)));
+        assert!(!git_safe((2, 43, 0)) && !git_safe((2, 38, 9)));
         assert_eq!(git_version("nonsense"), None);
     }
 

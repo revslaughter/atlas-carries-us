@@ -213,7 +213,7 @@ pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
                 },
             )?;
             text = t;
-            if h != "in place" {
+            if h == "section" {
                 how = h;
             }
         }
@@ -226,7 +226,7 @@ pub fn save_regions(s: &Studio, args: &Map<String, Value>) -> Reply {
                 },
             )?;
             text = t;
-            if h != "in place" {
+            if h == "section" {
                 how = h;
             }
         }
@@ -254,8 +254,10 @@ pub fn save_project(s: &Studio, args: &Map<String, Value>) -> Reply {
     if name.is_empty() {
         return fail(StatusCode::BAD_REQUEST, "give the project a name");
     }
-    let text_or_null = |k: &str| match args.get(k).and_then(Value::as_str).map(str::trim) {
-        Some(t) if !t.is_empty() => json!(t),
+    // Only the end and blank leading lines go: an indent on the first line
+    // can mean a code block.
+    let text_or_null = |k: &str| match args.get(k).and_then(Value::as_str) {
+        Some(t) if !t.trim().is_empty() => json!(t.trim_end().trim_start_matches(['\n', '\r'])),
         _ => Value::Null,
     };
     let description = text_or_null("description");
@@ -575,6 +577,54 @@ mod tests {
         assert!(
             out["error"].as_str().unwrap().contains("adapters run"),
             "{out}"
+        );
+    }
+
+    #[test]
+    fn a_description_keeps_the_indent_of_its_first_line() {
+        let (dir, a) = fixture();
+        let s = studio(Live::of(Arc::new(a)), Mode::Serve);
+        let (_, v) = config(&s);
+        let d = "    indented code first\n\nThen text.";
+        let (code, out) = save_project(
+            &s,
+            &args(json!({"revision": v["revision"], "name": "Shop", "description": d})),
+        );
+        assert_eq!(code, StatusCode::OK, "{out}");
+        let text = std::fs::read_to_string(dir.path().join("atlas.yaml")).unwrap();
+        assert_eq!(
+            yaml::parse(&text).unwrap()["project"]["description"],
+            json!(d)
+        );
+    }
+
+    #[test]
+    fn a_regions_save_keeps_the_layout_comments() {
+        let (dir, _old) = fixture();
+        let path = dir.path().join("atlas.yaml");
+        let text = std::fs::read_to_string(&path).unwrap()
+            + "# How the map lays out.\nlayout:\n  # Selling sits on top.\n  rows:\n    - [selling]\n    - [storage]\n";
+        std::fs::write(&path, &text).unwrap();
+        let run = crate::AdapterRun {
+            merged: crate::mcp::atlas::tests::fixture_doc(),
+            commit: None,
+            repo_roots: vec![dir.path().to_path_buf()],
+        };
+        let a = Arc::new(Atlas::from_config(&path, run, None).unwrap());
+        let s = studio(Live::of(a), Mode::Serve);
+        let (_, v) = config(&s);
+        let mut regions = v["regions"].clone();
+        regions[1]["name"] = json!("Store");
+        let (code, out) = save_regions(
+            &s,
+            &args(json!({"revision": v["revision"], "regions": regions, "layout": v["layout"]})),
+        );
+        assert_eq!(code, StatusCode::OK, "{out}");
+        assert_eq!(out["how"], "in place");
+        let now = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            now.contains("# Selling sits on top.") && now.contains("# The selling side."),
+            "{now}"
         );
     }
 

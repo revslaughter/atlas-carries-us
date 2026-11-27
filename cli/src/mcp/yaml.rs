@@ -63,7 +63,7 @@ pub enum Change {
 
 /// Parses YAML text into JSON values, as acu reads atlas.yaml.
 pub fn parse(text: &str) -> Result<Value, String> {
-    serde_yaml_ng::from_str(text).map_err(|e| format!("atlas.yaml does not parse: {e}"))
+    crate::config::parse_yaml(text).map_err(|e| format!("atlas.yaml does not parse: {e}"))
 }
 
 /// Applies a change to the parsed file, giving the value that the edited
@@ -150,10 +150,20 @@ fn set_keys(m: &mut Map<String, Value>, values: &[(&'static str, Value)]) {
 
 /// Edits the text and returns the new text and how acu edited it: "in
 /// place" when only the entry's lines changed, "section" when acu wrote the
-/// whole top-level section again.
+/// whole top-level section again, "unchanged" when the change changed
+/// nothing.
 pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), String> {
+    // A byte-order mark stays where it stood, outside the edit.
+    if let Some(rest) = text.strip_prefix(crate::config::BOM) {
+        let (out, how) = edit(rest, change)?;
+        return Ok((format!("{}{out}", crate::config::BOM), how));
+    }
     let original = parse(text)?;
     let want = expected(&original, change)?;
+    // A change that changes nothing leaves every line, comments included.
+    if want == original {
+        return Ok((text.to_string(), "unchanged"));
+    }
     let lines: Vec<&str> = text.lines().collect();
     let ends_nl = text.ends_with('\n') || text.is_empty();
     // A file whose lines end in CR LF keeps that ending.
@@ -405,7 +415,34 @@ fn splice(
     let secs = sections(lines);
     let own = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
     match change {
-        Change::Top { .. } => None,
+        Change::Top { key, .. } => {
+            // A mapping that stays a mapping keeps the lines of its
+            // unchanged keys, comments included.
+            let (o, m) = (original[*key].as_object()?, want[*key].as_object()?);
+            let mut names: Vec<&'static str> = Vec::new();
+            for k in o.keys().chain(m.keys()) {
+                if o.get(k) != m.get(k) {
+                    let name = KEY_ORDER.iter().find(|x| *x == k).copied()?;
+                    if !names.contains(&name) {
+                        names.push(name);
+                    }
+                }
+            }
+            let sec = secs.iter().find(|s| s.key == *key)?;
+            if !opens_block(lines[sec.start]) {
+                return None;
+            }
+            let first = (sec.start + 1..sec.end).find(|&i| !is_filler(lines[i]))?;
+            let n = indent(lines[first]);
+            if n == 0 {
+                return None;
+            }
+            let new = splice_keys(lines, first, sec.end, n, false, &names, m, pretty)?;
+            let mut out = own(&lines[..first]);
+            out.extend(new);
+            out.extend(own(&lines[sec.end..]));
+            Some(out)
+        }
         Change::List { key, items } => {
             let Some(sec) = secs.iter().find(|s| s.key == *key) else {
                 if items.is_empty() {
@@ -460,18 +497,28 @@ fn splice(
                     pick[k] = Some((i, true));
                 }
             }
+            // Pair each changed item with the old item that shares the most
+            // fields with it (an equal ID outweighs all the rest), best pairs
+            // first, the nearer place breaking a tie. An item that shares
+            // nothing with any old item takes no old comment.
+            let mut pairs: Vec<(usize, usize, usize)> = Vec::new();
             for (k, it) in items.iter().enumerate() {
                 if pick[k].is_some() {
                     continue;
                 }
-                let same = |field: &str| {
-                    it.get(field).filter(|v| !v.is_null()).and_then(|v| {
-                        (0..old.len()).find(|&i| !used[i] && old_values[i].get(field) == Some(v))
-                    })
-                };
-                let by_place = (items.len() == old.len() && !used[k]).then_some(k);
-                let at = same("id").or_else(|| same("title")).or(by_place);
-                if let Some(i) = at {
+                for (i, old_v) in old_values.iter().enumerate() {
+                    let sc = shared_fields(it, old_v);
+                    if !used[i] && sc > 0 {
+                        pairs.push((sc, k, i));
+                    }
+                }
+            }
+            pairs.sort_by(|a, b| {
+                b.0.cmp(&a.0)
+                    .then(a.1.abs_diff(a.2).cmp(&b.1.abs_diff(b.2)))
+            });
+            for (_, k, i) in pairs {
+                if pick[k].is_none() && !used[i] {
                     used[i] = true;
                     pick[k] = Some((i, false));
                 }
@@ -483,9 +530,13 @@ fn splice(
                         out.extend(own(&lines[lead..st]));
                         out.extend(own(&lines[st..end]));
                     }
-                    Some(((lead, st, _), false)) => {
+                    Some(((lead, st, end), false)) => {
                         out.extend(own(&lines[lead..st]));
-                        out.extend(emit_item(it.as_object()?, n, pretty));
+                        let old_v = &old_values[pick[k]?.0];
+                        let fresh = emit_item(it.as_object()?, n, pretty);
+                        out.extend(
+                            respliced(lines, st, end, n, old_v, it, pretty).unwrap_or(fresh),
+                        );
                     }
                     None => out.extend(emit_item(it.as_object()?, n, pretty)),
                 }
@@ -642,6 +693,7 @@ const KEY_ORDER: &[&str] = &[
     "readingTip",
     "autolinks",
     "drafted",
+    "rows",
 ];
 
 /// Lists a mapping's keys in the order of [`KEY_ORDER`].
@@ -746,8 +798,59 @@ fn flow(v: &Value) -> String {
         }
         Value::Array(a) => format!("[{}]", a.iter().map(flow).collect::<Vec<_>>().join(", ")),
         Value::String(s) if is_word(s) => s.clone(),
+        // JSON leaves these raw, but YAML reads them as line breaks or a
+        // byte-order mark, so they go in as escapes.
+        Value::String(s) => Value::String(s.clone())
+            .to_string()
+            .replace('\u{85}', "\\u0085")
+            .replace('\u{2028}', "\\u2028")
+            .replace('\u{2029}', "\\u2029")
+            .replace('\u{feff}', "\\ufeff"),
         other => other.to_string(),
     }
+}
+
+/// Counts the top-level fields that two list items share, with an equal
+/// `id` counting for a hundred, so a region pairs with its old self first.
+fn shared_fields(a: &Value, b: &Value) -> usize {
+    let (Some(a), Some(b)) = (a.as_object(), b.as_object()) else {
+        return 0;
+    };
+    a.iter()
+        .filter(|(k, v)| b.get(*k) == Some(v))
+        .map(|(k, _)| if k == "id" { 100 } else { 1 })
+        .sum()
+}
+
+/// Rewrites only the keys of a changed list item that differ from its old
+/// lines, so the comments inside the item stay. Gives `None` when the item's
+/// shape does not allow it, or when the result does not read back as the
+/// new item.
+fn respliced(
+    lines: &[&str],
+    st: usize,
+    end: usize,
+    n: usize,
+    old: &Value,
+    new: &Value,
+    pretty: bool,
+) -> Option<Vec<String>> {
+    let (o, m) = (old.as_object()?, new.as_object()?);
+    let mut keys: Vec<&str> = m
+        .iter()
+        .filter(|(k, v)| o.get(*k) != Some(v))
+        .map(|(k, _)| k.as_str())
+        .collect();
+    keys.extend(o.keys().filter(|k| !m.contains_key(*k)).map(String::as_str));
+    // splice_keys takes static names; the keys of atlas.yaml come from a
+    // short known list, and any other key falls back to a whole item.
+    let names: Vec<&'static str> = keys
+        .iter()
+        .map(|k| KEY_ORDER.iter().find(|o| *o == k).copied())
+        .collect::<Option<_>>()?;
+    let out = splice_keys(lines, st, end, n + 2, true, &names, m, pretty)?;
+    let probe = format!("x:\n{}\n", out.join("\n"));
+    (parse(&probe).ok()?["x"][0] == *new).then_some(out)
 }
 
 /// Reports whether a string can stand bare in YAML and still read as the
@@ -809,10 +912,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(parse(&out).unwrap()["tour"], json!(steps));
-        assert!(
-            out.contains("  # Before two.\n  - title: \"Two\"\n"),
-            "{out}"
-        );
+        assert!(out.contains("  # Before two.\n  - title: Two\n"), "{out}");
         // A region keeps its comment by ID, even after a move.
         let text = "version: 1\nregions:\n  # About a.\n  - id: a\n    name: A\n  # About b.\n  - id: b\n    name: B\n";
         let items = vec![
@@ -849,7 +949,7 @@ mod tests {
         )
         .unwrap();
         assert!(!out.contains("About A."), "{out}");
-        assert!(out.contains("  # About B.\n  - title: \"B\"\n"), "{out}");
+        assert!(out.contains("  # About B.\n  - title: B\n"), "{out}");
         assert!(out.contains("  # About the tour.\n"), "{out}");
         // A new step at the top, and A changed: the new step takes no comment.
         let mut a = old[0].clone();
@@ -869,7 +969,7 @@ mod tests {
             out.contains("  # About the tour.\n\n  - title: \"New\"\n"),
             "{out}"
         );
-        assert!(out.contains("  # About A.\n  - title: \"A\"\n"), "{out}");
+        assert!(out.contains("  # About A.\n  - title: A\n"), "{out}");
         // The comment under the key stays first after a reorder.
         let rev = vec![old[1].clone(), old[0].clone()];
         let (out, _) = edit(
@@ -884,6 +984,133 @@ mod tests {
             out.starts_with("version: 1\ntour:\n  # About the tour.\n"),
             "{out}"
         );
+    }
+
+    /// Builds a tour step that opens the overview.
+    fn step(title: &str) -> Value {
+        json!({"title": title, "open": {"view": "overview"}, "text": "x"})
+    }
+
+    #[test]
+    fn a_byte_order_mark_stays_and_the_file_parses() {
+        let text = "\u{feff}tour:\n  # About one.\n  - title: One\n    open: { view: overview }\n    text: x\nversion: 1\n";
+        let (out, how) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![step("One"), step("Two")],
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place", "{out}");
+        assert!(
+            out.starts_with('\u{feff}') && out.contains("# About one."),
+            "{out}"
+        );
+        assert_eq!(out.matches("tour:").count(), 1, "{out}");
+    }
+
+    #[test]
+    fn a_changed_item_keeps_the_comments_inside_it() {
+        let text = "version: 1\ntour:\n  - title: One\n    # TODO: check this claim.\n    open: { view: overview } # the start\n    text: x\n";
+        let mut s = step("One");
+        s["text"] = json!("y");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![s.clone()],
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["tour"][0], s);
+        assert!(out.contains("# TODO: check this claim."), "{out}");
+        assert!(out.contains("# the start"), "{out}");
+    }
+
+    #[test]
+    fn comments_follow_the_closest_old_item() {
+        // Two steps share a title: delete the first, edit the second.
+        let text = "version: 1\ntour:\n  # About the first look.\n  - title: Look\n    open: { view: overview }\n    text: a\n  # About the second look.\n  - title: Look\n    open: { view: unit, id: u }\n    text: b\n";
+        let old = parse(text).unwrap()["tour"].as_array().unwrap().clone();
+        let mut second = old[1].clone();
+        second["text"] = json!("b2");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![second],
+            },
+        )
+        .unwrap();
+        assert!(out.contains("# About the second look."), "{out}");
+        assert!(!out.contains("# About the first look."), "{out}");
+        // A step that moves and gets a new title keeps its comment.
+        let text = "version: 1\ntour:\n  # About A.\n  - title: A\n    open: { view: overview }\n    text: a\n  # About B.\n  - title: B\n    open: { view: overview }\n    text: b\n";
+        let old = parse(text).unwrap()["tour"].as_array().unwrap().clone();
+        let mut b = old[1].clone();
+        b["title"] = json!("B renamed");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![b, old[0].clone()],
+            },
+        )
+        .unwrap();
+        assert!(
+            out.contains("# About B.\n  - title: \"B renamed\""),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_layout_keeps_its_comments() {
+        let text = "version: 1\nlayout:\n  # The web side sits on top.\n  rows:\n    - [web, api]\n    - [store]\n";
+        let same = parse(text).unwrap()["layout"].clone();
+        let (out, how) = edit(
+            text,
+            &Change::Top {
+                key: "layout",
+                value: same,
+            },
+        )
+        .unwrap();
+        assert_eq!((out.as_str(), how), (text, "unchanged"));
+        let rows = json!({"rows": [["web"], ["api", "store"]]});
+        let (out, _) = edit(
+            text,
+            &Change::Top {
+                key: "layout",
+                value: rows.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["layout"], rows);
+        assert!(out.contains("# The web side sits on top."), "{out}");
+    }
+
+    #[test]
+    fn line_breaks_that_yaml_reads_go_in_as_escapes() {
+        let text = "version: 1\ntour:\n  - title: One\n    open: { view: overview }\n    text: x\n";
+        for t in ["a\u{85}b", "a\u{2028}b", "a\u{2029}b", "a\u{feff}b"] {
+            let s = json!({"title": t, "open": {"view": "overview"}, "text": "x"});
+            let (out, _) = edit(
+                text,
+                &Change::List {
+                    key: "tour",
+                    items: vec![s.clone()],
+                },
+            )
+            .unwrap();
+            assert_eq!(parse(&out).unwrap()["tour"][0], s, "{out}");
+        }
+    }
+
+    #[test]
+    fn a_repeated_key_does_not_parse() {
+        assert!(parse("version: 1\ntour: []\nregions: []\ntour: []\n").is_err());
+        assert!(parse("\u{feff}version: 1\nx: 2\n").is_ok());
     }
 
     #[test]
