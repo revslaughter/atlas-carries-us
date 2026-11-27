@@ -339,7 +339,7 @@ check when it loads the file.
 | `serve` | `--addr <host:port>` | `127.0.0.1:4321` | The address to listen on. |
 | `serve`, `mcp` | `--read-only` | off | Turn off the MCP tools that write `atlas.yaml`. |
 | `serve`, `mcp` | `--root <folder>` | current folder | With `-d`: the mapped repository, where the MCP tool `read_source` reads files. |
-| `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. For a client on another computer, give the computer's own address, such as `192.168.1.5:4321`. On `0.0.0.0`, `/mcp` and the API answer only loopback names, as through a container's forwarded port. |
+| `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. For a client on another computer, give the computer's own address, such as `192.168.1.5:4321`. On `0.0.0.0`, `/mcp` and the API answer only loopback names with the same port, such as a container's `-p 4321:4321`. |
 | `serve` | `--allow-host <name[:port]>` | none | On a loopback address, also show the map's pages and data to this forwarded name, such as `localhost:9000` behind `ssh -L`, or the forwarded name that GitHub Codespaces may send, such as `<codespace>-4321.app.github.dev`. A refused page's 403 names the `Host` that acu received; give that value. May repeat. The API and MCP keep their own names. |
 
 `acu serve` and `acu studio` print an address that holds a session token,

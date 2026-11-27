@@ -29,8 +29,8 @@ labels it until a person checks it.
    `--addr 192.168.1.5:4321`. On `0.0.0.0`, `/mcp` and the API answer only
    a `Host` of `127.0.0.1`, `localhost`, `[::1]` or `0.0.0.0`, each with
    the port. So a client on another computer gets 403. A container that
-   listens on `0.0.0.0` still works through a port that the host
-   forwards to `127.0.0.1`.
+   listens on `0.0.0.0` still works when the host forwards the same port
+   number to its `127.0.0.1`, such as `-p 4321:4321`.
    `acu serve -c` also offers the studio's editor at the same address
    ([`studio.md`](studio.md)); its saves and the write tools share one path.
 3. `acu mcp` writes the protocol to standard output and every message to
@@ -108,8 +108,8 @@ inherit it. An exported variable would stay in your shell, and every other
 program that the shell starts would inherit it.
 
 ```sh
-(umask 077; openssl rand -hex 32 > ~/.acu-token)   # once
-chmod 600 ~/.acu-token                             # also for an old file
+rm -f ~/.acu-token                                 # once: drop any old file
+(umask 077; openssl rand -hex 32 > ~/.acu-token)   # only you can read it
 ACU_TOKEN="$(cat ~/.acu-token)" acu serve -c atlas.yaml
 ```
 
