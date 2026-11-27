@@ -10,6 +10,7 @@
 //! body, so a web page on another site cannot send one.
 
 pub mod edit;
+pub mod folder;
 pub mod setup;
 
 use std::net::SocketAddr;

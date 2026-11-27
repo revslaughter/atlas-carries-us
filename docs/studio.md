@@ -259,12 +259,19 @@ A save takes the same path as a draft from an MCP write tool
    change again. A save that reaches a map that a new extraction has just
    replaced also fails with 409, for the same remedy.
 3. It rewrites only the changed section. A list save (regions or tour)
-   follows the rules below.
+   follows the rules below. Each line that acu leaves keeps its own line
+   ending, CR LF or LF. A new line takes the ending of most lines in the
+   file.
 4. It checks the new config against the config schema and runs the check of
    `acu extract`. A step whose target matches nothing, or a layout that
    names a missing region, fails with status 422 and the reason. acu then
    writes nothing.
-5. It replaces the file in one step, through a temporary file.
+5. It replaces the file in one step, through a temporary file. On Linux
+   and macOS, a file with more than one hard link keeps its links: acu
+   first writes the temporary file, then copies the new text into the file
+   itself, so every name shows the change. A reader at that moment can see
+   part of the old text. A copy that fails halfway leaves the temporary
+   file, and the message names it.
 
 In a list save, acu keeps comments by these rules:
 
@@ -357,6 +364,13 @@ could still try to reach it. These guards stop that:
    that start with a dot, and `node_modules`, `target`, `vendor`, `dist`,
    `build`, `__pycache__` and `venv`. It reads at most 500 folders, in the
    order that the system lists them, and shows those sorted by name.
+   After the check, acu opens the folder once: one name at a time from the
+   root or the workspace, with no link followed on the way. It lists the
+   folder, reads its marker files and its `atlas.yaml`, and writes a new
+   `atlas.yaml`, all through that open folder. So a folder that someone
+   swaps for a link after the check cannot send those calls elsewhere.
+   Just before the adapters start, acu checks that the path still leads to
+   the open folder. On Windows, the picker takes paths.
 7. **Clone address.** acu accepts an `https://` address with a plain host
    name and a path of plain names. It refuses anything else: another
    protocol, a user name, a query, `..`, a leading `-`.
@@ -401,10 +415,12 @@ sources for each guard.
    call the API, and so can another user on a shared machine. Run the studio
    only on a computer that you alone use. Issue #42 adds a session secret,
    as Jupyter uses.
-3. A local user who owns a folder under the root can swap that folder for a
-   symbolic link. The swap can fall between acu's path check and its use of
-   the path. Limit 2 covers this case: use the studio only on a computer
-   that you alone use. Issue #45 tracks a fix.
+3. A local user who owns a folder under the root can still swap that
+   folder for a symbolic link in one short window: after acu's last check
+   and before the adapters and the editor take the path (see guard 6). On
+   Windows, the picker takes paths, so the swap can fall anywhere between
+   the check and the use. Limit 2 covers both cases: use the studio only on
+   a computer that you alone use.
 4. `acu serve` checks the `Host` of API calls only. On a loopback address, a
    page that uses DNS rebinding can read the served map's data and pages.
    For private code, use `acu studio`, or an address and port that a hostile
@@ -429,10 +445,8 @@ sources for each guard.
    `Content-Security-Policy: default-src 'self'`, a random default port, a
    size cap on a clone, a restricted mode for untrusted code, and
    `GOTOOLCHAIN=local` for the Go adapter. Issue #44 tracks them.
-10. A file whose lines end partly in CR LF and partly in LF comes back from
-    a save with one ending: the ending of most of its lines.
-11. A save writes a new file and renames it over `atlas.yaml`. Another hard
-    link to the old file keeps the old text. Issue #45 tracks both.
+10. On Windows, a save writes a new file and renames it over `atlas.yaml`.
+    Another hard link to the old file keeps the old text.
 
 ## Later: a hosted service
 

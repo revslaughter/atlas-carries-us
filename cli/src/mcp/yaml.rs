@@ -164,23 +164,32 @@ pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), Strin
     if want == original {
         return Ok((text.to_string(), "unchanged"));
     }
-    let lines: Vec<&str> = text.lines().collect();
+    let (lines, ends) = split_lines(text);
     let ends_nl = text.ends_with('\n') || text.is_empty();
-    // A file whose lines end in CR LF keeps that ending.
+    // A line that the file held keeps its own ending. A new line takes the
+    // ending of most lines, so a file whose lines end in CR LF keeps that
+    // ending.
     let nl = if text.matches("\r\n").count() * 2 > text.matches('\n').count() {
         "\r\n"
     } else {
         "\n"
     };
-    let mut tries: Vec<(Option<Vec<String>>, &'static str)> = Vec::new();
+    let mut tries: Vec<(Option<Vec<Line>>, &'static str)> = Vec::new();
     for pretty in [true, false] {
         tries.push((splice(&lines, change, &original, &want, pretty), "in place"));
     }
     tries.push((rewrite_section(&lines, change, &want), "section"));
     for (attempt, how) in tries {
         let Some(new_lines) = attempt else { continue };
-        let mut out = new_lines.join(nl);
-        if ends_nl || !out.is_empty() {
+        let mut out = String::new();
+        for l in &new_lines {
+            out.push_str(l.text(&lines));
+            out.push_str(match l {
+                Line::Old(i) if !ends[*i].is_empty() => ends[*i],
+                _ => nl,
+            });
+        }
+        if new_lines.is_empty() && ends_nl {
             out.push_str(nl);
         }
         if parse(&out).ok().as_ref() == Some(&want) {
@@ -191,6 +200,54 @@ pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), Strin
         "acu cannot edit atlas.yaml in place without losing its comments; edit the file by hand"
             .into(),
     )
+}
+
+/// One line of an edited file.
+enum Line {
+    /// The line at this position in the old file. It keeps its own line
+    /// ending.
+    Old(usize),
+    /// A line that acu wrote. It takes the file's usual line ending.
+    New(String),
+}
+
+impl Line {
+    /// Returns the line's text, without its line ending.
+    fn text<'a>(&'a self, lines: &[&'a str]) -> &'a str {
+        match self {
+            Line::Old(i) => lines[*i],
+            Line::New(s) => s,
+        }
+    }
+}
+
+/// Splits a text into its lines, as [`str::lines`] does, and into the ending
+/// of each line: CR LF, LF, or nothing for a last line without one.
+fn split_lines(text: &str) -> (Vec<&str>, Vec<&str>) {
+    let mut lines = Vec::new();
+    let mut ends = Vec::new();
+    for piece in text.split_inclusive('\n') {
+        let (line, end) = if let Some(l) = piece.strip_suffix("\r\n") {
+            (l, "\r\n")
+        } else if let Some(l) = piece.strip_suffix('\n') {
+            (l, "\n")
+        } else {
+            (piece, "")
+        };
+        lines.push(line);
+        ends.push(end);
+    }
+    (lines, ends)
+}
+
+/// Keeps the lines of the old file in a range, each with its own ending.
+fn kept(range: std::ops::Range<usize>) -> Vec<Line> {
+    range.map(Line::Old).collect()
+}
+
+/// Turns lines that acu wrote into new lines of the file.
+fn fresh(lines: Vec<String>) -> Vec<Line> {
+    lines.into_iter().map(Line::New).collect()
 }
 
 /// One top-level key and the lines it spans, `start` included and `end`
@@ -360,7 +417,7 @@ fn splice_keys(
     values: &[&str],
     m: &Map<String, Value>,
     pretty: bool,
-) -> Option<Vec<String>> {
+) -> Option<Vec<Line>> {
     let keys = map_keys(lines, from, to, n, dash)?;
     if keys.is_empty() {
         return None;
@@ -396,9 +453,9 @@ fn splice_keys(
     // Apply from the bottom up, so the line numbers above stay right; two
     // inserts at one place land in the order of KEY_ORDER.
     edits.sort_by(|a, b| b.0.cmp(&a.0).then(b.2.cmp(&a.2)));
-    let mut out: Vec<String> = lines[from..to].iter().map(|l| l.to_string()).collect();
+    let mut out = kept(from..to);
     for (st, end, _, new) in edits {
-        out.splice(st - from..end - from, new);
+        out.splice(st - from..end - from, fresh(new));
     }
     Some(out)
 }
@@ -411,9 +468,8 @@ fn splice(
     original: &Value,
     want: &Value,
     pretty: bool,
-) -> Option<Vec<String>> {
+) -> Option<Vec<Line>> {
     let secs = sections(lines);
-    let own = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
     match change {
         Change::Top { key, .. } => {
             // A mapping that stays a mapping keeps the lines of its
@@ -438,29 +494,29 @@ fn splice(
                 return None;
             }
             let new = splice_keys(lines, first, sec.end, n, false, &names, m, pretty)?;
-            let mut out = own(&lines[..first]);
+            let mut out = kept(0..first);
             out.extend(new);
-            out.extend(own(&lines[sec.end..]));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
         Change::List { key, items } => {
             let Some(sec) = secs.iter().find(|s| s.key == *key) else {
                 if items.is_empty() {
-                    return Some(own(lines));
+                    return Some(kept(0..lines.len()));
                 }
-                let mut out = own(lines);
-                while out.last().is_some_and(|l| l.trim().is_empty()) {
+                let mut out = kept(0..lines.len());
+                while out.last().is_some_and(|l| l.text(lines).trim().is_empty()) {
                     out.pop();
                 }
-                out.push(format!("{key}:"));
+                out.push(Line::New(format!("{key}:")));
                 for it in items {
-                    out.extend(emit_item(it.as_object()?, 2, pretty));
+                    out.extend(fresh(emit_item(it.as_object()?, 2, pretty)));
                 }
                 return Some(out);
             };
             if items.is_empty() {
-                let mut out = own(&lines[..sec.start]);
-                out.extend(own(&lines[sec.end..]));
+                let mut out = kept(0..sec.start);
+                out.extend(kept(sec.end..lines.len()));
                 return Some(out);
             }
             let (n, old) = seq_items(lines, sec)?;
@@ -522,26 +578,26 @@ fn splice(
                     pick[k] = Some((i, false));
                 }
             }
-            let mut out = own(&lines[..head_end]);
+            let mut out = kept(0..head_end);
             for (k, it) in items.iter().enumerate() {
                 match pick[k].and_then(|(i, same)| blocks[i].map(|b| (b, same))) {
                     Some(((lead, st, end), true)) => {
-                        out.extend(own(&lines[lead..st]));
-                        out.extend(own(&lines[st..end]));
+                        out.extend(kept(lead..st));
+                        out.extend(kept(st..end));
                     }
                     Some(((lead, st, end), false)) => {
-                        out.extend(own(&lines[lead..st]));
+                        out.extend(kept(lead..st));
                         let old_v = &old_values[pick[k]?.0];
-                        let fresh = emit_item(it.as_object()?, n, pretty);
+                        let whole = fresh(emit_item(it.as_object()?, n, pretty));
                         out.extend(
-                            respliced(lines, st, end, n, old_v, it, pretty).unwrap_or(fresh),
+                            respliced(lines, st, end, n, old_v, it, pretty).unwrap_or(whole),
                         );
                     }
-                    None => out.extend(emit_item(it.as_object()?, n, pretty)),
+                    None => out.extend(fresh(emit_item(it.as_object()?, n, pretty))),
                 }
             }
-            out.extend(own(&lines[tail..sec.end]));
-            out.extend(own(&lines[sec.end..]));
+            out.extend(kept(tail..sec.end));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
         Change::Item {
@@ -550,20 +606,20 @@ fn splice(
             let item = want[*key].as_array()?.get(*at)?.as_object()?;
             let Some(sec) = secs.iter().find(|s| s.key == *key) else {
                 // No such section yet: add it at the end.
-                let mut out = own(lines);
-                while out.last().is_some_and(|l| l.trim().is_empty()) {
+                let mut out = kept(0..lines.len());
+                while out.last().is_some_and(|l| l.text(lines).trim().is_empty()) {
                     out.pop();
                 }
-                out.push(format!("{key}:"));
-                out.extend(emit_item(item, 2, pretty));
+                out.push(Line::New(format!("{key}:")));
+                out.extend(fresh(emit_item(item, 2, pretty)));
                 return Some(out);
             };
             let (n, items) = seq_items(lines, sec)?;
-            let new = emit_item(item, n, pretty);
-            let mut out = own(&lines[..sec.start + 1]);
+            let new = fresh(emit_item(item, n, pretty));
+            let mut out = kept(0..sec.start + 1);
             if items.is_empty() {
                 out.extend(new);
-                out.extend(own(&lines[sec.start + 1..]));
+                out.extend(kept(sec.start + 1..lines.len()));
                 return Some(out);
             }
             // Each item keeps the comments and blank lines above it (its
@@ -572,25 +628,25 @@ fn splice(
             let mut pending = Some(new);
             let mut prev = sec.start + 1;
             for (k, &(st, end)) in items.iter().enumerate() {
-                let lead = own(&lines[prev..st]);
+                let lead = kept(prev..st);
                 if k == *at && *insert {
                     out.extend(pending.take()?);
                     out.extend(lead);
-                    out.extend(own(&lines[st..end]));
+                    out.extend(kept(st..end));
                 } else if k == *at {
                     out.extend(lead);
                     out.extend(pending.take()?);
                 } else {
                     out.extend(lead);
-                    out.extend(own(&lines[st..end]));
+                    out.extend(kept(st..end));
                 }
                 prev = end;
             }
-            out.extend(own(&lines[prev..sec.end]));
+            out.extend(kept(prev..sec.end));
             if let Some(p) = pending {
                 out.extend(p);
             }
-            out.extend(own(&lines[sec.end..]));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
         Change::ItemKeys { key, at, values } => {
@@ -600,9 +656,9 @@ fn splice(
             let &(st, end) = items.get(*at)?;
             let names: Vec<&str> = values.iter().map(|v| v.0).collect();
             let new = splice_keys(lines, st, end, n + 2, true, &names, item, pretty)?;
-            let mut out = own(&lines[..st]);
+            let mut out = kept(0..st);
             out.extend(new);
-            out.extend(own(&lines[end..]));
+            out.extend(kept(end..lines.len()));
             Some(out)
         }
         Change::Keys { key, values } => {
@@ -618,9 +674,9 @@ fn splice(
             }
             let names: Vec<&str> = values.iter().map(|v| v.0).collect();
             let new = splice_keys(lines, first, sec.end, n, false, &names, m, pretty)?;
-            let mut out = own(&lines[..first]);
+            let mut out = kept(0..first);
             out.extend(new);
-            out.extend(own(&lines[sec.end..]));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
     }
@@ -628,7 +684,7 @@ fn splice(
 
 /// Writes the changed top-level section again from its value, and keeps
 /// every other section's lines.
-fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<String>> {
+fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<Line>> {
     let key = match change {
         Change::Item { key, .. }
         | Change::ItemKeys { key, .. }
@@ -653,19 +709,18 @@ fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<
         _ => return None,
     }
     if new.is_empty() && secs.iter().all(|s| s.key != key) {
-        return Some(lines.iter().map(|l| l.to_string()).collect());
+        return Some(kept(0..lines.len()));
     }
-    let own = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
     match secs.iter().find(|s| s.key == key) {
         Some(sec) => {
-            let mut out = own(&lines[..sec.start]);
-            out.extend(new);
-            out.extend(own(&lines[sec.end..]));
+            let mut out = kept(0..sec.start);
+            out.extend(fresh(new));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
         None => {
-            let mut out = own(lines);
-            out.extend(new);
+            let mut out = kept(0..lines.len());
+            out.extend(fresh(new));
             Some(out)
         }
     }
@@ -845,7 +900,7 @@ fn respliced(
     old: &Value,
     new: &Value,
     pretty: bool,
-) -> Option<Vec<String>> {
+) -> Option<Vec<Line>> {
     let (o, m) = (old.as_object()?, new.as_object()?);
     let mut keys: Vec<&str> = m
         .iter()
@@ -860,7 +915,8 @@ fn respliced(
         .map(|k| KEY_ORDER.iter().find(|o| *o == k).copied())
         .collect::<Option<_>>()?;
     let out = splice_keys(lines, st, end, n + 2, true, &names, m, pretty)?;
-    let probe = format!("x:\n{}\n", out.join("\n"));
+    let texts: Vec<&str> = out.iter().map(|l| l.text(lines)).collect();
+    let probe = format!("x:\n{}\n", texts.join("\n"));
     (parse(&probe).ok()?["x"][0] == *new).then_some(out)
 }
 
@@ -1380,6 +1436,95 @@ mod tests {
             "{out:?}"
         );
         assert!(out.contains("# Top comment.\r\n"), "{out:?}");
+    }
+
+    /// Checks the line endings of an edit's result: a line that the old
+    /// file held once keeps its old ending, and a line that the old file
+    /// lacks ends in `usual`. So does an old last line without an ending.
+    fn assert_endings(old: &str, out: &str, usual: &str) {
+        let (old_lines, old_ends) = split_lines(old);
+        let (lines, ends) = split_lines(out);
+        for (l, e) in lines.iter().zip(&ends) {
+            let mut same = old_lines.iter().enumerate().filter(|(_, o)| *o == l);
+            match (same.next(), same.next()) {
+                (Some((i, _)), None) if old_ends[i].is_empty() => {
+                    assert_eq!(*e, usual, "{l:?} in {out:?}")
+                }
+                (Some((i, _)), None) => assert_eq!(*e, old_ends[i], "{l:?} in {out:?}"),
+                (None, _) => assert_eq!(*e, usual, "{l:?} in {out:?}"),
+                // A line that the old file held twice may take either ending.
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn a_file_with_mixed_endings_keeps_the_ending_of_each_line() {
+        // Ten lines end in CR LF and nine in LF.
+        let text = "# Top comment.\r\nversion: 1\nproject:\r\n  name: Shop\n  # About the shop.\r\n  description: |\r\n    Old text.\r\nlanguages:\n  - adapter: go\n\n# The tour.\r\ntour:\n  - title: One\r\n    open: { view: overview }\n    text: First.\r\n  # Before two.\n  - title: Two\r\n    open: { view: overview }\r\n    text: Second.\n";
+        let v = parse(text).unwrap();
+        let mut steps = v["tour"].as_array().unwrap().clone();
+        steps.reverse();
+        steps.push(json!({"title": "Three", "open": {"view": "overview"}, "text": "Third."}));
+        let (out, how) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: steps.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert_eq!(parse(&out).unwrap()["tour"], json!(steps));
+        assert!(
+            out.contains("  # Before two.\n  - title: Two\r\n"),
+            "{out:?}"
+        );
+        assert!(out.contains("  - title: \"Three\"\r\n"), "{out:?}");
+        assert_endings(text, &out, "\r\n");
+    }
+
+    #[test]
+    fn one_cr_lf_line_in_an_lf_file_keeps_its_ending() {
+        // The last line has no ending; it gets the usual one.
+        let text = "version: 1\r\nproject:\n  name: Shop\n  description: Old.\nlanguages:\n  - adapter: go";
+        let (out, _) = edit(
+            text,
+            &Change::Keys {
+                key: "project",
+                values: vec![("description", json!("New."))],
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["project"]["description"], "New.");
+        assert!(out.starts_with("version: 1\r\nproject:\n"), "{out:?}");
+        assert!(out.ends_with("  - adapter: go\n"), "{out:?}");
+        assert_endings(text, &out, "\n");
+    }
+
+    #[test]
+    fn splitting_lines_agrees_with_str_lines() {
+        for text in [
+            "",
+            "a",
+            "a\n",
+            "a\r\n",
+            "a\n\nb",
+            "a\r\n\r\nb\r\n",
+            "a\rb\n",
+            "a\r",
+            "\n",
+            "x\r\r\n",
+        ] {
+            let (lines, ends) = split_lines(text);
+            assert_eq!(lines, text.lines().collect::<Vec<_>>(), "{text:?}");
+            let joined: String = lines
+                .iter()
+                .zip(&ends)
+                .map(|(l, e)| format!("{l}{e}"))
+                .collect();
+            assert_eq!(joined, text, "{text:?}");
+        }
     }
 
     #[test]

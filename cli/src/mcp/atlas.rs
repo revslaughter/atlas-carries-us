@@ -449,7 +449,11 @@ impl Atlas {
             conflict.set(true);
             return Err(CHANGED.into());
         }
-        write_atomic(&target, &new_text)?;
+        write_atomic(&target, &new_text).inspect_err(|e| {
+            if e == CHANGED {
+                conflict.set(true);
+            }
+        })?;
         let warnings = snap.warnings.clone();
         *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
         Ok(Written {
@@ -510,9 +514,12 @@ static DRAFTS: AtomicU64 = AtomicU64::new(0);
 /// Writes a file through a new temporary file beside it, so a reader never
 /// sees half a file. The temporary file gets a name of its own (process ID
 /// and a counter) and opens only when nothing sits at that name, so a
-/// second process or a symbolic link there cannot redirect the write.
+/// second process or a symbolic link there cannot redirect the write. On
+/// Unix, a file with more than one hard link gets its new text in place
+/// instead (see [`write_in_place`]), so every name of it shows the change.
 fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
     let dir = target.parent().unwrap_or(Path::new("."));
+    let old = std::fs::symlink_metadata(target).ok();
     let name = target
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -538,7 +545,7 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
     };
     // The new file takes the old one's mode before it holds any text, so
     // text that only its owner may read never sits in a wider file.
-    if let Ok(meta) = std::fs::metadata(target) {
+    if let Some(meta) = &old {
         let _ = std::fs::set_permissions(&tmp, meta.permissions());
     }
     let done = file
@@ -549,6 +556,10 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
     if let Err(e) = done {
         let _ = std::fs::remove_file(&tmp);
         return Err(e);
+    }
+    #[cfg(unix)]
+    if let Some(meta) = old.as_ref().filter(|m| linked(m)) {
+        return write_in_place(target, &tmp, meta, text);
     }
     std::fs::rename(&tmp, target).map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
@@ -562,6 +573,66 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
     if let Ok(d) = std::fs::File::open(dir) {
         let _ = d.sync_all();
     }
+    Ok(())
+}
+
+/// Reports whether a plain file has more than one hard link. A rename over
+/// such a file would give its name a new file and leave the other names on
+/// the old text.
+#[cfg(unix)]
+fn linked(meta: &std::fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    meta.file_type().is_file() && meta.nlink() > 1
+}
+
+/// Copies the new text into the file itself, so every hard link to it shows
+/// the change, as Vim and Emacs do for such a file. The temporary file
+/// `tmp` already holds the whole text, synced. acu opens the file by name,
+/// checks that it opened the file it checked before (`old`), and only then
+/// changes it. The open follows no link and does not wait, so a link or a
+/// pipe that took the name fails it. A reader during the copy can see part
+/// of the old text. A copy that fails halfway keeps `tmp` and names it, so
+/// the text stays safe.
+#[cfg(unix)]
+fn write_in_place(
+    target: &Path,
+    tmp: &Path,
+    old: &std::fs::Metadata,
+    text: &str,
+) -> Result<(), String> {
+    use rustix::fs::{Mode, OFlags};
+    use std::os::unix::fs::MetadataExt;
+    let flags =
+        OFlags::WRONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::NOCTTY | OFlags::CLOEXEC;
+    let opened = rustix::fs::open(target, flags, Mode::empty())
+        .map(std::fs::File::from)
+        .map_err(std::io::Error::from)
+        .and_then(|f| f.metadata().map(|m| (f, m)));
+    let mut file = match opened {
+        Ok((f, now)) if (now.dev(), now.ino()) == (old.dev(), old.ino()) => f,
+        Ok(_) => {
+            let _ = std::fs::remove_file(tmp);
+            return Err(CHANGED.into());
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(tmp);
+            return Err(format!(
+                "open {}: {e}; check that acu may write there",
+                target.display()
+            ));
+        }
+    };
+    file.write_all(text.as_bytes())
+        .and_then(|_| file.set_len(text.len() as u64))
+        .and_then(|_| file.sync_all())
+        .map_err(|e| {
+            format!(
+                "write {}: {e}; the new text sits in {}, so copy it over by hand",
+                target.display(),
+                tmp.display()
+            )
+        })?;
+    let _ = std::fs::remove_file(tmp);
     Ok(())
 }
 
@@ -772,6 +843,73 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
         write_atomic(&target, "new\n").unwrap();
         let mode = std::fs::metadata(&target).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_write_keeps_a_hard_link() {
+        use std::os::unix::fs::MetadataExt;
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("atlas.yaml");
+        let other = dir.path().join("other.yaml");
+        std::fs::write(&target, "a longer old text\n").unwrap();
+        std::fs::hard_link(&target, &other).unwrap();
+        let ino = std::fs::metadata(&target).unwrap().ino();
+        write_atomic(&target, "new\n").unwrap();
+        // Both names show the new text, which replaced the longer old text.
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "new\n");
+        assert_eq!(std::fs::read_to_string(&other).unwrap(), "new\n");
+        let meta = std::fs::metadata(&target).unwrap();
+        assert_eq!((meta.ino(), meta.nlink()), (ino, 2));
+        let left: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .filter(|n| n.contains("acu-draft"))
+            .collect();
+        assert!(left.is_empty(), "{left:?}");
+        // A file with one name still gets a new file through a rename.
+        std::fs::remove_file(&other).unwrap();
+        write_atomic(&target, "newer\n").unwrap();
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "newer\n");
+        assert_ne!(std::fs::metadata(&target).unwrap().ino(), ino);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_in_place_write_refuses_a_file_that_took_the_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("atlas.yaml");
+        let tmp = dir.path().join("draft");
+        std::fs::write(&target, "old\n").unwrap();
+        let checked = std::fs::metadata(&target).unwrap();
+        // Another file takes the name after acu checked it. The old file
+        // keeps a name, as a linked file does, so its inode stays in use.
+        std::fs::rename(&target, dir.path().join("aside")).unwrap();
+        std::fs::write(&target, "other\n").unwrap();
+        std::fs::write(&tmp, "new\n").unwrap();
+        let err = write_in_place(&target, &tmp, &checked, "new\n").unwrap_err();
+        assert_eq!(err, CHANGED);
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "other\n");
+        assert!(!tmp.exists());
+        // A link or a pipe at the name fails the open at once.
+        std::fs::remove_file(&target).unwrap();
+        std::os::unix::fs::symlink(dir.path().join("aside"), &target).unwrap();
+        std::fs::write(&tmp, "new\n").unwrap();
+        assert!(write_in_place(&target, &tmp, &checked, "new\n").is_err());
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("aside")).unwrap(),
+            "old\n"
+        );
+        std::fs::remove_file(&target).unwrap();
+        let fifo = std::process::Command::new("mkfifo")
+            .arg(&target)
+            .status()
+            .is_ok_and(|s| s.success());
+        if fifo {
+            std::fs::write(&tmp, "new\n").unwrap();
+            assert!(write_in_place(&target, &tmp, &checked, "new\n").is_err());
+        }
     }
 
     #[test]

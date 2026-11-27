@@ -121,7 +121,7 @@ The folder, like a release archive, holds `acu`, `acu-adapter-go`,
 | Rust | 1.97.1 | `rust-toolchain.toml` (rustup installs it for you) |
 | Node | 26.13.1 builds the project; 20 or later runs the adapter | `.node-version` |
 | Go | 1.24 or later | `adapters/go/go.mod` |
-| Python | 3.12 or later (3.13.18 in the image) | `.python-version` |
+| Python | 3.12 or later (3.13.17 in the image) | `.python-version` |
 | Rust nightly | `nightly-2026-11-01` | `adapters/rust/src/toolchain.rs` |
 
 You need only the tools of the languages that you map, plus Rust and Node to

@@ -56,7 +56,7 @@ ARG RUST_IMAGE=${REGISTRY}/library/rust:1.97.1-slim-bookworm@sha256:2775a09d208f
 ARG RUST_NIGHTLY=nightly-2026-11-01
 # CPython for the Python adapter, which needs only the standard library.
 # Keep the tag in step with .python-version.
-ARG PYTHON_IMAGE=${REGISTRY}/library/python:3.13.18-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72
+ARG PYTHON_IMAGE=${REGISTRY}/library/python:3.13.17-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530
 
 # The Go, Node and CPython of the build machine, for the toolchain stage.
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS go
