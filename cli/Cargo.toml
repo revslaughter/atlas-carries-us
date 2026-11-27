@@ -16,6 +16,9 @@ anyhow = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["now", "std"] }
 clap = { version = "4.6", features = ["derive"] }
 globset = "0.4"
+# The session secret of `acu serve` and `acu studio` (issue #42): random bytes
+# from the operating system. The lock file already held it through uuid.
+getrandom = "0.4"
 include_dir = "0.7"
 jsonschema = { version = "0.63", default-features = false }
 mime_guess = "2.0"

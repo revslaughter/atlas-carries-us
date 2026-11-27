@@ -974,6 +974,7 @@ mod tests {
             "127.0.0.1:4321".parse().unwrap(),
             Some(root.join("code")),
             Some(root.join("ws")),
+            crate::studio::tests::secret(),
         ));
         std::fs::create_dir_all(root.join("code")).unwrap();
         (dir, s)

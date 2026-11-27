@@ -437,20 +437,22 @@ pub fn http_service(
     impl FnOnce() + Send + 'static,
 ) {
     let port = addr.port();
-    let mut hosts = vec![
-        "localhost".to_string(),
-        "127.0.0.1".to_string(),
-        "::1".to_string(),
-    ];
     let ip = addr.ip().to_string();
-    if !hosts.contains(&ip) {
-        hosts.push(ip.clone());
-    }
     let host = if addr.is_ipv6() {
         format!("[{ip}]")
     } else {
         ip
     };
+    // With the port, so a name of another local server does not pass.
+    let mut hosts = vec![
+        format!("localhost:{port}"),
+        format!("127.0.0.1:{port}"),
+        format!("[::1]:{port}"),
+    ];
+    let own = format!("{host}:{port}");
+    if !hosts.contains(&own) {
+        hosts.push(own);
+    }
     let origins = vec![
         format!("http://localhost:{port}"),
         format!("http://127.0.0.1:{port}"),

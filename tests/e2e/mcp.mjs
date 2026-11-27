@@ -270,10 +270,13 @@ async function httpSession(name, child, addr) {
     });
     child.on("exit", () => rej(new Error("acu serve stopped:\n" + stderr)));
   });
+  const token = stderr.match(/\?token=([0-9a-f]{64}) /)?.[1] ?? "";
+  check(token !== "", `${name} over HTTP: acu serve prints the address with the token`, stderr);
+  const auth = { authorization: `Bearer ${token}` };
   const url = `http://${addr}/mcp`;
   let session = null;
   const post = async (msg, answer = true) => {
-    const headers = { "content-type": "application/json", accept: "application/json, text/event-stream" };
+    const headers = { ...auth, "content-type": "application/json", accept: "application/json, text/event-stream" };
     if (session) headers["mcp-session-id"] = session;
     headers["mcp-protocol-version"] = "2025-06-18";
     const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(msg) });
@@ -290,10 +293,19 @@ async function httpSession(name, child, addr) {
   check(init.result?.serverInfo?.name === "acu", `${name} over HTTP: initialize names acu`, JSON.stringify(init));
   await post({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }, false);
 
-  // A page on another site must not reach the server.
+  // A client without the token must not reach the server.
+  const bare = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 8, method: "tools/list", params: {} }),
+  });
+  check(bare.status === 401, `${name} over HTTP: a client without the token gets 401 (status ${bare.status})`);
+
+  // A page on another site must not reach the server, even with the token.
   const foreign = await fetch(url, {
     method: "POST",
     headers: {
+      ...auth,
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
       origin: "http://evil.example",
@@ -327,7 +339,7 @@ async function httpSession(name, child, addr) {
   const errors = [];
   page.on("console", m => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", e => errors.push(String(e)));
-  await page.goto(`http://${addr}/`);
+  await page.goto(`http://${addr}/?token=${token}`);
   await page.waitForFunction(() => window.atlas, null, { timeout: 15000 });
   await page.click("#tourBtn");
   await page.waitForTimeout(300);

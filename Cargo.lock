@@ -126,6 +126,7 @@ dependencies = [
  "axum",
  "chrono",
  "clap",
+ "getrandom 0.4.3",
  "globset",
  "include_dir",
  "jsonschema",

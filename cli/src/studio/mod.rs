@@ -5,9 +5,10 @@
 //! repository, proposes a first atlas.yaml, and extracts the map.
 //! docs/studio.md describes each call.
 //!
-//! The API answers only requests for a loopback address. A request that
-//! changes something must carry the header `X-Acu-Studio: 1` and a JSON
-//! body, so a web page on another site cannot send one.
+//! The API answers only requests for a loopback address that carry the
+//! session token (see [`crate::secret`]). A request that changes something
+//! must also carry the header `X-Acu-Studio: 1` and a JSON body, so a web
+//! page on another site cannot send one.
 
 pub mod edit;
 pub mod folder;
@@ -21,6 +22,7 @@ use axum::http::{header, HeaderMap, Method, StatusCode};
 use serde_json::{json, Value};
 
 use crate::mcp::Live;
+use crate::secret::Secret;
 
 /// The header that every changing request carries. A browser sends a
 /// custom header across sites only after a preflight, which acu never
@@ -102,6 +104,11 @@ pub struct Studio {
     /// The process group of a running clone, which acu stops when it shuts
     /// down.
     child: Mutex<Option<u32>>,
+    /// The session token that every API and MCP call must carry.
+    pub secret: Secret,
+    /// The forwarded `Host` values, each `name:port`, that `acu serve`
+    /// admits for pages and data on a loopback address.
+    allow_hosts: Vec<String>,
 }
 
 /// An answer of the API: a status and a JSON body.
@@ -117,13 +124,14 @@ pub fn fail(status: StatusCode, msg: impl Into<String>) -> Reply {
 }
 
 impl Studio {
-    /// Makes the shared state.
+    /// Makes the shared state with a session token and no forwarded names.
     pub fn new(
         live: Arc<Live>,
         mode: Mode,
         addr: SocketAddr,
         browse_root: Option<PathBuf>,
         workspace: Option<PathBuf>,
+        secret: Secret,
     ) -> Studio {
         Studio {
             live,
@@ -133,7 +141,21 @@ impl Studio {
             workspace,
             job: Mutex::new(None),
             child: Mutex::new(None),
+            secret,
+            allow_hosts: Vec::new(),
         }
+    }
+
+    /// Sets the forwarded names that pages and data admit; each holds the
+    /// form that [`parse_allow_host`] gives.
+    pub fn with_allow_hosts(mut self, hosts: Vec<String>) -> Studio {
+        self.allow_hosts = hosts;
+        self
+    }
+
+    /// Returns the forwarded names that pages and data admit.
+    pub fn allow_hosts(&self) -> &[String] {
+        &self.allow_hosts
     }
 
     /// Returns the address that the server listens on.
@@ -191,9 +213,64 @@ impl Studio {
         ))
     }
 
+    /// Says whether every page and the data need a known `Host`: always in
+    /// the studio, and in `acu serve` on a loopback address. `acu serve` on
+    /// an address that other computers reach answers any name.
+    pub fn checks_pages(&self) -> bool {
+        self.mode == Mode::Studio || self.addr().ip().is_loopback()
+    }
+
+    /// Checks the `Host` of a page or the data: the server's own names, or
+    /// a name from `--allow-host`.
+    pub fn check_page_host(&self, headers: &HeaderMap) -> Result<(), Reply> {
+        if !self.checks_pages() || self.check_host(headers).is_ok() {
+            return Ok(());
+        }
+        let host = headers
+            .get(header::HOST)
+            .and_then(|h| h.to_str().ok())
+            .unwrap_or("");
+        if !host.is_empty() && self.allow_hosts.iter().any(|h| host_matches(h, host)) {
+            return Ok(());
+        }
+        let hint = match self.mode {
+            Mode::Serve => format!(
+                "the server answers only requests for its own address; open it at the address that acu printed, or start acu serve again with --allow-host {} for a forwarded name",
+                if host.is_empty() { "<name:port>" } else { host }
+            ),
+            Mode::Studio => "the server answers only requests for its own address; open it at the address that acu printed".to_string(),
+        };
+        Err(fail(StatusCode::FORBIDDEN, hint))
+    }
+
+    /// Checks that a request carries the session token, in the cookie or
+    /// as a bearer token.
+    pub fn check_token(&self, headers: &HeaderMap) -> Result<(), Reply> {
+        if self.secret.admits(headers, self.addr().port()) {
+            return Ok(());
+        }
+        Err(fail(
+            StatusCode::UNAUTHORIZED,
+            "the request lacks the session token; open the address with ?token= that acu printed, or send the header Authorization: Bearer <token>",
+        ))
+    }
+
+    /// Checks that an MCP request carries the session token as a bearer
+    /// token. The cookie does not count here.
+    pub fn check_bearer(&self, headers: &HeaderMap) -> Result<(), Reply> {
+        if self.secret.admits_bearer(headers) {
+            return Ok(());
+        }
+        Err(fail(
+            StatusCode::UNAUTHORIZED,
+            "the MCP request lacks the session token; send the header Authorization: Bearer <token> with the token that acu printed",
+        ))
+    }
+
     /// Checks that a request may reach the API: its `Host` names this
-    /// server, its `Origin` (when sent) names this server, and a changing
-    /// request carries the guard header and a JSON body.
+    /// server, its `Origin` (when sent) names this server, it carries the
+    /// session token, and a changing request carries the guard header and
+    /// a JSON body.
     pub fn admit(&self, method: &Method, headers: &HeaderMap) -> Result<(), Reply> {
         self.check_host(headers)?;
         let hosts = self.hosts();
@@ -209,6 +286,8 @@ impl Studio {
                 ));
             }
         }
+        // After Origin, so a page on another site always meets 403.
+        self.check_token(headers)?;
         if method != Method::GET && method != Method::HEAD {
             // Fetch Metadata: a browser marks a request from another site.
             let site = headers
@@ -383,6 +462,76 @@ impl Studio {
     }
 }
 
+/// Checks one `--allow-host` value and writes it in the form that a browser
+/// sends as `Host`: a name or an address in lower case, with `:` and the
+/// port when the address names one, such as `myhost.example:8080`,
+/// `[fd00::1]:4321`, or `x-4321.app.github.dev` for an HTTPS forward on the
+/// default port.
+pub fn parse_allow_host(v: &str) -> Result<String, String> {
+    let bad = || {
+        format!(
+            "--allow-host {v}: give a name with an optional port, such as myhost.example:4321, [fd00::1]:4321 or x-4321.app.github.dev"
+        )
+    };
+    let v = v.trim().to_ascii_lowercase();
+    // An IPv6 address sits in brackets; a port may follow the bracket.
+    let (name, port) = match v.rfind(']') {
+        Some(end) => match &v[end + 1..] {
+            "" => (v.as_str(), None),
+            rest => (&v[..end + 1], Some(rest.strip_prefix(':').ok_or_else(bad)?)),
+        },
+        None => match v.split_once(':') {
+            Some((n, p)) => (n, Some(p)),
+            None => (v.as_str(), None),
+        },
+    };
+    let port = match port {
+        None => None,
+        Some(p) if !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()) => {
+            match p.parse::<u16>() {
+                Ok(n) if n > 0 => Some(n),
+                _ => return Err(bad()),
+            }
+        }
+        Some(_) => return Err(bad()),
+    };
+    let name = if let Some(inner) = name.strip_prefix('[').and_then(|n| n.strip_suffix(']')) {
+        let ip: std::net::Ipv6Addr = inner.parse().map_err(|_| bad())?;
+        format!("[{ip}]")
+    } else {
+        let ok = !name.is_empty()
+            && name.len() <= 253
+            && !name.starts_with(['-', '.'])
+            && !name.ends_with('-')
+            && !name.contains("..")
+            && name
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'.');
+        if !ok {
+            return Err(bad());
+        }
+        name.to_string()
+    };
+    Ok(match port {
+        Some(p) => format!("{name}:{p}"),
+        None => name,
+    })
+}
+
+/// Says whether a request's `Host` equals an `--allow-host` value. A
+/// browser leaves out the default port (80 or 443), so `name:443` also
+/// matches a bare `name`.
+fn host_matches(allowed: &str, host: &str) -> bool {
+    if allowed.eq_ignore_ascii_case(host) {
+        return true;
+    }
+    [":80", ":443"].iter().any(|p| {
+        allowed
+            .strip_suffix(p)
+            .is_some_and(|bare| bare.eq_ignore_ascii_case(host))
+    })
+}
+
 /// Parses a request body as a JSON object.
 pub fn body(bytes: &[u8]) -> Result<serde_json::Map<String, Value>, Reply> {
     if bytes.len() > MAX_BODY {
@@ -482,6 +631,11 @@ pub mod tests {
     use super::*;
     use axum::http::HeaderValue;
 
+    /// The session token of every test studio.
+    pub fn secret() -> Secret {
+        Secret::parse(crate::secret::tests::TEST).unwrap()
+    }
+
     /// Makes a studio over a slot, for the address 127.0.0.1:4321.
     pub fn studio(live: Live, mode: Mode) -> Arc<Studio> {
         Arc::new(Studio::new(
@@ -490,13 +644,19 @@ pub mod tests {
             "127.0.0.1:4321".parse().unwrap(),
             None,
             None,
+            secret(),
         ))
     }
 
-    /// Headers of a request from the studio's own page.
+    /// Headers of a request from the studio's own page, with its cookie.
     pub fn own(post: bool) -> HeaderMap {
         let mut h = HeaderMap::new();
         h.insert(header::HOST, HeaderValue::from_static("127.0.0.1:4321"));
+        h.insert(
+            header::COOKIE,
+            HeaderValue::from_str(&format!("acu-token-4321={}", crate::secret::tests::TEST))
+                .unwrap(),
+        );
         h.insert(
             header::ORIGIN,
             HeaderValue::from_static("http://127.0.0.1:4321"),
@@ -583,9 +743,157 @@ pub mod tests {
             "127.0.0.1:0".parse().unwrap(),
             None,
             None,
+            secret(),
         );
         s.set_addr("127.0.0.1:4321".parse().unwrap());
         assert!(s.admit(&Method::GET, &own(false)).is_ok());
+    }
+
+    #[test]
+    fn the_api_needs_the_session_token() {
+        let s = studio(Live::empty(), Mode::Serve);
+        let mut h = own(true);
+        h.remove(header::COOKIE);
+        let (code, v) = s.admit(&Method::GET, &h).unwrap_err();
+        assert_eq!(code, StatusCode::UNAUTHORIZED);
+        assert!(v["error"].as_str().unwrap().contains("?token="));
+        assert_eq!(
+            s.admit(&Method::POST, &h).unwrap_err().0,
+            StatusCode::UNAUTHORIZED
+        );
+        h.insert(
+            header::COOKIE,
+            HeaderValue::from_static("acu-token-4321=0123456789abcdef0123456789abcdee"),
+        );
+        assert_eq!(
+            s.admit(&Method::GET, &h).unwrap_err().0,
+            StatusCode::UNAUTHORIZED
+        );
+        h.remove(header::COOKIE);
+        h.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", crate::secret::tests::TEST)).unwrap(),
+        );
+        assert!(s.admit(&Method::POST, &h).is_ok());
+        // A foreign Host or Origin fails first, with 403, whatever the token.
+        h.remove(header::AUTHORIZATION);
+        h.insert(
+            header::ORIGIN,
+            HeaderValue::from_static("http://evil.example"),
+        );
+        assert_eq!(
+            s.admit(&Method::POST, &h).unwrap_err().0,
+            StatusCode::FORBIDDEN
+        );
+        h.insert(header::HOST, HeaderValue::from_static("evil.example:4321"));
+        assert_eq!(
+            s.admit(&Method::GET, &h).unwrap_err().0,
+            StatusCode::FORBIDDEN
+        );
+    }
+
+    #[test]
+    fn pages_admit_forwarded_names_only_in_acu_serve_on_loopback() {
+        let host = |v: &'static str| {
+            let mut h = HeaderMap::new();
+            h.insert(header::HOST, HeaderValue::from_static(v));
+            h
+        };
+        let serve = Studio::new(
+            Arc::new(Live::empty()),
+            Mode::Serve,
+            "127.0.0.1:4321".parse().unwrap(),
+            None,
+            None,
+            secret(),
+        )
+        .with_allow_hosts(vec!["myhost.example:8080".into()]);
+        assert!(serve.checks_pages());
+        assert!(serve.check_page_host(&host("127.0.0.1:4321")).is_ok());
+        assert!(serve.check_page_host(&host("LOCALHOST:4321")).is_ok());
+        assert!(serve.check_page_host(&host("myhost.example:8080")).is_ok());
+        assert!(serve.check_page_host(&host("MyHost.Example:8080")).is_ok());
+        let (code, v) = serve
+            .check_page_host(&host("myhost.example:8081"))
+            .unwrap_err();
+        assert_eq!(code, StatusCode::FORBIDDEN);
+        assert!(v["error"]
+            .as_str()
+            .unwrap()
+            .contains("--allow-host myhost.example:8081"));
+        assert!(serve.check_page_host(&host("evil.example:4321")).is_err());
+        assert!(serve.check_page_host(&HeaderMap::new()).is_err());
+        // The API keeps its own names; a forwarded name reaches no call.
+        assert_eq!(
+            serve
+                .check_host(&host("myhost.example:8080"))
+                .unwrap_err()
+                .0,
+            StatusCode::FORBIDDEN
+        );
+        let open = Studio::new(
+            Arc::new(Live::empty()),
+            Mode::Serve,
+            "0.0.0.0:4321".parse().unwrap(),
+            None,
+            None,
+            secret(),
+        );
+        assert!(!open.checks_pages());
+        assert!(open.check_page_host(&host("anything.example")).is_ok());
+        let studio = studio(Live::empty(), Mode::Studio);
+        assert!(studio.checks_pages());
+        let (_, v) = studio
+            .check_page_host(&host("evil.example:4321"))
+            .unwrap_err();
+        assert!(!v["error"].as_str().unwrap().contains("--allow-host"));
+    }
+
+    #[test]
+    fn allow_host_takes_a_name_and_a_port() {
+        assert_eq!(
+            parse_allow_host("MyHost.Example:8080").unwrap(),
+            "myhost.example:8080"
+        );
+        assert_eq!(parse_allow_host("10.0.0.5:4321").unwrap(), "10.0.0.5:4321");
+        assert_eq!(
+            parse_allow_host("[FD00:0::1]:4321").unwrap(),
+            "[fd00::1]:4321"
+        );
+        assert_eq!(
+            parse_allow_host("x-4321.app.github.dev:443").unwrap(),
+            "x-4321.app.github.dev:443"
+        );
+        assert_eq!(
+            parse_allow_host("X-4321.app.github.dev").unwrap(),
+            "x-4321.app.github.dev"
+        );
+        assert_eq!(parse_allow_host("[::1]").unwrap(), "[::1]");
+        assert!(host_matches("x.example:443", "x.example"));
+        assert!(host_matches("x.example:80", "X.Example"));
+        assert!(host_matches("x.example", "x.example"));
+        assert!(!host_matches("x.example", "x.example:8080"));
+        assert!(!host_matches("x.example:8080", "x.example"));
+        for bad in [
+            "myhost:",
+            "[::1]x",
+            "[::1]:",
+            ":4321",
+            "myhost:0",
+            "myhost:65536",
+            "myhost:+80",
+            "my host:80",
+            "-x:80",
+            "x-:80",
+            ".x:80",
+            "a..b:80",
+            "fd00::1:80",
+            "[nope]:80",
+            "http://x:80",
+            "x/y:80",
+        ] {
+            assert!(parse_allow_host(bad).is_err(), "{bad}");
+        }
     }
 
     #[test]

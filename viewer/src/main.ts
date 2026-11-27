@@ -59,6 +59,10 @@ function storedTheme(): string | null {
   }
 }
 
+/** What the page says when acu refuses the data for want of the session token. */
+const TOKEN_REFUSED =
+  "acu refused this page: it lacks the session token. Open the address that acu printed, with its ?token= part.";
+
 /**
  * Starts the viewer: sets the theme, waits for the fonts (at most 2.5
  * seconds), asks the server for its state, shows the setup screen when the
@@ -106,6 +110,10 @@ async function boot() {
   let doc: AtlasDoc;
   try {
     const res = await fetch("data/atlas.json");
+    if (res.status === 401) {
+      loading.textContent = TOKEN_REFUSED;
+      return;
+    }
     if (!res.ok) throw new Error(String(res.status));
     doc = await res.json();
   } catch {

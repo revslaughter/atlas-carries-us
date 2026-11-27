@@ -14,6 +14,7 @@ mod adapter;
 mod assemble;
 mod config;
 mod mcp;
+mod secret;
 mod site;
 mod studio;
 
@@ -72,6 +73,10 @@ enum Cmd {
         /// can reach. Without it, they work on a loopback address only.
         #[arg(long)]
         allow_remote_writes: bool,
+        /// On a loopback address, also show the map to this forwarded name
+        /// and port, such as myhost.example:8080. May repeat.
+        #[arg(long, value_name = "NAME:PORT", value_parser = studio::parse_allow_host)]
+        allow_host: Vec<String>,
     },
     /// Run the MCP server over standard input and output, for desktop clients.
     Mcp {
@@ -172,14 +177,22 @@ fn run(cli: Cli) -> Result<()> {
             addr,
             mcp,
             allow_remote_writes,
+            mut allow_host,
         } => {
+            let secret = secret::Secret::from_env().map_err(anyhow::Error::msg)?;
+            if !allow_host.is_empty() && !addr.ip().is_loopback() {
+                eprintln!("acu: {addr} answers any name, so --allow-host changes nothing; drop it, or listen on a loopback address");
+            }
+            allow_host.sort();
+            allow_host.dedup();
             let why = serve_writes(mcp.read_only, addr, allow_remote_writes);
             if why == Some(mcp::atlas::REMOTE) && input.data.is_none() {
                 eprintln!("acu: {addr} lets other computers reach the server, so the MCP write tools stay off; add --allow-remote-writes to turn them on");
             }
             let atlas = Arc::new(open_atlas(&input, &mcp, why)?);
             let live = Arc::new(mcp::Live::of(atlas));
-            let studio = studio::Studio::new(live, studio::Mode::Serve, addr, None, None);
+            let studio = studio::Studio::new(live, studio::Mode::Serve, addr, None, None, secret)
+                .with_allow_hosts(allow_host);
             tokio::runtime::Runtime::new()?.block_on(site::serve(Arc::new(studio)))
         }
         Cmd::Studio {
@@ -188,6 +201,7 @@ fn run(cli: Cli) -> Result<()> {
             root,
             workspace,
         } => {
+            let secret = secret::Secret::from_env().map_err(anyhow::Error::msg)?;
             if !addr.ip().is_loopback() {
                 bail!("the studio listens on a loopback address only, such as 127.0.0.1:4321; use acu serve to share a map");
             }
@@ -227,6 +241,7 @@ fn run(cli: Cli) -> Result<()> {
                 addr,
                 Some(root),
                 Some(workspace),
+                secret,
             );
             tokio::runtime::Runtime::new()?.block_on(site::serve(Arc::new(studio)))
         }
@@ -461,5 +476,21 @@ mod tests {
         assert!(Cli::try_parse_from(["acu", "mcp", "-d", "a.json", "--root", "x"]).is_ok());
         assert!(Cli::try_parse_from(["acu", "serve", "--allow-remote-writes"]).is_ok());
         assert!(Cli::try_parse_from(["acu", "studio", "some/folder", "--root", "/"]).is_ok());
+        let Ok(Cli {
+            cmd: Cmd::Serve { allow_host, .. },
+        }) = Cli::try_parse_from([
+            "acu",
+            "serve",
+            "--allow-host",
+            "A.example:80",
+            "--allow-host",
+            "b.example:81",
+        ])
+        else {
+            panic!("serve with --allow-host parses");
+        };
+        assert_eq!(allow_host, ["a.example:80", "b.example:81"]);
+        assert!(Cli::try_parse_from(["acu", "serve", "--allow-host", "no pe:80"]).is_err());
+        assert!(Cli::try_parse_from(["acu", "studio", "--allow-host", "a.example:80"]).is_err());
     }
 }
