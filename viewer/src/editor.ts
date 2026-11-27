@@ -619,7 +619,7 @@ async function save() {
       S.saving = false;
       const said = String(a.data?.error ?? "The save failed").replace(/\.?$/, ".");
       S.msg = {
-        text: a.status === 409 ? said + " To read it, choose Discard changes." : said,
+        text: a.status === 409 ? said + " To read the file again, choose Discard changes." : said,
         bad: true,
       };
       render(".ed-msg");
