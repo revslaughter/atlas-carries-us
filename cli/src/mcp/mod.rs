@@ -27,7 +27,7 @@ use rmcp::transport::streamable_http_server::{StreamableHttpServerConfig, Stream
 use rmcp::{ErrorData, ServerHandler, ServiceExt};
 use serde_json::{json, Value};
 
-pub use atlas::Atlas;
+pub use atlas::{Atlas, Live};
 
 /// What the server tells a client when it connects.
 const INSTRUCTIONS: &str = "This server reads one code map made by Atlas Carries Us. Start with overview. Use search to find IDs, then symbol, neighbours, path, trace and read_source. Lists come in pages; pass page to read more. Write tools (draft_*) put text into atlas.yaml with a drafted mark; give your model name in the model parameter.";
@@ -35,14 +35,14 @@ const INSTRUCTIONS: &str = "This server reads one code map made by Atlas Carries
 /// The MCP server: one handler over the shared live map.
 #[derive(Clone)]
 pub struct Server {
-    /// The live map.
-    atlas: Arc<Atlas>,
+    /// The slot that holds the live map.
+    live: Arc<Live>,
 }
 
 impl Server {
-    /// Makes a server over a live map.
-    pub fn new(atlas: Arc<Atlas>) -> Server {
-        Server { atlas }
+    /// Makes a server over the slot of a live map.
+    pub fn new(live: Arc<Live>) -> Server {
+        Server { live }
     }
 }
 
@@ -285,7 +285,11 @@ pub fn call(atlas: &Atlas, name: &str, args: &JsonObject, client: &str) -> Resul
         }
     };
     let snap = atlas.snapshot().map_err(|e| {
-        format!("acu: read the map: {e}; fix the file or restart acu, then call again")
+        if e.starts_with("acu:") {
+            e
+        } else {
+            format!("acu: read the map: {e}; fix the file or restart acu, then call again")
+        }
     })?;
     let text = match name {
         "overview" => read::overview(&snap, atlas.why_read_only()),
@@ -373,9 +377,8 @@ impl ServerHandler for Server {
         _request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
     ) -> Result<ListToolsResult, ErrorData> {
-        Ok(ListToolsResult::with_all_items(tools(
-            self.atlas.writable(),
-        )))
+        let writable = self.live.get().is_ok_and(|a| a.writable());
+        Ok(ListToolsResult::with_all_items(tools(writable)))
     }
 
     /// Runs one tool. A tool's failure comes back as a tool error with a
@@ -387,11 +390,14 @@ impl ServerHandler for Server {
     ) -> Result<CallToolResponse, ErrorData> {
         let client = context.client_info().map(|i| i.name).unwrap_or_default();
         let args = request.arguments.unwrap_or_default();
-        let atlas = self.atlas.clone();
+        let live = self.live.clone();
         let name = request.name.to_string();
-        let out = tokio::task::spawn_blocking(move || call(&atlas, &name, &args, &client))
-            .await
-            .map_err(|e| ErrorData::internal_error(format!("acu: a tool stopped: {e}"), None))?;
+        let out = tokio::task::spawn_blocking(move || {
+            live.get()
+                .and_then(|atlas| call(&atlas, &name, &args, &client))
+        })
+        .await
+        .map_err(|e| ErrorData::internal_error(format!("acu: a tool stopped: {e}"), None))?;
         Ok(match out {
             Ok(text) => CallToolResult::success(vec![ContentBlock::text(text)]),
             Err(text) => CallToolResult::error(vec![ContentBlock::text(text)]),
@@ -408,7 +414,7 @@ pub async fn serve_stdio(atlas: Arc<Atlas>) -> Result<()> {
         "acu: the MCP server reads standard input; writes {}",
         if atlas.writable() { "on" } else { "off" }
     );
-    let service = Server::new(atlas)
+    let service = Server::new(Arc::new(Live::of(atlas)))
         .serve(rmcp::transport::stdio())
         .await
         .map_err(|e| anyhow::anyhow!("start the MCP server: {e}"))?;
@@ -424,7 +430,7 @@ pub async fn serve_stdio(atlas: Arc<Atlas>) -> Result<()> {
 /// another site cannot reach it. It also returns a function that closes its
 /// open streams, for when the server shuts down.
 pub fn http_service(
-    atlas: Arc<Atlas>,
+    live: Arc<Live>,
     addr: SocketAddr,
 ) -> (
     StreamableHttpService<Server, LocalSessionManager>,
@@ -448,6 +454,7 @@ pub fn http_service(
     let origins = vec![
         format!("http://localhost:{port}"),
         format!("http://127.0.0.1:{port}"),
+        format!("http://[::1]:{port}"),
         format!("http://{host}:{port}"),
     ];
     let config = StreamableHttpServerConfig::default()
@@ -456,7 +463,7 @@ pub fn http_service(
         .enforce_origin_validation();
     let token = config.cancellation_token.clone();
     let service = StreamableHttpService::new(
-        move || Ok(Server::new(atlas.clone())),
+        move || Ok(Server::new(live.clone())),
         Arc::new(LocalSessionManager::default()),
         config,
     );

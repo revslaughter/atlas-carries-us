@@ -33,6 +33,24 @@ pub enum Change {
         /// The keys and their new values.
         values: Vec<(&'static str, Value)>,
     },
+    /// Replace a whole top-level list. Each new item that equals an old
+    /// item keeps that item's lines and the comments above them, so a
+    /// reorder or a deletion keeps the comments of the untouched items. An
+    /// empty list removes the key.
+    List {
+        /// The top-level key: `regions` or `tour`.
+        key: &'static str,
+        /// The new items, in order.
+        items: Vec<Value>,
+    },
+    /// Replace the value of a top-level key, or remove the key when the
+    /// value is null. acu writes the whole section again.
+    Top {
+        /// The top-level key, such as `layout`.
+        key: &'static str,
+        /// The new value, or null.
+        value: Value,
+    },
     /// Set keys of a top-level mapping, and drop the keys whose value is
     /// null.
     Keys {
@@ -45,7 +63,7 @@ pub enum Change {
 
 /// Parses YAML text into JSON values, as acu reads atlas.yaml.
 pub fn parse(text: &str) -> Result<Value, String> {
-    serde_yaml_ng::from_str(text).map_err(|e| format!("atlas.yaml does not parse: {e}"))
+    crate::config::parse_yaml(text).map_err(|e| format!("atlas.yaml does not parse: {e}"))
 }
 
 /// Applies a change to the parsed file, giving the value that the edited
@@ -93,6 +111,20 @@ fn expected(original: &Value, change: &Change) -> Result<Value, String> {
                 .ok_or(format!("{key} in atlas.yaml holds no entry {}", at + 1))?;
             set_keys(m, values);
         }
+        Change::List { key, items } => {
+            if items.is_empty() {
+                obj.remove(*key);
+            } else {
+                obj.insert(key.to_string(), Value::Array(items.clone()));
+            }
+        }
+        Change::Top { key, value } => {
+            if value.is_null() {
+                obj.remove(*key);
+            } else {
+                obj.insert(key.to_string(), value.clone());
+            }
+        }
         Change::Keys { key, values } => {
             let m = obj
                 .entry(*key)
@@ -118,27 +150,46 @@ fn set_keys(m: &mut Map<String, Value>, values: &[(&'static str, Value)]) {
 
 /// Edits the text and returns the new text and how acu edited it: "in
 /// place" when only the entry's lines changed, "section" when acu wrote the
-/// whole top-level section again.
+/// whole top-level section again, "unchanged" when the change changed
+/// nothing.
 pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), String> {
+    // A byte-order mark stays where it stood, outside the edit.
+    if let Some(rest) = text.strip_prefix(crate::config::BOM) {
+        let (out, how) = edit(rest, change)?;
+        return Ok((format!("{}{out}", crate::config::BOM), how));
+    }
     let original = parse(text)?;
     let want = expected(&original, change)?;
-    let lines: Vec<&str> = text.lines().collect();
+    // A change that changes nothing leaves every line, comments included.
+    if want == original {
+        return Ok((text.to_string(), "unchanged"));
+    }
+    let (lines, ends) = split_lines(text);
     let ends_nl = text.ends_with('\n') || text.is_empty();
-    // A file whose lines end in CR LF keeps that ending.
+    // A line that the file held keeps its own ending. A new line takes the
+    // ending of most lines, so a file whose lines end in CR LF keeps that
+    // ending.
     let nl = if text.matches("\r\n").count() * 2 > text.matches('\n').count() {
         "\r\n"
     } else {
         "\n"
     };
-    let mut tries: Vec<(Option<Vec<String>>, &'static str)> = Vec::new();
+    let mut tries: Vec<(Option<Vec<Line>>, &'static str)> = Vec::new();
     for pretty in [true, false] {
-        tries.push((splice(&lines, change, &want, pretty), "in place"));
+        tries.push((splice(&lines, change, &original, &want, pretty), "in place"));
     }
     tries.push((rewrite_section(&lines, change, &want), "section"));
     for (attempt, how) in tries {
         let Some(new_lines) = attempt else { continue };
-        let mut out = new_lines.join(nl);
-        if ends_nl || !out.is_empty() {
+        let mut out = String::new();
+        for l in &new_lines {
+            out.push_str(l.text(&lines));
+            out.push_str(match l {
+                Line::Old(i) if !ends[*i].is_empty() => ends[*i],
+                _ => nl,
+            });
+        }
+        if new_lines.is_empty() && ends_nl {
             out.push_str(nl);
         }
         if parse(&out).ok().as_ref() == Some(&want) {
@@ -149,6 +200,54 @@ pub fn edit(text: &str, change: &Change) -> Result<(String, &'static str), Strin
         "acu cannot edit atlas.yaml in place without losing its comments; edit the file by hand"
             .into(),
     )
+}
+
+/// One line of an edited file.
+enum Line {
+    /// The line at this position in the old file. It keeps its own line
+    /// ending.
+    Old(usize),
+    /// A line that acu wrote. It takes the file's usual line ending.
+    New(String),
+}
+
+impl Line {
+    /// Returns the line's text, without its line ending.
+    fn text<'a>(&'a self, lines: &[&'a str]) -> &'a str {
+        match self {
+            Line::Old(i) => lines[*i],
+            Line::New(s) => s,
+        }
+    }
+}
+
+/// Splits a text into its lines, as [`str::lines`] does, and into the ending
+/// of each line: CR LF, LF, or nothing for a last line without one.
+fn split_lines(text: &str) -> (Vec<&str>, Vec<&str>) {
+    let mut lines = Vec::new();
+    let mut ends = Vec::new();
+    for piece in text.split_inclusive('\n') {
+        let (line, end) = if let Some(l) = piece.strip_suffix("\r\n") {
+            (l, "\r\n")
+        } else if let Some(l) = piece.strip_suffix('\n') {
+            (l, "\n")
+        } else {
+            (piece, "")
+        };
+        lines.push(line);
+        ends.push(end);
+    }
+    (lines, ends)
+}
+
+/// Keeps the lines of the old file in a range, each with its own ending.
+fn kept(range: std::ops::Range<usize>) -> Vec<Line> {
+    range.map(Line::Old).collect()
+}
+
+/// Turns lines that acu wrote into new lines of the file.
+fn fresh(lines: Vec<String>) -> Vec<Line> {
+    lines.into_iter().map(Line::New).collect()
 }
 
 /// One top-level key and the lines it spans, `start` included and `end`
@@ -318,7 +417,7 @@ fn splice_keys(
     values: &[&str],
     m: &Map<String, Value>,
     pretty: bool,
-) -> Option<Vec<String>> {
+) -> Option<Vec<Line>> {
     let keys = map_keys(lines, from, to, n, dash)?;
     if keys.is_empty() {
         return None;
@@ -354,39 +453,173 @@ fn splice_keys(
     // Apply from the bottom up, so the line numbers above stay right; two
     // inserts at one place land in the order of KEY_ORDER.
     edits.sort_by(|a, b| b.0.cmp(&a.0).then(b.2.cmp(&a.2)));
-    let mut out: Vec<String> = lines[from..to].iter().map(|l| l.to_string()).collect();
+    let mut out = kept(from..to);
     for (st, end, _, new) in edits {
-        out.splice(st - from..end - from, new);
+        out.splice(st - from..end - from, fresh(new));
     }
     Some(out)
 }
 
 /// Writes the new lines of the one entry that changed and keeps every other
 /// line. Gives `None` when the file's shape does not allow it.
-fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option<Vec<String>> {
+fn splice(
+    lines: &[&str],
+    change: &Change,
+    original: &Value,
+    want: &Value,
+    pretty: bool,
+) -> Option<Vec<Line>> {
     let secs = sections(lines);
-    let own = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
     match change {
+        Change::Top { key, .. } => {
+            // A mapping that stays a mapping keeps the lines of its
+            // unchanged keys, comments included.
+            let (o, m) = (original[*key].as_object()?, want[*key].as_object()?);
+            let mut names: Vec<&'static str> = Vec::new();
+            for k in o.keys().chain(m.keys()) {
+                if o.get(k) != m.get(k) {
+                    let name = KEY_ORDER.iter().find(|x| *x == k).copied()?;
+                    if !names.contains(&name) {
+                        names.push(name);
+                    }
+                }
+            }
+            let sec = secs.iter().find(|s| s.key == *key)?;
+            if !opens_block(lines[sec.start]) {
+                return None;
+            }
+            let first = (sec.start + 1..sec.end).find(|&i| !is_filler(lines[i]))?;
+            let n = indent(lines[first]);
+            if n == 0 {
+                return None;
+            }
+            let new = splice_keys(lines, first, sec.end, n, false, &names, m, pretty)?;
+            let mut out = kept(0..first);
+            out.extend(new);
+            out.extend(kept(sec.end..lines.len()));
+            Some(out)
+        }
+        Change::List { key, items } => {
+            let Some(sec) = secs.iter().find(|s| s.key == *key) else {
+                if items.is_empty() {
+                    return Some(kept(0..lines.len()));
+                }
+                let mut out = kept(0..lines.len());
+                while out.last().is_some_and(|l| l.text(lines).trim().is_empty()) {
+                    out.pop();
+                }
+                out.push(Line::New(format!("{key}:")));
+                for it in items {
+                    out.extend(fresh(emit_item(it.as_object()?, 2, pretty)));
+                }
+                return Some(out);
+            };
+            if items.is_empty() {
+                let mut out = kept(0..sec.start);
+                out.extend(kept(sec.end..lines.len()));
+                return Some(out);
+            }
+            let (n, old) = seq_items(lines, sec)?;
+            let old_values = original[*key].as_array()?;
+            if old_values.len() != old.len() {
+                return None;
+            }
+            // Comments under the key, up to a blank line, stay there: they
+            // speak of the whole list. The lines after that blank line, and
+            // the comments and blank lines above each later item, go with
+            // the item below them.
+            let first = old.first().map_or(sec.start + 1, |o| o.0);
+            let head_end = (sec.start + 1..first)
+                .rev()
+                .find(|&i| lines[i].trim().is_empty())
+                .map_or(sec.start + 1, |i| i + 1);
+            let mut prev = head_end;
+            let mut blocks: Vec<Option<(usize, usize, usize)>> = Vec::new();
+            for &(st, end) in &old {
+                blocks.push(Some((prev, st, end)));
+                prev = end;
+            }
+            let tail = prev;
+            // First, each new item that equals an old item takes that item's
+            // lines. Then each changed item pairs with an old item by score
+            // (see `shared_fields`) and keeps that item's comments.
+            let mut used = vec![false; old.len()];
+            let mut pick: Vec<Option<(usize, bool)>> = vec![None; items.len()];
+            for (k, it) in items.iter().enumerate() {
+                if let Some(i) = (0..old.len()).find(|&i| !used[i] && old_values[i] == *it) {
+                    used[i] = true;
+                    pick[k] = Some((i, true));
+                }
+            }
+            // Pair each changed item with the old item that shares the most
+            // fields with it (an equal ID outweighs all the rest), best pairs
+            // first, the nearer place breaking a tie. An item that shares
+            // nothing with any old item, or only one field other than `id`
+            // and `title`, takes no old comment.
+            let mut pairs: Vec<(usize, usize, usize)> = Vec::new();
+            for (k, it) in items.iter().enumerate() {
+                if pick[k].is_some() {
+                    continue;
+                }
+                for (i, old_v) in old_values.iter().enumerate() {
+                    let sc = shared_fields(it, old_v);
+                    if !used[i] && sc > 0 {
+                        pairs.push((sc, k, i));
+                    }
+                }
+            }
+            pairs.sort_by(|a, b| {
+                b.0.cmp(&a.0)
+                    .then(a.1.abs_diff(a.2).cmp(&b.1.abs_diff(b.2)))
+            });
+            for (_, k, i) in pairs {
+                if pick[k].is_none() && !used[i] {
+                    used[i] = true;
+                    pick[k] = Some((i, false));
+                }
+            }
+            let mut out = kept(0..head_end);
+            for (k, it) in items.iter().enumerate() {
+                match pick[k].and_then(|(i, same)| blocks[i].map(|b| (b, same))) {
+                    Some(((lead, st, end), true)) => {
+                        out.extend(kept(lead..st));
+                        out.extend(kept(st..end));
+                    }
+                    Some(((lead, st, end), false)) => {
+                        out.extend(kept(lead..st));
+                        let old_v = &old_values[pick[k]?.0];
+                        let whole = fresh(emit_item(it.as_object()?, n, pretty));
+                        out.extend(
+                            respliced(lines, st, end, n, old_v, it, pretty).unwrap_or(whole),
+                        );
+                    }
+                    None => out.extend(fresh(emit_item(it.as_object()?, n, pretty))),
+                }
+            }
+            out.extend(kept(tail..sec.end));
+            out.extend(kept(sec.end..lines.len()));
+            Some(out)
+        }
         Change::Item {
             key, at, insert, ..
         } => {
             let item = want[*key].as_array()?.get(*at)?.as_object()?;
             let Some(sec) = secs.iter().find(|s| s.key == *key) else {
                 // No such section yet: add it at the end.
-                let mut out = own(lines);
-                while out.last().is_some_and(|l| l.trim().is_empty()) {
+                let mut out = kept(0..lines.len());
+                while out.last().is_some_and(|l| l.text(lines).trim().is_empty()) {
                     out.pop();
                 }
-                out.push(format!("{key}:"));
-                out.extend(emit_item(item, 2, pretty));
+                out.push(Line::New(format!("{key}:")));
+                out.extend(fresh(emit_item(item, 2, pretty)));
                 return Some(out);
             };
             let (n, items) = seq_items(lines, sec)?;
-            let new = emit_item(item, n, pretty);
-            let mut out = own(&lines[..sec.start + 1]);
+            let new = fresh(emit_item(item, n, pretty));
+            let mut out = kept(0..sec.start + 1);
             if items.is_empty() {
                 out.extend(new);
-                out.extend(own(&lines[sec.start + 1..]));
+                out.extend(kept(sec.start + 1..lines.len()));
                 return Some(out);
             }
             // Each item keeps the comments and blank lines above it (its
@@ -395,25 +628,25 @@ fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option
             let mut pending = Some(new);
             let mut prev = sec.start + 1;
             for (k, &(st, end)) in items.iter().enumerate() {
-                let lead = own(&lines[prev..st]);
+                let lead = kept(prev..st);
                 if k == *at && *insert {
                     out.extend(pending.take()?);
                     out.extend(lead);
-                    out.extend(own(&lines[st..end]));
+                    out.extend(kept(st..end));
                 } else if k == *at {
                     out.extend(lead);
                     out.extend(pending.take()?);
                 } else {
                     out.extend(lead);
-                    out.extend(own(&lines[st..end]));
+                    out.extend(kept(st..end));
                 }
                 prev = end;
             }
-            out.extend(own(&lines[prev..sec.end]));
+            out.extend(kept(prev..sec.end));
             if let Some(p) = pending {
                 out.extend(p);
             }
-            out.extend(own(&lines[sec.end..]));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
         Change::ItemKeys { key, at, values } => {
@@ -423,9 +656,9 @@ fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option
             let &(st, end) = items.get(*at)?;
             let names: Vec<&str> = values.iter().map(|v| v.0).collect();
             let new = splice_keys(lines, st, end, n + 2, true, &names, item, pretty)?;
-            let mut out = own(&lines[..st]);
+            let mut out = kept(0..st);
             out.extend(new);
-            out.extend(own(&lines[end..]));
+            out.extend(kept(end..lines.len()));
             Some(out)
         }
         Change::Keys { key, values } => {
@@ -441,9 +674,9 @@ fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option
             }
             let names: Vec<&str> = values.iter().map(|v| v.0).collect();
             let new = splice_keys(lines, first, sec.end, n, false, &names, m, pretty)?;
-            let mut out = own(&lines[..first]);
+            let mut out = kept(0..first);
             out.extend(new);
-            out.extend(own(&lines[sec.end..]));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
     }
@@ -451,13 +684,18 @@ fn splice(lines: &[&str], change: &Change, want: &Value, pretty: bool) -> Option
 
 /// Writes the changed top-level section again from its value, and keeps
 /// every other section's lines.
-fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<String>> {
+fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<Line>> {
     let key = match change {
-        Change::Item { key, .. } | Change::ItemKeys { key, .. } | Change::Keys { key, .. } => *key,
+        Change::Item { key, .. }
+        | Change::ItemKeys { key, .. }
+        | Change::Keys { key, .. }
+        | Change::List { key, .. }
+        | Change::Top { key, .. } => *key,
     };
     let secs = sections(lines);
     let mut new = vec![format!("{key}:")];
     match &want[key] {
+        Value::Null => new.clear(),
         Value::Array(items) => {
             for it in items {
                 new.extend(emit_item(it.as_object()?, 2, false));
@@ -470,17 +708,19 @@ fn rewrite_section(lines: &[&str], change: &Change, want: &Value) -> Option<Vec<
         }
         _ => return None,
     }
-    let own = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
+    if new.is_empty() && secs.iter().all(|s| s.key != key) {
+        return Some(kept(0..lines.len()));
+    }
     match secs.iter().find(|s| s.key == key) {
         Some(sec) => {
-            let mut out = own(&lines[..sec.start]);
-            out.extend(new);
-            out.extend(own(&lines[sec.end..]));
+            let mut out = kept(0..sec.start);
+            out.extend(fresh(new));
+            out.extend(kept(sec.end..lines.len()));
             Some(out)
         }
         None => {
-            let mut out = own(lines);
-            out.extend(new);
+            let mut out = kept(0..lines.len());
+            out.extend(fresh(new));
             Some(out)
         }
     }
@@ -507,6 +747,7 @@ const KEY_ORDER: &[&str] = &[
     "readingTip",
     "autolinks",
     "drafted",
+    "rows",
 ];
 
 /// Lists a mapping's keys in the order of [`KEY_ORDER`].
@@ -611,8 +852,72 @@ fn flow(v: &Value) -> String {
         }
         Value::Array(a) => format!("[{}]", a.iter().map(flow).collect::<Vec<_>>().join(", ")),
         Value::String(s) if is_word(s) => s.clone(),
+        // JSON leaves these raw, but YAML reads them as line breaks or a
+        // byte-order mark, so they go in as escapes.
+        Value::String(s) => Value::String(s.clone())
+            .to_string()
+            .replace('\u{85}', "\\u0085")
+            .replace('\u{2028}', "\\u2028")
+            .replace('\u{2029}', "\\u2029")
+            .replace('\u{feff}', "\\ufeff"),
         other => other.to_string(),
     }
+}
+
+/// Scores how well two list items match: the number of top-level fields
+/// they share, with an equal `id` counting for a hundred, so a region pairs
+/// with its old self first. Items that share neither `id` nor `title` must
+/// share two fields; one shared field, such as `open: { view: overview }`,
+/// says nothing, and scores 0.
+fn shared_fields(a: &Value, b: &Value) -> usize {
+    let (Some(a), Some(b)) = (a.as_object(), b.as_object()) else {
+        return 0;
+    };
+    let shared: Vec<&String> = a
+        .iter()
+        .filter(|(k, v)| b.get(*k) == Some(v))
+        .map(|(k, _)| k)
+        .collect();
+    let strong = shared.iter().any(|k| *k == "id" || *k == "title");
+    if !strong && shared.len() < 2 {
+        return 0;
+    }
+    shared
+        .iter()
+        .map(|k| if *k == "id" { 100 } else { 1 })
+        .sum()
+}
+
+/// Rewrites only the keys of a changed list item that differ from its old
+/// lines, so the comments inside the item stay. Gives `None` when the item's
+/// shape does not allow it, or when the result does not read back as the
+/// new item.
+fn respliced(
+    lines: &[&str],
+    st: usize,
+    end: usize,
+    n: usize,
+    old: &Value,
+    new: &Value,
+    pretty: bool,
+) -> Option<Vec<Line>> {
+    let (o, m) = (old.as_object()?, new.as_object()?);
+    let mut keys: Vec<&str> = m
+        .iter()
+        .filter(|(k, v)| o.get(*k) != Some(v))
+        .map(|(k, _)| k.as_str())
+        .collect();
+    keys.extend(o.keys().filter(|k| !m.contains_key(*k)).map(String::as_str));
+    // splice_keys takes static names; the keys of atlas.yaml come from a
+    // short known list, and any other key falls back to a whole item.
+    let names: Vec<&'static str> = keys
+        .iter()
+        .map(|k| KEY_ORDER.iter().find(|o| *o == k).copied())
+        .collect::<Option<_>>()?;
+    let out = splice_keys(lines, st, end, n + 2, true, &names, m, pretty)?;
+    let texts: Vec<&str> = out.iter().map(|l| l.text(lines)).collect();
+    let probe = format!("x:\n{}\n", texts.join("\n"));
+    (parse(&probe).ok()?["x"][0] == *new).then_some(out)
 }
 
 /// Reports whether a string can stand bare in YAML and still read as the
@@ -635,6 +940,330 @@ mod tests {
     use serde_json::json;
 
     const TEXT: &str = "# Top comment.\nversion: 1\nproject:\n  name: Shop\n  # About the shop.\n  description: |\n    Old text.\nlanguages:\n  - adapter: go\n\n# The tour.\ntour:\n  - title: One\n    open: { view: overview }\n    text: First.\n  # Before two.\n  - title: Two\n    open: { view: overview }\n    text: Second.\n";
+
+    #[test]
+    fn a_reordered_list_keeps_the_comments_of_each_item() {
+        let v = parse(TEXT).unwrap();
+        let mut steps = v["tour"].as_array().unwrap().clone();
+        steps.reverse();
+        steps.push(json!({"title": "Three", "open": {"view": "overview"}, "text": "Third."}));
+        let (out, how) = edit(
+            TEXT,
+            &Change::List {
+                key: "tour",
+                items: steps.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert_eq!(parse(&out).unwrap()["tour"], json!(steps));
+        assert!(
+            out.contains("# The tour.\ntour:\n  # Before two.\n  - title: Two\n"),
+            "{out}"
+        );
+        assert!(out.contains("  - title: One\n"), "{out}");
+        assert!(out.ends_with("    text: \"Third.\"\n"), "{out}");
+    }
+
+    #[test]
+    fn a_changed_item_keeps_the_comment_above_it() {
+        let v = parse(TEXT).unwrap();
+        let mut steps = v["tour"].as_array().unwrap().clone();
+        steps[1]["text"] = json!("Changed.");
+        let (out, _) = edit(
+            TEXT,
+            &Change::List {
+                key: "tour",
+                items: steps.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["tour"], json!(steps));
+        assert!(out.contains("  # Before two.\n  - title: Two\n"), "{out}");
+        // A region keeps its comment by ID, even after a move.
+        let text = "version: 1\nregions:\n  # About a.\n  - id: a\n    name: A\n  # About b.\n  - id: b\n    name: B\n";
+        let items = vec![
+            json!({"id": "b", "name": "B2"}),
+            json!({"id": "a", "name": "A"}),
+        ];
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "regions",
+                items: items.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["regions"], json!(items));
+        assert!(out.contains("  # About b.\n  - id: b\n"), "{out}");
+        assert!(out.contains("  # About a.\n  - id: a\n"), "{out}");
+    }
+
+    #[test]
+    fn comments_stay_with_their_own_items_after_an_insert_or_a_delete() {
+        let text = "version: 1\ntour:\n  # About the tour.\n\n  # About A.\n  - title: A\n    text: a\n    open: { view: overview }\n  # About B.\n  - title: B\n    text: b\n    open: { view: overview }\n";
+        let v = parse(text).unwrap();
+        let old = v["tour"].as_array().unwrap().clone();
+        // Delete A and change B's text: B keeps its own comment.
+        let mut b = old[1].clone();
+        b["text"] = json!("b2");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![b.clone()],
+            },
+        )
+        .unwrap();
+        assert!(!out.contains("About A."), "{out}");
+        assert!(out.contains("  # About B.\n  - title: B\n"), "{out}");
+        assert!(out.contains("  # About the tour.\n"), "{out}");
+        // A new step at the top, and A changed: the new step takes no comment.
+        let mut a = old[0].clone();
+        a["text"] = json!("a2");
+        let fresh = json!({"title": "New", "text": "n", "open": {"view": "overview"}});
+        let items = vec![fresh, a, old[1].clone()];
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: items.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["tour"], json!(items));
+        assert!(
+            out.contains("  # About the tour.\n\n  - title: \"New\"\n"),
+            "{out}"
+        );
+        assert!(out.contains("  # About A.\n  - title: A\n"), "{out}");
+        // The comment under the key stays first after a reorder.
+        let rev = vec![old[1].clone(), old[0].clone()];
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: rev,
+            },
+        )
+        .unwrap();
+        assert!(
+            out.starts_with("version: 1\ntour:\n  # About the tour.\n"),
+            "{out}"
+        );
+    }
+
+    /// Builds a tour step that opens the overview.
+    fn step(title: &str) -> Value {
+        json!({"title": title, "open": {"view": "overview"}, "text": "x"})
+    }
+
+    #[test]
+    fn a_byte_order_mark_stays_and_the_file_parses() {
+        let text = "\u{feff}tour:\n  # About one.\n  - title: One\n    open: { view: overview }\n    text: x\nversion: 1\n";
+        let (out, how) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![step("One"), step("Two")],
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place", "{out}");
+        assert!(
+            out.starts_with('\u{feff}') && out.contains("# About one."),
+            "{out}"
+        );
+        assert_eq!(out.matches("tour:").count(), 1, "{out}");
+    }
+
+    #[test]
+    fn a_changed_item_keeps_the_comments_inside_it() {
+        let text = "version: 1\ntour:\n  - title: One\n    # TODO: check this claim.\n    open: { view: overview } # the start\n    text: x\n";
+        let mut s = step("One");
+        s["text"] = json!("y");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![s.clone()],
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["tour"][0], s);
+        assert!(out.contains("# TODO: check this claim."), "{out}");
+        assert!(out.contains("# the start"), "{out}");
+    }
+
+    #[test]
+    fn comments_follow_the_closest_old_item() {
+        // Two steps share a title: delete the first, edit the second.
+        let text = "version: 1\ntour:\n  # About the first look.\n  - title: Look\n    open: { view: overview }\n    text: a\n  # About the second look.\n  - title: Look\n    open: { view: unit, id: u }\n    text: b\n";
+        let old = parse(text).unwrap()["tour"].as_array().unwrap().clone();
+        let mut second = old[1].clone();
+        second["text"] = json!("b2");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![second],
+            },
+        )
+        .unwrap();
+        assert!(out.contains("# About the second look."), "{out}");
+        assert!(!out.contains("# About the first look."), "{out}");
+        // A step that moves and gets a new title keeps its comment.
+        let text = "version: 1\ntour:\n  # About A.\n  - title: A\n    open: { view: overview }\n    text: a\n  # About B.\n  - title: B\n    open: { view: overview }\n    text: b\n";
+        let old = parse(text).unwrap()["tour"].as_array().unwrap().clone();
+        let mut b = old[1].clone();
+        b["title"] = json!("B renamed");
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![b, old[0].clone()],
+            },
+        )
+        .unwrap();
+        assert!(
+            out.contains("# About B.\n  - title: \"B renamed\""),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn one_shared_view_pairs_no_comments() {
+        // A new step that shares only its view with a deleted step takes
+        // none of that step's comments.
+        let text = "version: 1\ntour:\n  # About gone.\n  - title: Gone\n    # Inner note.\n    open: { view: overview }\n    text: g\n";
+        let fresh = json!({"title": "New", "text": "n", "open": {"view": "overview"}});
+        let (out, _) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: vec![fresh],
+            },
+        )
+        .unwrap();
+        assert!(
+            !out.contains("About gone") && !out.contains("Inner note"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_layout_keeps_its_comments() {
+        let text = "version: 1\nlayout:\n  # The web side sits on top.\n  rows:\n    - [web, api]\n    - [store]\n";
+        let same = parse(text).unwrap()["layout"].clone();
+        let (out, how) = edit(
+            text,
+            &Change::Top {
+                key: "layout",
+                value: same,
+            },
+        )
+        .unwrap();
+        assert_eq!((out.as_str(), how), (text, "unchanged"));
+        let rows = json!({"rows": [["web"], ["api", "store"]]});
+        let (out, _) = edit(
+            text,
+            &Change::Top {
+                key: "layout",
+                value: rows.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["layout"], rows);
+        assert!(out.contains("# The web side sits on top."), "{out}");
+    }
+
+    #[test]
+    fn line_breaks_that_yaml_reads_go_in_as_escapes() {
+        let text = "version: 1\ntour:\n  - title: One\n    open: { view: overview }\n    text: x\n";
+        for t in ["a\u{85}b", "a\u{2028}b", "a\u{2029}b", "a\u{feff}b"] {
+            let s = json!({"title": t, "open": {"view": "overview"}, "text": "x"});
+            let (out, _) = edit(
+                text,
+                &Change::List {
+                    key: "tour",
+                    items: vec![s.clone()],
+                },
+            )
+            .unwrap();
+            assert_eq!(parse(&out).unwrap()["tour"][0], s, "{out}");
+        }
+    }
+
+    #[test]
+    fn a_repeated_key_does_not_parse() {
+        assert!(parse("version: 1\ntour: []\nregions: []\ntour: []\n").is_err());
+        assert!(parse("\u{feff}version: 1\nx: 2\n").is_ok());
+    }
+
+    #[test]
+    fn a_list_that_the_file_lacks_goes_in_at_the_end() {
+        let items = vec![json!({"id": "a", "name": "A", "paths": ["x"]})];
+        let (out, how) = edit(
+            TEXT,
+            &Change::List {
+                key: "regions",
+                items: items.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert_eq!(parse(&out).unwrap()["regions"], json!(items));
+        assert!(out.starts_with("# Top comment.\n"), "{out}");
+    }
+
+    #[test]
+    fn an_empty_list_removes_its_section() {
+        let (out, _) = edit(
+            TEXT,
+            &Change::List {
+                key: "tour",
+                items: vec![],
+            },
+        )
+        .unwrap();
+        assert!(parse(&out).unwrap().get("tour").is_none(), "{out}");
+        assert!(out.starts_with("# Top comment.\n"), "{out}");
+        // An empty list where none stood changes nothing.
+        let (same, _) = edit(
+            &out,
+            &Change::List {
+                key: "regions",
+                items: vec![],
+            },
+        )
+        .unwrap();
+        assert_eq!(same, out);
+    }
+
+    #[test]
+    fn a_top_key_is_set_and_removed() {
+        let rows = json!({"rows": [["a", "b"], ["c"]]});
+        let (out, how) = edit(
+            TEXT,
+            &Change::Top {
+                key: "layout",
+                value: rows.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "section");
+        assert_eq!(parse(&out).unwrap()["layout"], rows);
+        let (out, _) = edit(
+            &out,
+            &Change::Top {
+                key: "layout",
+                value: Value::Null,
+            },
+        )
+        .unwrap();
+        assert!(parse(&out).unwrap().get("layout").is_none(), "{out}");
+        assert!(out.contains("# Before two."), "{out}");
+    }
 
     #[test]
     fn replacing_a_step_keeps_every_other_line() {
@@ -807,6 +1436,95 @@ mod tests {
             "{out:?}"
         );
         assert!(out.contains("# Top comment.\r\n"), "{out:?}");
+    }
+
+    /// Checks the line endings of an edit's result: a line that the old
+    /// file held once keeps its old ending, and a line that the old file
+    /// lacks ends in `usual`. So does an old last line without an ending.
+    fn assert_endings(old: &str, out: &str, usual: &str) {
+        let (old_lines, old_ends) = split_lines(old);
+        let (lines, ends) = split_lines(out);
+        for (l, e) in lines.iter().zip(&ends) {
+            let mut same = old_lines.iter().enumerate().filter(|(_, o)| *o == l);
+            match (same.next(), same.next()) {
+                (Some((i, _)), None) if old_ends[i].is_empty() => {
+                    assert_eq!(*e, usual, "{l:?} in {out:?}")
+                }
+                (Some((i, _)), None) => assert_eq!(*e, old_ends[i], "{l:?} in {out:?}"),
+                (None, _) => assert_eq!(*e, usual, "{l:?} in {out:?}"),
+                // A line that the old file held twice may take either ending.
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn a_file_with_mixed_endings_keeps_the_ending_of_each_line() {
+        // Ten lines end in CR LF and nine in LF.
+        let text = "# Top comment.\r\nversion: 1\nproject:\r\n  name: Shop\n  # About the shop.\r\n  description: |\r\n    Old text.\r\nlanguages:\n  - adapter: go\n\n# The tour.\r\ntour:\n  - title: One\r\n    open: { view: overview }\n    text: First.\r\n  # Before two.\n  - title: Two\r\n    open: { view: overview }\r\n    text: Second.\n";
+        let v = parse(text).unwrap();
+        let mut steps = v["tour"].as_array().unwrap().clone();
+        steps.reverse();
+        steps.push(json!({"title": "Three", "open": {"view": "overview"}, "text": "Third."}));
+        let (out, how) = edit(
+            text,
+            &Change::List {
+                key: "tour",
+                items: steps.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(how, "in place");
+        assert_eq!(parse(&out).unwrap()["tour"], json!(steps));
+        assert!(
+            out.contains("  # Before two.\n  - title: Two\r\n"),
+            "{out:?}"
+        );
+        assert!(out.contains("  - title: \"Three\"\r\n"), "{out:?}");
+        assert_endings(text, &out, "\r\n");
+    }
+
+    #[test]
+    fn one_cr_lf_line_in_an_lf_file_keeps_its_ending() {
+        // The last line has no ending; it gets the usual one.
+        let text = "version: 1\r\nproject:\n  name: Shop\n  description: Old.\nlanguages:\n  - adapter: go";
+        let (out, _) = edit(
+            text,
+            &Change::Keys {
+                key: "project",
+                values: vec![("description", json!("New."))],
+            },
+        )
+        .unwrap();
+        assert_eq!(parse(&out).unwrap()["project"]["description"], "New.");
+        assert!(out.starts_with("version: 1\r\nproject:\n"), "{out:?}");
+        assert!(out.ends_with("  - adapter: go\n"), "{out:?}");
+        assert_endings(text, &out, "\n");
+    }
+
+    #[test]
+    fn splitting_lines_agrees_with_str_lines() {
+        for text in [
+            "",
+            "a",
+            "a\n",
+            "a\r\n",
+            "a\n\nb",
+            "a\r\n\r\nb\r\n",
+            "a\rb\n",
+            "a\r",
+            "\n",
+            "x\r\r\n",
+        ] {
+            let (lines, ends) = split_lines(text);
+            assert_eq!(lines, text.lines().collect::<Vec<_>>(), "{text:?}");
+            let joined: String = lines
+                .iter()
+                .zip(&ends)
+                .map(|(l, e)| format!("{l}{e}"))
+                .collect();
+            assert_eq!(joined, text, "{text:?}");
+        }
     }
 
     #[test]

@@ -151,6 +151,9 @@ happens at run time: the routes that the function `inFunc` registers gain
 
 ## regions
 
+`acu studio` edits the regions, the layout and the tour in the browser, and
+saves them here ([`studio.md`](studio.md)).
+
 ```yaml
 regions:
   - id: storage

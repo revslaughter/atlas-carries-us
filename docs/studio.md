@@ -1,0 +1,456 @@
+# The studio
+
+`acu studio` sets up and edits a map in the browser. With it you need not
+write `atlas.yaml` by hand. The studio does these jobs:
+
+1. Pick a project: a folder on your computer, or a repository that it clones
+   over HTTPS.
+2. Propose a first `atlas.yaml` from the languages and plugins that the
+   folder shows.
+3. Run the adapters, show their progress, and open the map.
+4. Edit the tour, the regions and the project text, and save them into
+   `atlas.yaml`.
+5. Run the adapters again after a change to the code.
+
+`acu serve -c atlas.yaml` offers the same editor for one project, while its
+write tools work (see [`mcp.md`](mcp.md#start-the-server)). The editor works
+only in a browser that reaches acu through a loopback name, such as
+`127.0.0.1` or `localhost`. A browser on another computer never sees it.
+`acu serve -d` serves a finished `atlas.json`. It has no config, so the
+editor stays off.
+
+Everything stays on your computer. The studio writes only `atlas.yaml` in the
+project folder, and clones only into its workspace folder. Git keeps the
+history of `atlas.yaml`, as for any other file.
+
+## Start it
+
+```sh
+acu studio                         # pick a project in the browser
+acu studio path/to/project         # open that project's atlas.yaml at the start
+acu studio --addr 127.0.0.1:5000   # another port
+acu studio --root ~/code           # show only ~/code in the folder picker
+acu studio --workspace ~/clones    # clone repositories into ~/clones
+```
+
+1. Run the command. It prints the address, by default
+   `http://127.0.0.1:4321/`.
+2. Open the address in a browser.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `project` | none | A project folder, or its `atlas.yaml`, to open at the start. |
+| `--addr` | `127.0.0.1:4321` | The address. acu accepts a loopback address only. |
+| `--root` | your home folder | The folder that the folder picker shows, with every folder below it. |
+| `--workspace` | `$XDG_CACHE_HOME/acu/repos`, else `~/.cache/acu/repos` | The folder that receives clones. |
+
+`acu studio` refuses an address that other computers can reach. To share a
+finished map, use `acu build` or `acu serve -d`.
+
+A project that you name on the command line opens and extracts at the start.
+The studio asks no trust question for it: the name on the command line counts
+as your trust. acu refuses an `atlas.yaml` that forms a symbolic link, as the
+folder picker does.
+
+## Set up a project
+
+### Pick a folder
+
+1. Open the studio. With no project open, it shows the setup screen.
+2. Move through the folders. The picker marks each folder that holds an
+   `atlas.yaml` or a git repository.
+3. Choose a folder.
+   - A folder with an `atlas.yaml` opens with that file. The studio never
+     replaces an existing `atlas.yaml`.
+   - A folder without one gets a proposal (below).
+
+The studio refuses an `atlas.yaml` that forms a symbolic link. A link could
+point the editor's saves at any file.
+
+**Up one folder** works only inside the root. In the workspace it stays off,
+so for a clone outside the root you cannot move up from the clone.
+
+To pick another project later, choose **Projects** in the header or in the
+editor. That opens the setup screen again. While a map shows, Escape closes
+the setup screen.
+
+### Clone a repository
+
+1. Paste an HTTPS address, such as `https://github.com/go-chi/chi`.
+2. Choose **Clone**. The studio clones the repository into the workspace,
+   at `<workspace>/<host>/<path>`, and shows each phase of git's progress
+   when it ends.
+3. The clone then opens as a picked folder.
+
+The path holds 2 to 6 parts after the host, such as `<owner>/<name>`, or a
+GitLab group with subgroups. acu writes the host in lower case. A repository
+cloned before opens as it stands; the studio does not fetch it again.
+
+### Read the proposal
+
+The studio proposes a first `atlas.yaml` from what the folder holds:
+
+1. **Languages.** It looks for marker files in the folder and in each folder
+   one level down, as a monorepo often holds them. A language found one
+   level down gets that folder as its `root`, unless the same adapter
+   already reads the parent folder.
+
+   | Marker file | Language |
+   | --- | --- |
+   | `go.mod` | Go |
+   | `Cargo.toml` | Rust |
+   | `package.json`, `tsconfig.json` | TypeScript (the adapter also reads JavaScript) |
+   | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt`, a `.py` file | Python |
+
+2. **Entry-point plugins.** The dependencies in the marker files suggest
+   plugins. A dependency must appear as a whole name: `click` does not match
+   `clickhouse-driver`.
+
+   | Marker file | Plugins |
+   | --- | --- |
+   | `go.mod` | `go-nethttp` (always), `go-chi`, `cobra` |
+   | `package.json` | `express`, `hono`, `sveltekit` |
+   | `Cargo.toml` | `axum`, `clap` |
+   | Python marker files | `flask`, `fastapi`, `django`, `click`, `typer` |
+
+3. **Repository and links.** A git remote named `origin` on GitHub or GitLab
+   gives `project.repo` and the matching `links` preset. The studio reads
+   `.git/config` as text; it runs no git before you confirm trust.
+4. **Name.** The folder's name becomes `project.name`.
+
+Detection looks at no more than 200 subfolders, the first that the system
+lists. It reads a marker file only
+up to 1 MB, and it never follows a symbolic link to one. An `atlas.yaml` over
+1 MB shows as empty in the proposal.
+
+The proposal holds no regions and no tour; you add them after the first
+extraction. Read the proposed YAML and change it as you need before you
+write it. [`config.md`](config.md) explains each field.
+
+### Confirm trust and extract
+
+Extraction runs the project's own build tools. The Rust adapter runs
+`build.rs` scripts and procedural macros, and the Go toolchain can run code
+through cgo. So the studio asks you to confirm that you trust the code before
+the first extraction of a picked folder. Open only code that you would also
+build.
+
+1. Confirm that you trust the code.
+2. Choose **Write and extract** (or **Open and extract** for an existing
+   `atlas.yaml`). The studio writes the new `atlas.yaml`, runs each adapter,
+   and shows each line of progress.
+3. The map opens when the check passes. A failure shows the reason; fix the
+   config or install the missing toolchain, then try again.
+
+## Open the editor
+
+1. Choose **Edit**. The editor opens in a drawer with four tabs: **Tour**,
+   **Regions**, **Project** and **Extract**.
+2. To move between the tabs, press the left and right arrow keys. Home moves
+   to the first tab, and End to the last.
+3. To close the drawer, press Escape outside a field. Escape does nothing
+   during a save.
+
+## Edit the tour
+
+The **Tour** tab lists the steps in order.
+
+1. **Record a step.** Move the map to the view that the step should open:
+   the overview, a region, a unit, an item, or a trace. Choose **Record this
+   view as a step**. The studio adds a step that opens that view, by ID. The
+   title field stays empty and shows the view's name as a hint, because a
+   person writes the step's text.
+2. **Write the text.** Give the step a title and a text. The text takes the
+   inline subset of Markdown that the viewer shows, and a preview follows
+   the field.
+3. **Change the view.** Move the map, then choose **Use the current view**
+   on a step.
+4. **Preview.** Choose **Show** on a step to open its view.
+5. **Reorder.** Use one of these ways:
+   - Drag a step by its row, and drop it on another row. A drop on the upper
+     half moves the step before that row. A drop on the lower half moves it
+     after that row.
+   - Choose the ↑ or ↓ button.
+   - Give a step's row the focus, then press Alt+ArrowUp or Alt+ArrowDown.
+6. **Open a step's form.** Give the step's row the focus, then press Enter
+   or Space.
+7. **Delete.** Choose **Delete step** in a step's form.
+8. **Accept a drafted step.** A step that a program drafted carries a
+   `drafted` mark (see [`config.md`](config.md#drafted-text)). Read it
+   against the code, then choose **Mark as checked**. That removes the mark.
+   Only a person chooses it; the studio never removes a mark on its own.
+
+## Edit the regions
+
+The **Regions** tab lists the regions in order. Enter or Space on a region's
+row opens its form, as on a step. For each region you can set:
+
+1. **Name** and **ID**. The ID takes letters, digits, `_` and `-`. A new
+   region's ID follows its name until you edit the ID. When you change the
+   ID of a region, the save also points the tour steps that open it at the
+   new ID, in the same write. A deleted region that a step opens stops the
+   save, with the step's number.
+2. **What it does** and **How to read it**: the region's `description` and
+   `readingTip`.
+3. **Paths, one pattern per line**: globs over unit paths. While you type,
+   the studio lists the units that the globs match, by the same rules as
+   `acu extract`. A unit joins the first region that matches it.
+4. **Pick units**: tick units in the list to add their paths from the
+   repository root, or untick them to remove them. Some units match only
+   through a shorter path from a language's root. The list shows such a
+   unit's box greyed out, with the text "edit Paths to change it". Change
+   that path in **Paths**.
+5. **Colour**: **Automatic**, or **Colour 1** to **Colour 9**, which
+   `atlas.yaml` stores as `color` 0 to 8, an index into the colour-blind-safe
+   palette.
+6. **Default region**: units that match no region go to the default region.
+7. **Layout row**: the row of the overview that holds the region, from 1 to
+   20. The studio writes the rows as `layout`.
+   - The studio drops empty rows. So rows 1 and 3 become rows 1 and 2.
+   - A region that you move into another row goes to the end of that row.
+   - A region without a row goes after the others.
+
+**Suggest regions from folders** shows only while the project has no
+regions. It makes one region per top-level folder of the units. The folder
+comes from each unit's path from its language's root, not from the
+repository root. Each suggestion gets its own colour, and a `drafted` mark by
+"acu studio", because a program chose the grouping. Rename and regroup the
+suggestions, then mark them as checked. A region's mark covers the whole
+region (its name, paths and text). So the mark stays until you choose
+**Mark as checked**, even when you clear the region's text.
+
+## Edit the project
+
+The **Project** tab sets the project's name and its description, the text
+of the overview. A drafted description shows **Mark as checked**, as a
+drafted step does. Clearing the description also removes its mark.
+
+## Save and extract again
+
+1. Choose **Save to atlas.yaml**.
+2. To throw away your changes instead, choose **Discard changes**. The
+   studio reads the file again.
+3. After a change to the code, to `languages` or to `entryPoints`, save or
+   discard your changes first.
+4. On the **Extract** tab, choose **Run the adapters again**.
+
+A save writes each changed section, in this order: the project, the regions,
+the tour. Each section goes in its own write. The regions and the tour go in
+one write when both changed. A section that you did not change stays as it
+stands. If a later write fails, the earlier writes stay in the file.
+
+After a save, the page reloads and shows the change. After a new extraction,
+the studio shows the new map.
+
+While the adapters run, a save fails at once with status 409 and the text
+"wait until the adapters finish, then save again". acu does not hold the
+save or retry it.
+
+### How a save works
+
+A save takes the same path as a draft from an MCP write tool
+([`mcp.md`](mcp.md#drafts)):
+
+1. acu reads `atlas.yaml` from disk.
+2. It compares the file's revision with the revision that the editor read.
+   The revision holds an FNV-1a hash of the file's text. A file that changed
+   meanwhile, in a text editor or another window, fails the save with status
+   409. Choose **Discard changes** to read the file again, then make the
+   change again. A save that reaches a map that a new extraction has just
+   replaced also fails with 409, for the same remedy.
+3. It rewrites only the changed section. A list save (regions or tour)
+   follows the rules below. Each line that acu leaves keeps its own line
+   ending, CR LF or LF. A new line takes the ending of most lines in the
+   file.
+4. It checks the new config against the config schema and runs the check of
+   `acu extract`. A step whose target matches nothing, or a layout that
+   names a missing region, fails with status 422 and the reason. acu then
+   writes nothing.
+5. It replaces the file in one step, through a temporary file. On Linux
+   and macOS, a file with more than one hard link keeps its links: acu
+   first writes the temporary file, then copies the new text into the file
+   itself, so every name shows the change. A reader at that moment can see
+   part of the old text. A copy that fails halfway leaves the temporary
+   file, and the message names it.
+
+In a list save, acu keeps comments by these rules:
+
+1. Comments under the key, up to the last blank line before the first entry,
+   stay under the key. They describe the whole list.
+2. Comments directly above the first entry, with no blank line between,
+   belong to that entry. They move with it.
+3. An entry equal to an old entry keeps its old lines and the comments above
+   them.
+4. A changed entry pairs with the old entry that shares the most fields
+   with it. An equal ID counts most. A pair needs an equal ID, an equal
+   title, or two equal fields; one shared field, such as the same view,
+   forms no pair.
+5. A changed entry keeps the comments above its old entry, and the comments
+   inside it: acu rewrites only the keys that changed.
+6. A new entry that pairs with no old entry takes no comments.
+
+## The API
+
+The editor talks to acu through a JSON API under `/api/`. The tests and other
+local tools may use it too.
+
+| Call | Body | Answer |
+| --- | --- | --- |
+| `GET /api/state` | none | The mode (`serve` or `studio`), whether a map shows, whether writes work and why not, the open project, the last job, and the picker's root and workspace. |
+| `GET /api/config` | none | The file's `revision` and `path`; `writable` and `why`; `project`, `regions`, `layout` and `tour` as written; `resolved.tour` and `resolved.regions` as acu resolved them; every unit with its path and region; the map's warnings. |
+| `GET /api/job` | none | The last job: `id`, `kind` (`extract`, `open` or `clone`), `state` (`running`, `done` or `failed`), `log`, `error`, and the `path` that the job opened or cloned. |
+| `POST /api/tour` | `revision`, `tour` | Replaces the tour. Answers the new `revision`, `how` (`in place`, `section`, or `unchanged` when the save changed nothing) and `warnings`. |
+| `POST /api/regions` | `revision`, `regions`, optional `layout`, optional `tour` | Replaces the regions; with `layout`, also the layout (`null` removes it); with `tour`, also the tour, in the same write. Answers as `POST /api/tour` does. |
+| `POST /api/project` | `revision`, `name`, `description`, `descriptionDrafted` | Sets the project's name and description; a missing or null `descriptionDrafted` removes the mark. |
+| `POST /api/match` | `paths` | The IDs of the units that the globs match, and the globs that do not parse. |
+| `POST /api/extract` | none | Starts a job that runs the adapters again on the open config. |
+| `POST /api/folders` | optional `path` | The folders inside `path` (default: the root), each with `config` and `git` marks; the listed folder's own `config` and `git`; `more` when the list stopped at 500; the parent folder, inside the root only. `acu studio` only. |
+| `POST /api/propose` | `path` | The folder's `atlas.yaml`, or a proposal, with the languages and plugins found, and `exists` when an `atlas.yaml` exists. `acu studio` only. |
+| `POST /api/open` | `path`, optional `config`, `trust: true` | Starts a job that writes `config` as a new `atlas.yaml` (never over an existing one), extracts, and opens the map. `acu studio` only. |
+| `POST /api/clone` | `url` | Starts a job that clones the repository into the workspace. `acu studio` only. |
+
+Every answer holds JSON. A failed call answers `{ "error": "acu: …" }`, and
+the text names the next step.
+
+| Status | Means |
+| --- | --- |
+| 200 | Done. |
+| 202 | A job started; read `GET /api/job` for its progress. |
+| 400 | The body lacks a field or holds the wrong shape. |
+| 403 | The guards refused the request; writes stay off; the folder lies outside the root and the workspace; acu cannot read the folder; the `atlas.yaml` forms a symbolic link; the clone target passes through a link; or a setup call came to `acu serve`. |
+| 404 | No such call, folder or file; `GET /data/atlas.json` before a project opens; or `/api/open` without `config` on a folder that holds no `atlas.yaml`. |
+| 409 | The file changed since the editor read it, no project shows yet, a job runs already (a save fails at once, too), or `atlas.yaml` exists already. |
+| 413 | The body exceeds 4 MB. |
+| 415 | The content type differs from `application/json`. |
+| 422 | The change fails the schema or the check; the error gives the reason. |
+| 428 | `open` lacks `trust: true`. |
+| 500 | A lock broke after an earlier failure, or a call stopped; restart acu. |
+
+## Security
+
+The studio listens on a loopback address, but a web page in your browser
+could still try to reach it. These guards stop that:
+
+1. **Host.** The API answers only a `Host` of `127.0.0.1:<port>`,
+   `localhost:<port>`, `[::1]:<port>`, or the address that acu listens on,
+   with the port that the system gave (so `--addr 127.0.0.1:0` works). In
+   `acu studio` the rule covers the viewer's pages, the map's data and the
+   API. `acu serve` applies it to the API only, so a map behind a forwarded
+   port still shows. This blocks DNS rebinding. acu checks the guards before
+   it reads a request's body.
+2. **Origin.** A request that sends `Origin` must name one of those hosts.
+3. **Changing calls.** Every POST needs all of these:
+   - the header `X-Acu-Studio: 1`;
+   - the content type `application/json`, with parameters such as `charset`
+     allowed;
+   - an `Origin` header;
+   - a `Sec-Fetch-Site` of `same-origin` or `none`. A request without the
+     header counts as `same-origin`.
+
+   A page on another site cannot set the custom header without a preflight.
+   acu refuses every cross-site preflight (`OPTIONS`) with 403, and never
+   sends an `Access-Control-Allow-*` header.
+4. **Responses.** The viewer's pages and the API send
+   `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and
+   `Content-Security-Policy: frame-ancestors 'none'`, so no other site can
+   frame the studio.
+5. **MCP.** `/mcp` answers through the MCP library. The library checks
+   `Host` and `Origin` itself, with its own list, which also accepts
+   `http://[::1]:<port>`. It sends none of the headers in guard 4. The
+   custom-header and Fetch-Metadata rules of guard 3 do not apply to it.
+6. **Folder picker.** acu resolves each path (`..` and symbolic links
+   included) before it checks it. A path must lie inside the root or the
+   workspace. The picker lists folders only, never files. It hides names
+   that start with a dot, and `node_modules`, `target`, `vendor`, `dist`,
+   `build`, `__pycache__` and `venv`. It reads at most 500 folders, in the
+   order that the system lists them, and shows those sorted by name.
+   After the check, acu opens the folder once: one name at a time from the
+   root or the workspace, with no link followed on the way. It lists the
+   folder, reads its marker files and its `atlas.yaml`, and writes a new
+   `atlas.yaml`, all through that open folder. So a folder that someone
+   swaps for a link after the check cannot send those calls elsewhere.
+   Just before the adapters start, acu checks that the path still leads to
+   the open folder. On Windows, the picker takes paths.
+7. **Clone address.** acu accepts an `https://` address with a plain host
+   name and a path of plain names. It refuses anything else: another
+   protocol, a user name, a query, `..`, a leading `-`.
+8. **Clone target.** acu refuses a target when a folder between the
+   workspace and the target forms a symbolic link or holds a git
+   repository. It also refuses a target whose real path leaves the
+   workspace.
+9. **Trust.** Opening a picked folder needs `trust: true`, because
+   extraction runs the project's build tools.
+
+acu runs the clone in these steps:
+
+1. It checks the git version. It accepts git 2.45.1 or later. It also
+   accepts a patched release of an older line: 2.39.4, 2.40.2, 2.41.1,
+   2.42.2, 2.43.4 or 2.44.1, or a later release of the same line. The May
+   2024 releases fixed several flaws in clone (CVE-2024-32002, -32004,
+   -32020, -32021 and -32465).
+2. It runs git without a shell, with this command line:
+   `git clone --progress --depth 1 --single-branch --no-tags
+   --no-recurse-submodules -- <url> <folder>`.
+   `--no-recurse-submodules` alone blocks CVE-2024-32002.
+3. It sets `protocol.allow=never`, `protocol.https.allow=always` and
+   `core.hooksPath=/dev/null`.
+4. It sets `GIT_ALLOW_PROTOCOL=https`, `GIT_PROTOCOL_FROM_USER=0` and
+   `GIT_TERMINAL_PROMPT=0`.
+5. It runs git in a process group of its own, for at most 10 minutes. After
+   that time, acu stops the group. It removes the folder, with the host and
+   owner folders that stay empty.
+6. Git writes into a hidden staging folder (`.<name>.acu-partial`). The
+   folder takes the final name only after git succeeds. So a clone that
+   Ctrl-C stopped halfway never opens later as a good one. Ctrl-C stops a
+   running clone's group.
+
+[`research/notes/live-service.md`](research/notes/live-service.md) gives the
+sources for each guard.
+
+## Limits
+
+1. One job runs at a time. acu refuses a second job with status 409; start
+   it again after the first ends.
+2. The studio holds no session token yet. Any process on your computer can
+   call the API, and so can another user on a shared machine. Run the studio
+   only on a computer that you alone use. Issue #42 adds a session secret,
+   as Jupyter uses.
+3. A local user who owns a folder under the root can still swap that
+   folder for a symbolic link in one short window: after acu's last check
+   and before the adapters and the editor take the path (see guard 6). On
+   Windows, the picker takes paths, so the swap can fall anywhere between
+   the check and the use. Limit 2 covers both cases: use the studio only on
+   a computer that you alone use.
+4. `acu serve` checks the `Host` of API calls only. On a loopback address, a
+   page that uses DNS rebinding can read the served map's data and pages.
+   For private code, use `acu studio`, or an address and port that a hostile
+   page cannot guess. Issue #43 tracks a `Host` check for `acu serve`, with
+   an option for forwarded names.
+5. The MCP server at `/mcp` follows the open project: after you open another
+   project or extract again, its tools read the new map. Before a project
+   opens, every tool answers that no project shows yet.
+6. A tour step or region that the code no longer matches fails the check on
+   save. Fix its target, or delete it, then save again.
+7. A save across sections does not happen in one atomic step. Only the
+   regions and the tour go in one write. See "Save and extract again".
+8. Run one studio per `atlas.yaml`. Two servers on one file share no lock.
+   - The revision check stops a studio save after a change by the other
+     server.
+   - An MCP draft in the other server reads the file from disk first, so it
+     starts from the newest text.
+   - A write can still fall between the other server's read and its write.
+     Then the later write replaces the file, and the earlier change gets
+     lost.
+9. Some guards from the research note do not exist yet:
+   `Content-Security-Policy: default-src 'self'`, a random default port, a
+   size cap on a clone, a restricted mode for untrusted code, and
+   `GOTOOLCHAIN=local` for the Go adapter. Issue #44 tracks them.
+10. On Windows, a save writes a new file and renames it over `atlas.yaml`.
+    Another hard link to the old file keeps the old text.
+
+## Later: a hosted service
+
+[`plans/live-service.md`](plans/live-service.md) proposes a hosted service
+that builds maps on each push and turns edits into pull requests.
+[`research/notes/live-service.md`](research/notes/live-service.md) holds the
+research behind it.

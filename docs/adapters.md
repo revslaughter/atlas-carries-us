@@ -26,6 +26,11 @@ The request:
 }
 ```
 
+`root` and `repoRoot` arrive as absolute paths in one form, so `root` starts
+with `repoRoot`. On Windows, they arrive as plain drive paths, such as
+`C:\work\repo`, without the `\\?\` prefix, as long as that form names the
+same folder.
+
 The rules for the reply:
 
 1. Write `version`, `meta`, `containers`, `symbols` and `edges`, and, where

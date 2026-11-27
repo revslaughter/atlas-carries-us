@@ -15,6 +15,7 @@ to run it. Other files hold the details:
 | The adapters and their plugins | [`docs/adapters.md`](docs/adapters.md) |
 | The data format | [`docs/schema.md`](docs/schema.md) |
 | The MCP server for language models | [`docs/mcp.md`](docs/mcp.md) |
+| Set up and edit a map in the browser | [`docs/studio.md`](docs/studio.md) |
 | The workflow and the conventions | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 ## How it works
@@ -120,7 +121,7 @@ The folder, like a release archive, holds `acu`, `acu-adapter-go`,
 | Rust | 1.97.1 | `rust-toolchain.toml` (rustup installs it for you) |
 | Node | 26.13.1 builds the project; 20 or later runs the adapter | `.node-version` |
 | Go | 1.24 or later | `adapters/go/go.mod` |
-| Python | 3.12 or later (3.13.18 in the image) | `.python-version` |
+| Python | 3.12 or later (3.13.17 in the image) | `.python-version` |
 | Rust nightly | `nightly-2026-11-01` | `adapters/rust/src/toolchain.rs` |
 
 You need only the tools of the languages that you map, plus Rust and Node to
@@ -212,6 +213,17 @@ begin with `acu:` and go to standard error.
 `acu` reads a config file, `atlas.yaml`, that you keep beside your code. Every
 relative path in it resolves against the folder that holds it.
 
+### Set up in the browser
+
+`acu studio` writes the config for you. Run it, open
+`http://127.0.0.1:4321/`, and pick a folder or paste an HTTPS address of a
+repository. The studio proposes an `atlas.yaml` from the languages it finds,
+runs the adapters, and opens the map. Then you edit the regions and the tour
+in the browser: record the current view as a step, write its text, and drag
+the steps into order. Each save goes into `atlas.yaml`, with its comments
+kept. [`docs/studio.md`](docs/studio.md) explains each step. The sections
+below describe the file itself.
+
 ### The smallest config
 
 ```yaml
@@ -298,7 +310,7 @@ check when it loads the file.
 
 ## 3. Run it
 
-### The five commands
+### The commands
 
 | Command | What it does |
 | --- | --- |
@@ -307,6 +319,7 @@ check when it loads the file.
 | `acu mcp` | Runs the MCP server over standard input and output, for desktop clients. |
 | `acu build` | Writes a static site (the viewer and the data) to a folder. |
 | `acu check` | Reports problems in the config and the data. It writes nothing. |
+| `acu studio` | Sets up and edits a map in the browser: pick a folder or clone a repository, extract, and edit the regions and the tour ([`docs/studio.md`](docs/studio.md)). |
 
 ### Options
 

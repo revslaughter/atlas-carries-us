@@ -1331,7 +1331,9 @@ function onCanvasKey(e: KeyboardEvent) {
  */
 function onGlobalKey(e: KeyboardEvent) {
   const t = e.target as HTMLElement;
-  if (t.tagName === "INPUT" || t.tagName === "TEXTAREA") return;
+  if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") return;
+  // The editor and the setup screen take their own keys.
+  if (t.closest?.("#editor, #setup")) return;
   if (e.key === "/") {
     e.preventDefault();
     (document.getElementById("q") as HTMLInputElement).focus();

@@ -1,6 +1,8 @@
-//! The live map that `acu serve` and `acu mcp` share: the current atlas.json,
-//! where it came from, the folders that the read tools may see, and the one
-//! path by which a write tool changes atlas.yaml.
+//! The live map that `acu serve`, `acu studio` and `acu mcp` share: the
+//! current atlas.json, where it came from, the folders that the read tools
+//! may see, and the one path by which a write tool or the editor changes
+//! atlas.yaml. [`Live`] holds the map that a server shows now; the studio
+//! swaps in a new one after each extraction.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -79,7 +81,115 @@ pub struct Atlas {
     /// Keeps two writes of this process from editing atlas.yaml at once.
     /// Another process that writes the file at the same time can still
     /// overwrite a draft; the last rename wins.
-    writing: Mutex<()>,
+    writing: Arc<Mutex<()>>,
+    /// True once [`Live::install`] put a newer map on show; a write to this
+    /// map then fails, so no change reaches the file but not the map.
+    retired: std::sync::atomic::AtomicBool,
+}
+
+/// The slot that holds the map a server shows now. `acu serve` and `acu mcp`
+/// fill it once; `acu studio` starts with it empty and fills it again after
+/// each extraction, so every request reads the newest map.
+pub struct Live {
+    /// The map on show, if any.
+    slot: RwLock<Option<Arc<Atlas>>>,
+}
+
+/// What a request gets while the studio holds no map yet.
+pub const NO_PROJECT: &str =
+    "acu: the studio holds no project yet; open one in the browser, then call again";
+
+impl Live {
+    /// Makes a slot that holds one map.
+    pub fn of(atlas: Arc<Atlas>) -> Live {
+        Live {
+            slot: RwLock::new(Some(atlas)),
+        }
+    }
+
+    /// Makes an empty slot.
+    pub fn empty() -> Live {
+        Live {
+            slot: RwLock::new(None),
+        }
+    }
+
+    /// Returns the map on show, or the reason none shows.
+    pub fn get(&self) -> Result<Arc<Atlas>, String> {
+        self.slot
+            .read()
+            .map_err(|_| BROKEN.to_string())?
+            .clone()
+            .ok_or_else(|| NO_PROJECT.to_string())
+    }
+
+    /// Returns the write lock that a new map should share: the lock of the
+    /// map on show, or a new one.
+    pub fn write_lock(&self) -> Arc<Mutex<()>> {
+        self.get()
+            .map(|a| a.write_lock())
+            .unwrap_or_else(|_| Arc::new(Mutex::new(())))
+    }
+
+    /// Puts a new map on show while it holds the write lock, retires the old
+    /// map, and, when `stale` says the file changed since the new map read
+    /// it, applies the file again. So a write lands either before the swap,
+    /// and the new map shows it, or after, on the new map; a write to the
+    /// old map then fails and asks for a retry.
+    pub fn install(&self, atlas: Arc<Atlas>, stale: impl FnOnce() -> bool) -> Result<(), String> {
+        let lock = atlas.write_lock();
+        // A lock that a panic broke still guards; take it, clear the mark,
+        // and go on, so the new map always goes on show and takes saves.
+        let _guard = lock.lock().unwrap_or_else(|p| {
+            lock.clear_poison();
+            p.into_inner()
+        });
+        let old = match self.slot.write() {
+            Ok(mut g) => g.replace(atlas.clone()),
+            Err(p) => p.into_inner().replace(atlas.clone()),
+        };
+        if let Some(old) = old {
+            if !Arc::ptr_eq(&old, &atlas) {
+                old.retired.store(true, Ordering::SeqCst);
+            }
+        }
+        if stale() {
+            atlas.reapply()?;
+        }
+        Ok(())
+    }
+
+    /// Puts a new map on show.
+    pub fn set(&self, atlas: Arc<Atlas>) {
+        // A lock that a panic broke still holds a usable value; replace it.
+        match self.slot.write() {
+            Ok(mut g) => *g = Some(atlas),
+            Err(p) => *p.into_inner() = Some(atlas),
+        }
+    }
+}
+
+/// Names one state of atlas.yaml: a hash of its text. The editor sends it
+/// back with each save, so acu can refuse a save that would overwrite an
+/// edit made meanwhile in another window or in a text editor.
+pub fn revision(text: &str) -> String {
+    // FNV-1a, 64 bits: stable across runs and platforms.
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in text.as_bytes() {
+        h ^= u64::from(*b);
+        h = h.wrapping_mul(0x0100_0000_01b3);
+    }
+    format!("{h:016x}")
+}
+
+/// Why a save failed: the file changed since the editor read it, or the
+/// change itself fails.
+#[derive(Debug)]
+pub enum SaveError {
+    /// atlas.yaml changed since the given revision.
+    Stale(String),
+    /// The change fails the schema, the check or the file system.
+    Failed(String),
 }
 
 /// The result of a write: what acu did, and the warnings of the new map.
@@ -90,6 +200,9 @@ pub struct Written {
     pub warnings: Vec<String>,
     /// How acu edited the file: in place, or by writing a section again.
     pub how: &'static str,
+    /// The revision of the text that acu wrote, taken while acu still held
+    /// the file, so no later writer can slip in between.
+    pub revision: String,
 }
 
 /// Why the write tools stay off under `--read-only`.
@@ -99,8 +212,16 @@ pub const READ_ONLY: &str = "acu runs with --read-only; start it without the fla
 /// other computers can reach.
 pub const REMOTE: &str = "acu listens on an address that other computers can reach; start it with --allow-remote-writes to draft text";
 
+/// What a write answers when atlas.yaml changed on disk while acu checked
+/// the change.
+const CHANGED: &str = "acu: atlas.yaml changed on disk while acu checked the change, so acu wrote nothing; read the file again, then make the change again";
+
+/// What a write to a map that a newer map replaced answers.
+const RETIRED: &str =
+    "acu: a newer map went on show meanwhile; read the file again, then make the change again";
+
 /// The message of a lock that a panic in another thread left broken.
-const BROKEN: &str = "a lock broke after an earlier failure; restart acu";
+const BROKEN: &str = "acu: a lock broke after an earlier failure; restart acu";
 
 impl Atlas {
     /// Opens a map from the adapters' output and a config; the result must
@@ -129,7 +250,8 @@ impl Atlas {
             current: RwLock::new(Arc::new(snap)),
             sources: Sources::new(roots, None),
             read_only,
-            writing: Mutex::new(()),
+            writing: Arc::new(Mutex::new(())),
+            retired: std::sync::atomic::AtomicBool::new(false),
         })
     }
 
@@ -159,8 +281,73 @@ impl Atlas {
             read_only: Some(
                 "acu serves a finished atlas.json, so no config stands behind it; start acu with -c atlas.yaml to draft text",
             ),
-            writing: Mutex::new(()),
+            writing: Arc::new(Mutex::new(())),
+            retired: std::sync::atomic::AtomicBool::new(false),
         })
+    }
+
+    /// The canonical path of atlas.yaml, when a config stands behind the
+    /// map.
+    pub fn config_path(&self) -> Option<&Path> {
+        match &self.origin {
+            Origin::Config { path, .. } => Some(path),
+            Origin::File { .. } => None,
+        }
+    }
+
+    /// Reads atlas.yaml as it stands on disk now, with its revision.
+    pub fn config_text(&self) -> Result<(String, String), String> {
+        let path = self
+            .config_path()
+            .ok_or("acu: no config stands behind this map; start acu with -c atlas.yaml")?;
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("acu: read {}: {e}; check the file", path.display()))?;
+        let rev = revision(&text);
+        Ok((text, rev))
+    }
+
+    /// Changes atlas.yaml as [`Atlas::write`] does, but only while the file
+    /// still has the revision that the editor read. A save over a newer
+    /// file fails with [`SaveError::Stale`] and changes nothing.
+    pub fn save(
+        &self,
+        base: &str,
+        edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
+    ) -> Result<Written, SaveError> {
+        let stale = std::cell::Cell::new(None);
+        let conflict = std::cell::Cell::new(false);
+        let out = self.write_marked(
+            |text| {
+                let now = revision(text);
+                if now != base {
+                    stale.set(Some(now));
+                    return Err("stale".into());
+                }
+                edit(text)
+            },
+            &conflict,
+        );
+        match (out, stale.into_inner()) {
+            (Ok(w), _) => Ok(w),
+            (Err(_), Some(now)) => Err(SaveError::Stale(format!(
+                "acu: atlas.yaml changed on disk since you opened it (now revision {now}); read the file again, then make the change again"
+            ))),
+            // Decided under the lock, by what the write itself saw.
+            (Err(e), None) if conflict.get() => Err(SaveError::Stale(e)),
+            (Err(e), None) => Err(SaveError::Failed(e)),
+        }
+    }
+
+    /// Makes this map share the write lock of another, so a write to the
+    /// old map and a write to this one never run at once.
+    pub fn sharing(mut self, lock: Arc<Mutex<()>>) -> Atlas {
+        self.writing = lock;
+        self
+    }
+
+    /// Returns this map's write lock, for a map that replaces it.
+    pub fn write_lock(&self) -> Arc<Mutex<()>> {
+        self.writing.clone()
     }
 
     /// Reports whether the write tools work.
@@ -204,6 +391,18 @@ impl Atlas {
         &self,
         edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
     ) -> Result<Written, String> {
+        self.write_marked(edit, &std::cell::Cell::new(false))
+    }
+
+    /// Writes as [`Atlas::write`] does, and sets `conflict` when the write
+    /// failed because a newer map replaced this one or the file changed on
+    /// disk meanwhile, so a caller can tell those cases apart without
+    /// reading the message.
+    fn write_marked(
+        &self,
+        edit: impl FnOnce(&str) -> Result<(String, &'static str), String>,
+        conflict: &std::cell::Cell<bool>,
+    ) -> Result<Written, String> {
         if let Some(why) = self.why_read_only() {
             return Err(why.to_string());
         }
@@ -211,6 +410,10 @@ impl Atlas {
             return Err("no config stands behind this map; start acu with -c atlas.yaml".into());
         };
         let _guard = self.writing.lock().map_err(|_| BROKEN.to_string())?;
+        if self.retired.load(Ordering::SeqCst) {
+            conflict.set(true);
+            return Err(RETIRED.into());
+        }
         // Write only the config file itself, and only inside its own folder.
         let target = path
             .canonicalize()
@@ -224,28 +427,53 @@ impl Atlas {
         let text = std::fs::read_to_string(&target)
             .map_err(|e| format!("read {}: {e}; check the file", target.display()))?;
         let (new_text, how) = edit(&text)?;
-        let value: Value = serde_yaml_ng::from_str(&new_text)
+        let value: Value = config::parse_yaml(&new_text)
             .map_err(|e| format!("the new atlas.yaml does not parse, so acu wrote nothing: {e}"))?;
         let problems =
             config::validate(&value, config::CONFIG_SCHEMA).map_err(|e| e.to_string())?;
         if !problems.is_empty() {
             return Err(format!(
-                "the draft breaks the config schema, so acu wrote nothing: {}",
+                "the change breaks the config schema, so acu wrote nothing: {}",
                 problems.join("; ")
             ));
         }
         let cfg: config::Config = serde_json::from_value(value)
-            .map_err(|e| format!("the draft breaks the config, so acu wrote nothing: {e}"))?;
+            .map_err(|e| format!("the change breaks the config, so acu wrote nothing: {e}"))?;
         let snap = assemble_checked(run, &cfg)
-            .map_err(|e| format!("the draft breaks the check, so acu wrote nothing: {e}"))?;
-        write_atomic(&target, &new_text)?;
+            .map_err(|e| format!("the change breaks the check, so acu wrote nothing: {e}"))?;
+        // A text editor may have saved while acu checked the change; then
+        // acu writes nothing, rather than lose that edit.
+        let now = std::fs::read_to_string(&target)
+            .map_err(|e| format!("read {}: {e}; check the file", target.display()))?;
+        if now != text {
+            conflict.set(true);
+            return Err(CHANGED.into());
+        }
+        write_atomic(&target, &new_text).inspect_err(|e| {
+            if e == CHANGED {
+                conflict.set(true);
+            }
+        })?;
         let warnings = snap.warnings.clone();
         *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
         Ok(Written {
             path: target,
             warnings,
             how,
+            revision: revision(&new_text),
         })
+    }
+
+    /// Applies atlas.yaml as it stands on disk to the adapters' output
+    /// again, and shows the result; the caller holds the write lock.
+    fn reapply(&self) -> Result<(), String> {
+        let Origin::Config { path, run } = &self.origin else {
+            return Ok(());
+        };
+        let loaded = config::load(path).map_err(|e| format!("{e:#}"))?;
+        let snap = assemble_checked(run, &loaded.config)?;
+        *self.current.write().map_err(|_| BROKEN.to_string())? = Arc::new(snap);
+        Ok(())
     }
 }
 
@@ -258,8 +486,9 @@ fn assemble_checked(run: &AdapterRun, cfg: &config::Config) -> Result<Snapshot, 
     rep.warnings.extend(check.warnings);
     if !rep.errors.is_empty() {
         return Err(format!(
-            "{} problems: {}",
+            "{} problem{}: {}",
             rep.errors.len(),
+            if rep.errors.len() == 1 { "" } else { "s" },
             rep.errors.join("; ")
         ));
     }
@@ -285,9 +514,12 @@ static DRAFTS: AtomicU64 = AtomicU64::new(0);
 /// Writes a file through a new temporary file beside it, so a reader never
 /// sees half a file. The temporary file gets a name of its own (process ID
 /// and a counter) and opens only when nothing sits at that name, so a
-/// second process or a symbolic link there cannot redirect the write.
+/// second process or a symbolic link there cannot redirect the write. On
+/// Unix, a file with more than one hard link gets its new text in place
+/// instead (see [`write_in_place`]), so every name of it shows the change.
 fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
     let dir = target.parent().unwrap_or(Path::new("."));
+    let old = std::fs::symlink_metadata(target).ok();
     let name = target
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -311,6 +543,11 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
             }
         }
     };
+    // The new file takes the old one's mode before it holds any text, so
+    // text that only its owner may read never sits in a wider file.
+    if let Some(meta) = &old {
+        let _ = std::fs::set_permissions(&tmp, meta.permissions());
+    }
     let done = file
         .write_all(text.as_bytes())
         .and_then(|_| file.sync_all())
@@ -320,8 +557,9 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
         let _ = std::fs::remove_file(&tmp);
         return Err(e);
     }
-    if let Ok(meta) = std::fs::metadata(target) {
-        let _ = std::fs::set_permissions(&tmp, meta.permissions());
+    #[cfg(unix)]
+    if let Some(meta) = old.as_ref().filter(|m| linked(m)) {
+        return write_in_place(target, &tmp, meta, text);
     }
     std::fs::rename(&tmp, target).map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
@@ -329,7 +567,73 @@ fn write_atomic(target: &Path, text: &str) -> Result<(), String> {
             "replace {}: {e}; check that acu may write there",
             target.display()
         )
-    })
+    })?;
+    // Make the new name itself durable.
+    #[cfg(unix)]
+    if let Ok(d) = std::fs::File::open(dir) {
+        let _ = d.sync_all();
+    }
+    Ok(())
+}
+
+/// Reports whether a plain file has more than one hard link. A rename over
+/// such a file would give its name a new file and leave the other names on
+/// the old text.
+#[cfg(unix)]
+fn linked(meta: &std::fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    meta.file_type().is_file() && meta.nlink() > 1
+}
+
+/// Copies the new text into the file itself, so every hard link to it shows
+/// the change, as Vim and Emacs do for such a file. The temporary file
+/// `tmp` already holds the whole text, synced. acu opens the file by name,
+/// checks that it opened the file it checked before (`old`), and only then
+/// changes it. The open follows no link and does not wait, so a link or a
+/// pipe that took the name fails it. A reader during the copy can see part
+/// of the old text. A copy that fails halfway keeps `tmp` and names it, so
+/// the text stays safe.
+#[cfg(unix)]
+fn write_in_place(
+    target: &Path,
+    tmp: &Path,
+    old: &std::fs::Metadata,
+    text: &str,
+) -> Result<(), String> {
+    use rustix::fs::{Mode, OFlags};
+    use std::os::unix::fs::MetadataExt;
+    let flags =
+        OFlags::WRONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::NOCTTY | OFlags::CLOEXEC;
+    let opened = rustix::fs::open(target, flags, Mode::empty())
+        .map(std::fs::File::from)
+        .map_err(std::io::Error::from)
+        .and_then(|f| f.metadata().map(|m| (f, m)));
+    let mut file = match opened {
+        Ok((f, now)) if (now.dev(), now.ino()) == (old.dev(), old.ino()) => f,
+        Ok(_) => {
+            let _ = std::fs::remove_file(tmp);
+            return Err(CHANGED.into());
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(tmp);
+            return Err(format!(
+                "open {}: {e}; check that acu may write there",
+                target.display()
+            ));
+        }
+    };
+    file.write_all(text.as_bytes())
+        .and_then(|_| file.set_len(text.len() as u64))
+        .and_then(|_| file.sync_all())
+        .map_err(|e| {
+            format!(
+                "write {}: {e}; the new text sits in {}, so copy it over by hand",
+                target.display(),
+                tmp.display()
+            )
+        })?;
+    let _ = std::fs::remove_file(tmp);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -411,6 +715,210 @@ tour:\n  - title: Start\n    open: { view: overview }\n    text: Two units.\n  #
         };
         let atlas = Atlas::from_config(&dir.path().join("atlas.yaml"), run, None).unwrap();
         (dir, atlas)
+    }
+
+    #[test]
+    fn a_save_over_a_newer_file_is_refused() {
+        let (dir, atlas) = fixture();
+        let (text, rev) = atlas.config_text().unwrap();
+        assert_eq!(rev, revision(FIXTURE_CONFIG));
+        std::fs::write(
+            dir.path().join("atlas.yaml"),
+            text.replace("Shop", "Shop 2"),
+        )
+        .unwrap();
+        let err = atlas
+            .save(&rev, |t| Ok((t.to_string(), "test")))
+            .err()
+            .unwrap();
+        assert!(matches!(err, SaveError::Stale(_)), "{err:?}");
+        let (_, now) = atlas.config_text().unwrap();
+        let w = atlas
+            .save(&now, |t| Ok((t.replace("Shop 2", "Shop 3"), "test")))
+            .unwrap();
+        assert_eq!(w.how, "test");
+        assert_eq!(w.revision, atlas.config_text().unwrap().1);
+        assert_eq!(atlas.snapshot().unwrap().doc["project"]["name"], "Shop 3");
+        // A change on disk shows after a refresh.
+        let text = std::fs::read_to_string(dir.path().join("atlas.yaml")).unwrap();
+        std::fs::write(
+            dir.path().join("atlas.yaml"),
+            text.replace("Shop 3", "Shop 4"),
+        )
+        .unwrap();
+        let atlas = Arc::new(atlas);
+        Live::empty().install(atlas.clone(), || true).unwrap();
+        assert_eq!(atlas.snapshot().unwrap().doc["project"]["name"], "Shop 4");
+    }
+
+    #[test]
+    fn an_installed_map_retires_the_old_one_and_shows_later_changes() {
+        let (dir, old) = fixture();
+        let old = Arc::new(old);
+        let live = Live::of(old.clone());
+        let run = AdapterRun {
+            merged: fixture_doc(),
+            commit: None,
+            repo_roots: vec![dir.path().to_path_buf()],
+        };
+        let new = Atlas::from_config(&dir.path().join("atlas.yaml"), run, None)
+            .unwrap()
+            .sharing(live.write_lock());
+        let new = Arc::new(new);
+        // A change that lands after the new map read the file.
+        let text = std::fs::read_to_string(dir.path().join("atlas.yaml")).unwrap();
+        std::fs::write(
+            dir.path().join("atlas.yaml"),
+            text.replace("Shop", "Shop 2"),
+        )
+        .unwrap();
+        live.install(new.clone(), || true).unwrap();
+        assert_eq!(new.snapshot().unwrap().doc["project"]["name"], "Shop 2");
+        let err = old.write(|t| Ok((t.to_string(), "test"))).err().unwrap();
+        assert!(err.contains("newer map"), "{err}");
+        let stale = old
+            .save("any", |t| Ok((t.to_string(), "test")))
+            .err()
+            .unwrap();
+        assert!(matches!(stale, SaveError::Stale(_)), "{stale:?}");
+        assert!(new.write(|t| Ok((t.to_string(), "test"))).is_ok());
+    }
+
+    #[test]
+    fn a_broken_lock_still_lets_a_new_map_on_show_and_take_saves() {
+        let (_dir, atlas) = fixture();
+        let atlas = Arc::new(atlas);
+        let lock = atlas.write_lock();
+        let poison = lock.clone();
+        let _ = std::thread::spawn(move || {
+            let _g = poison.lock().unwrap();
+            panic!("break the lock on purpose");
+        })
+        .join();
+        assert!(lock.is_poisoned());
+        let live = Live::empty();
+        live.install(atlas.clone(), || false).unwrap();
+        assert!(!lock.is_poisoned());
+        assert!(atlas.write(|t| Ok((t.to_string(), "test"))).is_ok());
+    }
+
+    #[test]
+    fn a_hand_edit_during_a_save_is_not_lost() {
+        let (dir, atlas) = fixture();
+        let path = dir.path().join("atlas.yaml");
+        let (_, rev) = atlas.config_text().unwrap();
+        let p2 = path.clone();
+        let out = atlas.save(&rev, move |t| {
+            // The person saves in a text editor while acu checks the change.
+            std::fs::write(&p2, t.replace("Two units.", "Edited by hand.")).unwrap();
+            Ok((t.replace("name: Shop", "name: Shop 2"), "test"))
+        });
+        assert!(matches!(out, Err(SaveError::Stale(_))), "{:?}", out.err());
+        let now = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            now.contains("Edited by hand.") && !now.contains("Shop 2"),
+            "{now}"
+        );
+    }
+
+    #[test]
+    fn a_file_with_a_repeated_key_does_not_load() {
+        let (dir, _) = fixture();
+        let path = dir.path().join("atlas.yaml");
+        let text = format!(
+            "{FIXTURE_CONFIG}tour:\n  - title: Only\n    open: {{ view: overview }}\n    text: x\n"
+        );
+        std::fs::write(&path, text).unwrap();
+        assert!(config::load(&path).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_write_keeps_an_owner_only_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("atlas.yaml");
+        std::fs::write(&target, "old\n").unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o600)).unwrap();
+        write_atomic(&target, "new\n").unwrap();
+        let mode = std::fs::metadata(&target).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_write_keeps_a_hard_link() {
+        use std::os::unix::fs::MetadataExt;
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("atlas.yaml");
+        let other = dir.path().join("other.yaml");
+        std::fs::write(&target, "a longer old text\n").unwrap();
+        std::fs::hard_link(&target, &other).unwrap();
+        let ino = std::fs::metadata(&target).unwrap().ino();
+        write_atomic(&target, "new\n").unwrap();
+        // Both names show the new text, which replaced the longer old text.
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "new\n");
+        assert_eq!(std::fs::read_to_string(&other).unwrap(), "new\n");
+        let meta = std::fs::metadata(&target).unwrap();
+        assert_eq!((meta.ino(), meta.nlink()), (ino, 2));
+        let left: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .filter(|n| n.contains("acu-draft"))
+            .collect();
+        assert!(left.is_empty(), "{left:?}");
+        // A file with one name still gets a new file through a rename.
+        std::fs::remove_file(&other).unwrap();
+        write_atomic(&target, "newer\n").unwrap();
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "newer\n");
+        assert_ne!(std::fs::metadata(&target).unwrap().ino(), ino);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_in_place_write_refuses_a_file_that_took_the_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("atlas.yaml");
+        let tmp = dir.path().join("draft");
+        std::fs::write(&target, "old\n").unwrap();
+        let checked = std::fs::metadata(&target).unwrap();
+        // Another file takes the name after acu checked it. The old file
+        // keeps a name, as a linked file does, so its inode stays in use.
+        std::fs::rename(&target, dir.path().join("aside")).unwrap();
+        std::fs::write(&target, "other\n").unwrap();
+        std::fs::write(&tmp, "new\n").unwrap();
+        let err = write_in_place(&target, &tmp, &checked, "new\n").unwrap_err();
+        assert_eq!(err, CHANGED);
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "other\n");
+        assert!(!tmp.exists());
+        // A link or a pipe at the name fails the open at once.
+        std::fs::remove_file(&target).unwrap();
+        std::os::unix::fs::symlink(dir.path().join("aside"), &target).unwrap();
+        std::fs::write(&tmp, "new\n").unwrap();
+        assert!(write_in_place(&target, &tmp, &checked, "new\n").is_err());
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("aside")).unwrap(),
+            "old\n"
+        );
+        std::fs::remove_file(&target).unwrap();
+        let fifo = std::process::Command::new("mkfifo")
+            .arg(&target)
+            .status()
+            .is_ok_and(|s| s.success());
+        if fifo {
+            std::fs::write(&tmp, "new\n").unwrap();
+            assert!(write_in_place(&target, &tmp, &checked, "new\n").is_err());
+        }
+    }
+
+    #[test]
+    fn a_live_slot_starts_empty_and_takes_a_map() {
+        let live = Live::empty();
+        assert_eq!(live.get().err().unwrap(), NO_PROJECT);
+        let (_dir, atlas) = fixture();
+        live.set(Arc::new(atlas));
+        assert!(live.get().unwrap().writable());
     }
 
     #[test]

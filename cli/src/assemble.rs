@@ -134,7 +134,7 @@ fn link_templates(links: &Option<Links>, repo: &Option<String>) -> Option<Value>
 }
 
 /// Compiles a path glob in which `*` never crosses a `/`.
-fn glob(pattern: &str) -> Result<GlobMatcher> {
+pub fn glob(pattern: &str) -> Result<GlobMatcher> {
     Ok(globset::GlobBuilder::new(pattern)
         .literal_separator(true)
         .build()

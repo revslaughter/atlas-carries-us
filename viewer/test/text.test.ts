@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { draftedNote, inlineHTML, inlinePlain, setTextEnv, sourceURL } from "../src/text";
+import { draftedNote, inlineHTML, inlinePlain, setTextEnv, sourceURL, webURL } from "../src/text";
+
+test("only web URLs reach a link", () => {
+  assert.equal(webURL("https://example.com/x"), "https://example.com/x");
+  assert.equal(webURL("HTTP://example.com"), "HTTP://example.com");
+  assert.equal(webURL("javascript:alert(1)"), null);
+  assert.equal(webURL(" data:text/html,x"), null);
+  assert.equal(webURL(null), null);
+});
 
 setTextEnv({
   project: {

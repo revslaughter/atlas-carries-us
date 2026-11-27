@@ -16,16 +16,21 @@
  * This file starts the page: {@link boot} loads the fonts and the data and
  * builds the {@link Model}. app.ts holds the canvas, the camera and the
  * history; scene.ts lays out each view; panel.ts writes the docs panel;
- * tour.ts runs the guided tour. The research behind the design sits in
+ * tour.ts runs the guided tour. Under `acu serve -c` and `acu studio`,
+ * editor.ts edits atlas.yaml and setup.ts picks a project (api.ts talks to
+ * the server). The research behind the design sits in
  * [docs/research/report.md](https://github.com/revslaughter/atlas-carries-us/blob/main/docs/research/report.md).
  *
  * @packageDocumentation
  */
 
+import { loadState } from "./api";
 import { back, debug, fwd, go, start } from "./app";
+import { wireEditor } from "./editor";
 import { Model } from "./model";
 import * as panel from "./panel";
 import { buildSearch, wireSearch } from "./search";
+import { showSetup } from "./setup";
 import { setTextEnv } from "./text";
 import { tour } from "./tour";
 import type { AtlasDoc } from "./types";
@@ -56,9 +61,10 @@ function storedTheme(): string | null {
 
 /**
  * Starts the viewer: sets the theme, waits for the fonts (at most 2.5
- * seconds), loads data/atlas.json, checks its version, builds the
- * {@link Model}, wires the header's buttons, and opens the view that the
- * address names.
+ * seconds), asks the server for its state, shows the setup screen when the
+ * studio holds no project yet, else loads data/atlas.json, checks its
+ * version, builds the {@link Model}, wires the header's buttons and the
+ * editor, and opens the view that the address names.
  */
 async function boot() {
   setTheme(storedTheme());
@@ -90,6 +96,12 @@ async function boot() {
     ]);
   } catch {
     /* fonts fall back to the system */
+  }
+  // Only acu serve and acu studio answer the API; a static site does not.
+  const server = await loadState();
+  if (server?.setup && !server.map) {
+    await showSetup(server);
+    return;
   }
   let doc: AtlasDoc;
   try {
@@ -131,6 +143,7 @@ async function boot() {
   start(M);
   buildSearch();
   wireSearch();
+  if (server) wireEditor(server);
   (window as any).atlas = { model: M, go, tour, debug };
 }
 

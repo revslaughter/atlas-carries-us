@@ -42,6 +42,16 @@
           <button class="btn" id="legendBtn" aria-pressed="true">Legend</button>
           <button class="btn" id="aboutBtn">How to read</button>
           <button class="btn" id="themeBtn">Light theme</button>
+          <button
+            class="btn"
+            id="editBtn"
+            aria-pressed="false"
+            hidden
+            title="Edit the tour, the regions and the project text"
+          >
+            Edit
+          </button>
+          <button class="btn" id="projectsBtn" hidden title="Open or set up another project">Projects</button>
         </div>
       </header>
       <main id="stage">
@@ -57,8 +67,10 @@
         <div id="legend" aria-label="Legend"></div>
         <div id="tour" hidden role="dialog" aria-label="Tour"></div>
         <div id="announce" class="sr" aria-live="polite"></div>
+        <aside id="editor" hidden aria-label="Editor"></aside>
       </main>
       <aside id="panel" aria-label="Documentation"></aside>
+      <section id="setup" hidden role="dialog" aria-modal="true" aria-label="Set up a map"></section>
       <footer id="status">
         <div id="statustext"></div>
         <a

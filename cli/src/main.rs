@@ -6,12 +6,16 @@
 //! 3. `acu serve` runs the viewer locally, with an MCP server at `/mcp`.
 //! 4. `acu mcp` runs the same MCP server over standard input and output.
 //! 5. `acu check` reports config and data problems without writing anything.
+//! 6. `acu studio` serves the viewer with a setup screen and an editor: pick
+//!    a folder or clone a repository, write atlas.yaml, extract, and edit
+//!    the regions and the tour in the browser.
 
 mod adapter;
 mod assemble;
 mod config;
 mod mcp;
 mod site;
+mod studio;
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -80,6 +84,22 @@ enum Cmd {
     Check {
         #[command(flatten)]
         input: Input,
+    },
+    /// Set up and edit a map in the browser: pick a folder or clone a
+    /// repository, extract, and edit regions and the tour.
+    Studio {
+        /// A project folder, or its atlas.yaml, to open at the start.
+        project: Option<PathBuf>,
+        /// Address to listen on; a loopback address only.
+        #[arg(long, default_value = "127.0.0.1:4321")]
+        addr: SocketAddr,
+        /// The folder that the folder picker shows. Default: your home folder.
+        #[arg(long)]
+        root: Option<PathBuf>,
+        /// The folder that receives cloned repositories.
+        /// Default: acu/repos in your cache folder.
+        #[arg(long)]
+        workspace: Option<PathBuf>,
     },
 }
 
@@ -158,7 +178,57 @@ fn run(cli: Cli) -> Result<()> {
                 eprintln!("acu: {addr} lets other computers reach the server, so the MCP write tools stay off; add --allow-remote-writes to turn them on");
             }
             let atlas = Arc::new(open_atlas(&input, &mcp, why)?);
-            tokio::runtime::Runtime::new()?.block_on(site::serve(addr, atlas))
+            let live = Arc::new(mcp::Live::of(atlas));
+            let studio = studio::Studio::new(live, studio::Mode::Serve, addr, None, None);
+            tokio::runtime::Runtime::new()?.block_on(site::serve(Arc::new(studio)))
+        }
+        Cmd::Studio {
+            project,
+            addr,
+            root,
+            workspace,
+        } => {
+            if !addr.ip().is_loopback() {
+                bail!("the studio listens on a loopback address only, such as 127.0.0.1:4321; use acu serve to share a map");
+            }
+            let root = match root.or_else(studio::setup::home) {
+                Some(r) => r
+                    .canonicalize()
+                    .with_context(|| format!("find {}", r.display()))?,
+                None => {
+                    bail!("found no home folder; pass --root with the folder to pick projects from")
+                }
+            };
+            let workspace = workspace
+                .or_else(studio::setup::default_workspace)
+                .context("found no cache folder; pass --workspace with a folder for clones")?;
+            // An absolute workspace lets the picker match the folders of
+            // clones; the first clone creates it.
+            let workspace = std::path::absolute(&workspace)
+                .with_context(|| format!("find {}", workspace.display()))?;
+            let live = Arc::new(mcp::Live::empty());
+            if let Some(p) = project {
+                // Naming the project on the command line counts as trust;
+                // a linked atlas.yaml stays refused, as in the picker.
+                let file = if p.is_dir() { p.join("atlas.yaml") } else { p };
+                if std::fs::symlink_metadata(&file).is_ok_and(|m| m.file_type().is_symlink()) {
+                    bail!(
+                        "{} is a symbolic link; replace it with a file, then start the studio again",
+                        file.display()
+                    );
+                }
+                let loaded = config::load(&file)?;
+                let run = run_adapters(&loaded)?;
+                live.set(Arc::new(mcp::Atlas::from_config(&file, run, None)?));
+            }
+            let studio = studio::Studio::new(
+                live,
+                studio::Mode::Studio,
+                addr,
+                Some(root),
+                Some(workspace),
+            );
+            tokio::runtime::Runtime::new()?.block_on(site::serve(Arc::new(studio)))
         }
         Cmd::Mcp { input, mcp } => {
             let why = mcp.read_only.then_some(mcp::atlas::READ_ONLY);
@@ -282,7 +352,16 @@ fn extract_unchecked(config_path: &Path) -> Result<(Value, assemble::Report)> {
 }
 
 /// Runs each language's adapter with its plugins and merges the documents.
-fn run_adapters(loaded: &config::Loaded) -> Result<AdapterRun> {
+pub fn run_adapters(loaded: &config::Loaded) -> Result<AdapterRun> {
+    run_adapters_with(loaded, &|_| {})
+}
+
+/// Runs the adapters as [`run_adapters`] does, and hands each line of
+/// progress to `progress`: acu's own lines and the adapters' messages.
+pub fn run_adapters_with(
+    loaded: &config::Loaded,
+    progress: &(dyn Fn(&str) + Sync),
+) -> Result<AdapterRun> {
     let cfg = &loaded.config;
     for e in &cfg.entry_points {
         if e.adapter.is_none() && adapter::plugin_adapter(&e.plugin).is_none() {
@@ -311,12 +390,14 @@ fn run_adapters(loaded: &config::Loaded) -> Result<AdapterRun> {
                     == Some(lang.adapter.as_str())
             })
             .collect();
-        eprintln!(
+        let line = format!(
             "acu: running the {} adapter on {}",
             lang.adapter,
             src.root.display()
         );
-        docs.push(adapter::run(lang, &src, &plugins)?);
+        eprintln!("{line}");
+        progress(&line);
+        docs.push(adapter::run(lang, &src, &plugins, progress)?);
     }
     Ok(AdapterRun {
         merged: assemble::merge(docs)?,
@@ -379,5 +460,6 @@ mod tests {
         assert!(Cli::try_parse_from(["acu", "mcp", "--root", "x"]).is_err());
         assert!(Cli::try_parse_from(["acu", "mcp", "-d", "a.json", "--root", "x"]).is_ok());
         assert!(Cli::try_parse_from(["acu", "serve", "--allow-remote-writes"]).is_ok());
+        assert!(Cli::try_parse_from(["acu", "studio", "some/folder", "--root", "/"]).is_ok());
     }
 }
