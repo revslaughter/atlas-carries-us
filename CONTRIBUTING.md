@@ -142,8 +142,8 @@ cargo zigbuild --release --locked --target aarch64-apple-darwin -p atlas-carries
 | Viewer | The TypeScript type check, unit tests (including the language-word test), and the build. |
 | `acu` and the Rust adapter | `cargo fmt`, `cargo clippy` with warnings as errors, the tests (for the Rust adapter: golden file, schema validation, named facts), and a release build of the workspace. |
 | End to end | For each example: `acu extract`, the count snapshot, `acu build`, and the smoke test in both themes. |
-| Studio | `tests/e2e/studio.mjs`: sets up a fixture project in the browser, extracts, records and reorders tour steps, edits a region, and checks the API's guards ([`docs/studio.md`](docs/studio.md)). |
-| MCP server | `tests/e2e/mcp.mjs`: a scripted client calls every MCP tool on chi and Cobra, then drafts a tour step over HTTP and checks the viewer's "Machine-drafted" label ([`docs/mcp.md`](docs/mcp.md)). |
+| Studio | `tests/e2e/studio.mjs`: sets up a fixture project in the browser, extracts, records and reorders tour steps, edits a region, and checks the API's guards. The token checks cover a call without the token (401), a wrong cookie, another port's cookie, a working Bearer header, the studio's data and `/mcp`, the 303 trade with its exact `Set-Cookie`, and the message on a page without the token ([`docs/studio.md`](docs/studio.md)). |
+| MCP server | `tests/e2e/mcp.mjs`: a scripted client calls every MCP tool on chi and Cobra. It then reads the token from `acu serve`, checks that a client without it gets 401, drafts a tour step over HTTP with the Bearer header, and checks the viewer's "Machine-drafted" label ([`docs/mcp.md`](docs/mcp.md)). |
 | This project's map | `acu extract -c atlas.yaml`, the doc check (`tests/e2e/docs.mjs`), `acu build`, and the smoke test in both themes. |
 
 ## 4. Conventions that hold everywhere

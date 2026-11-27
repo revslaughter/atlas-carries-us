@@ -62,7 +62,10 @@ docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.
 
 1. The image runs `acu` in `/work`. Mount your project there.
 2. Give `--addr 0.0.0.0:4321` so that the port reaches the host.
-3. Open <http://127.0.0.1:4321/>.
+3. Open <http://127.0.0.1:4321/>. On an address that other computers can
+   reach, the map's pages answer without a token. The API and the MCP server
+   still need the session token that `acu` prints
+   ([`docs/studio.md`](docs/studio.md#the-session-token)).
 
 ### Route B: programs for your own system
 
@@ -215,8 +218,8 @@ relative path in it resolves against the folder that holds it.
 
 ### Set up in the browser
 
-`acu studio` writes the config for you. Run it, open
-`http://127.0.0.1:4321/`, and pick a folder or paste an HTTPS address of a
+`acu studio` writes the config for you. Run it, open the address that it
+prints, such as `http://127.0.0.1:4321/?token=<token>`, and pick a folder or paste an HTTPS address of a
 repository. The studio proposes an `atlas.yaml` from the languages it finds,
 runs the adapters, and opens the map. Then you edit the regions and the tour
 in the browser: record the current view as a step, write its text, and drag
@@ -335,11 +338,21 @@ check when it loads the file.
 | `serve`, `mcp` | `--read-only` | off | Turn off the MCP tools that write `atlas.yaml`. |
 | `serve`, `mcp` | `--root <folder>` | current folder | With `-d`: the mapped repository, where the MCP tool `read_source` reads files. |
 | `serve` | `--allow-remote-writes` | off | Let the MCP write tools work on an address that other computers can reach. |
+| `serve` | `--allow-host <name[:port]>` | none | On a loopback address, also show the map's pages and data to this forwarded name, such as `localhost:9000` behind `ssh -L`, or `<codespace>-4321.app.github.dev` in GitHub Codespaces. May repeat. The API and MCP keep their own names. |
+
+`acu serve` and `acu studio` print an address that holds a session token,
+such as `http://127.0.0.1:4321/?token=<token>`. Open that address; the API
+and the MCP server answer only requests that carry the token. The
+environment variable `ACU_TOKEN` fixes the token, so that it stays the same
+across restarts. [`docs/studio.md`](docs/studio.md#the-session-token)
+explains the token, and [`docs/mcp.md`](docs/mcp.md#connect-a-client) shows
+how an MCP client sends it.
 
 ### Common tasks
 
 1. Look at your map. Run this in the folder that holds `atlas.yaml`, then open
-   <http://127.0.0.1:4321/>:
+   the address that it prints, such as
+   `http://127.0.0.1:4321/?token=<token>`:
 
    ```sh
    acu serve
@@ -422,6 +435,8 @@ The examples need no setup of your own.
 | `breaks the config schema` | The message lists each problem and its place in `atlas.yaml`. |
 | A tour step points at nothing | The code moved. Fix the step's `name`, `path` or `id`. |
 | The port stays busy | Give `acu serve --addr 127.0.0.1:<another port>`. |
+| `the request lacks the session token` | Open the address with `?token=` that `acu` printed. An MCP client sends `Authorization: Bearer <token>`. |
+| `the server answers only requests for its own address` | Open `127.0.0.1` or `localhost` with the port that `acu` printed. For a forwarded name, start `acu serve` again with `--allow-host <name:port>`. |
 
 ## Develop
 
