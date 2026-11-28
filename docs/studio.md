@@ -51,6 +51,11 @@ acu studio --workspace ~/clones    # clone repositories into ~/clones
 `acu studio` refuses an address that other computers can reach. To share a
 finished map, use `acu build` or `acu serve -d`.
 
+A project that you name on the command line opens and extracts at the start.
+The studio asks no trust question for it: the name on the command line counts
+as your trust. acu refuses an `atlas.yaml` that forms a symbolic link, as the
+folder picker does.
+
 ## The session token
 
 `acu studio` and `acu serve` make a session token at start. Every call to
@@ -191,10 +196,6 @@ acu serve -c atlas.yaml --allow-host <codespace>-4321.app.github.dev
 If the page answers 403, the message names the `Host` that acu received.
 Give that value instead.
 
-A forward may rewrite the printed address to its own name. acu then drops
-`?token=` from the address with a 303 and sets no cookie, and the map
-shows. The editor needs the server's own address.
-
 1. Give the name as the browser sends it in `Host`, with or without a
    port: `localhost:9000`, `myhost.example:8080`, `[fd00::1]:4321`,
    `[fd00::1]` or `x-4321.app.github.dev`. `--help` shows the form as
@@ -218,10 +219,9 @@ shows. The editor needs the server's own address.
    --allow-host changes nothing; drop it, or listen on a loopback address".
 7. `acu studio` takes no `--allow-host`.
 
-A project that you name on the command line opens and extracts at the start.
-The studio asks no trust question for it: the name on the command line counts
-as your trust. acu refuses an `atlas.yaml` that forms a symbolic link, as the
-folder picker does.
+A forward may rewrite the printed address to its own name. acu then drops
+`?token=` from the address with a 303 and sets no cookie, and the map
+shows. The editor needs the server's own address.
 
 ## Set up a project
 
