@@ -239,9 +239,10 @@ async fn route(req: Request, studio: Arc<Studio>) -> Response {
 
 /// Exchanges a `?token=` in a page address for the session cookie: a good
 /// token gets the cookie and a redirect to the address without it; a wrong
-/// one gets 401. A forwarded name gets 403, because its API refuses every
-/// call, and the token should not pass through a forward. An address
-/// without the token gets `None`.
+/// one gets 401. A name other than the server's own (a forward, or a LAN
+/// name on `0.0.0.0`) gets the redirect without a cookie and without a
+/// look at the token: its API refuses every call, and the map still shows
+/// there. An address without the token gets `None`.
 fn exchange_token(
     studio: &Studio,
     path: &str,
@@ -250,13 +251,8 @@ fn exchange_token(
 ) -> Option<Response> {
     let (token, rest) = crate::secret::take_token(query?);
     let token = token?;
-    if studio.check_host(headers).is_err() {
-        return Some(json_reply(studio::fail(
-            StatusCode::FORBIDDEN,
-            "acu takes the token only at the server's own address; open the address that acu printed, on the computer that runs acu",
-        )));
-    }
-    if !studio.secret.matches(&token) {
+    let own = studio.check_host(headers).is_ok();
+    if own && !studio.secret.matches(&token) {
         return Some(json_reply(studio::fail(
             StatusCode::UNAUTHORIZED,
             "the address holds a wrong or old token; open the address that acu printed last",
@@ -274,10 +270,7 @@ fn exchange_token(
     } else {
         format!("{path}?{rest}")
     };
-    let (Ok(loc), Ok(cookie)) = (
-        header::HeaderValue::from_str(&to),
-        header::HeaderValue::from_str(&studio.secret.set_cookie(studio.addr().port())),
-    ) else {
+    let Ok(loc) = header::HeaderValue::from_str(&to) else {
         return Some(json_reply(studio::fail(
             StatusCode::BAD_REQUEST,
             "the address holds characters that acu cannot repeat in a redirect; open the address that acu printed",
@@ -285,7 +278,13 @@ fn exchange_token(
     };
     let mut r = reply(StatusCode::SEE_OTHER, "text/plain", Vec::new());
     r.headers_mut().insert(header::LOCATION, loc);
-    r.headers_mut().insert(header::SET_COOKIE, cookie);
+    if own {
+        if let Ok(cookie) =
+            header::HeaderValue::from_str(&studio.secret.set_cookie(studio.addr().port()))
+        {
+            r.headers_mut().insert(header::SET_COOKIE, cookie);
+        }
+    }
     Some(r)
 }
 
@@ -500,9 +499,20 @@ mod tests {
         // A forwarded name gets neither mark, and takes no token.
         let page = page_text(get(s.clone(), "fwd.example:9999", "/", false).await).await;
         assert!(!page.contains("acu-api"));
-        let r = get(s, "fwd.example:9999", &format!("/?token={TEST}"), false).await;
-        assert_eq!(r.status(), StatusCode::FORBIDDEN);
+        // A forwarded name drops the token from the address and sets no
+        // cookie, whatever the token; the map then shows without it.
+        let r = get(
+            s.clone(),
+            "fwd.example:9999",
+            &format!("/?a=1&token={TEST}"),
+            false,
+        )
+        .await;
+        assert_eq!(r.status(), StatusCode::SEE_OTHER);
+        assert_eq!(r.headers()[header::LOCATION], "/?a=1");
         assert!(r.headers().get(header::SET_COOKIE).is_none());
+        let r = get(s, "fwd.example:9999", "/?token=wrong", false).await;
+        assert_eq!(r.status(), StatusCode::SEE_OTHER);
         // Without writes, acu serve gives no hint: no editor to miss.
         let ro = server(studio::Mode::Serve, "127.0.0.1:4321");
         let page = page_text(get(ro, "127.0.0.1:4321", "/", false).await).await;

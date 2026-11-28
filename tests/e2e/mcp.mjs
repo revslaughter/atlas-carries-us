@@ -397,8 +397,9 @@ async function httpSession(name, child, addr) {
     calls.join("\n"),
   );
   await page.goto(`http://${addr}/?token=${token}`);
-  check(await page.isHidden("#tokenNote"), `${name} over HTTP: with the token, the note stays hidden`);
   await page.waitForFunction(() => window.atlas, null, { timeout: 15000 });
+  check(await page.isHidden("#tokenNote"), `${name} over HTTP: with the token, the note stays hidden`);
+  check(await page.isVisible("#editBtn"), `${name} over HTTP: with the token, the Edit button shows`);
   await page.click("#tourBtn");
   await page.waitForTimeout(300);
   const card = (await page.locator("#tour").textContent()) ?? "";

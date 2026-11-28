@@ -94,52 +94,54 @@ server, for example to open a folder with `trust: true`.
      cookies apart.
 7. A wrong or old token in the address answers 401 with "acu: the address
    holds a wrong or old token; open the address that acu printed last". No
-   cookie follows. A token in the address of a forwarded name answers 403
-   with "acu: acu takes the token only at the server's own address; open
-   the address that acu printed, on the computer that runs acu". The API
-   refuses that name anyway, and the token should not pass through a
-   forward.
-8. A call to `/api/` must carry the cookie or the header
+   cookie follows.
+8. A token in the address at a name other than the server's own, such as
+   a forwarded name or a LAN name on `0.0.0.0`, gets the 303 to the
+   address without the token, and no cookie. acu does not compare the
+   token there. The API refuses that name anyway, and the map shows
+   without the token.
+9. A call to `/api/` must carry the cookie or the header
    `Authorization: Bearer <token>`. The token itself in the cookie does not
    count. A call without either answers 401 with "acu: the request lacks
    the session token; open the address with ?token= that acu printed, or
    send the header Authorization: Bearer <token>".
-9. A call to `/mcp` must carry `Authorization: Bearer <token>`. The cookie
-   does not open `/mcp`. So a page in the browser never reaches the MCP
-   tools.
-10. A call to `/mcp` without a good bearer token answers 401 with "acu: the
+10. A call to `/mcp` must carry `Authorization: Bearer <token>`. The cookie
+    does not open `/mcp`. So a page in the browser never reaches the MCP
+    tools.
+11. A call to `/mcp` without a good bearer token answers 401 with "acu: the
     MCP request lacks the session token; send the header Authorization:
     Bearer <token> with the token that acu printed".
     - The answer carries `WWW-Authenticate: Bearer realm="acu"`.
     - A sent but wrong token adds `, error="invalid_token"`.
     - The header names no sign-in server. A client that looks for one
       under `/.well-known/oauth-*` gets 404.
-11. acu compares the token and the cookie value in a time that does not
+12. acu compares the token and the cookie value in a time that does not
     depend on where they differ.
-12. The viewer's page carries the API mark
+13. The viewer's page carries the API mark
     (`<meta name="acu-api" content="1" />`) only when the request names the
     server's own `Host` and carries the cookie or the token. A page without
     the mark never calls the API, so the browser logs no refused request.
-13. In `acu studio`, `/data/atlas.json` needs the cookie too, because it
+14. In `acu studio`, `/data/atlas.json` needs the cookie too, because it
     holds the open project. Without it, the studio page shows "acu refused
     the map data: this page lacks the session token, or holds an old one.
     Open the address that acu printed last, with its ?token= part. If this
     message stays, let the browser keep cookies for this address."
-14. `acu serve` keeps its pages and `/data/atlas.json` open without a
+15. `acu serve` keeps its pages and `/data/atlas.json` open without a
     token, so that it can share a map. With writes on, a page at the
     server's own `Host` without the cookie carries a second mark,
     `<meta name="acu-api" content="token" />`. Its viewer calls no API.
     In place of the Edit button, it shows "Editor off: this page lacks the
-    session token. Open the address that acu printed." `acu serve` with
+    session token. Open the address that acu printed. If this note stays,
+    let the browser keep cookies for this address." `acu serve` with
     writes off shows no note, because it has no editor.
-15. After acu restarts, the old cookie no longer counts. A call from an
+16. After acu restarts, the old cookie no longer counts. A call from an
     open editor then answers 401, and the editor shows "acu: the session
     ended, because acu restarted or the browser dropped the cookie. Keep
     this tab open: open the address that acu printed in a new tab, then
     come back here and try again." The editor keeps the text that you have
     not saved. The new tab sets the new cookie under the same name, so the
     old tab sends it too. The revision check of a save still applies.
-16. On a forwarded name (see `--allow-host` below), the map and its data
+17. On a forwarded name (see `--allow-host` below), the map and its data
     show, but the editor does not. For the editor, forward the same port to
     the same name, such as `ssh -L 4321:127.0.0.1:4321 host`, and open the
     printed address.
@@ -188,6 +190,10 @@ acu serve -c atlas.yaml --allow-host <codespace>-4321.app.github.dev
 
 If the page answers 403, the message names the `Host` that acu received.
 Give that value instead.
+
+A forward may rewrite the printed address to its own name. acu then drops
+`?token=` from the address with a 303 and sets no cookie, and the map
+shows. The editor needs the server's own address.
 
 1. Give the name as the browser sends it in `Host`, with or without a
    port: `localhost:9000`, `myhost.example:8080`, `[fd00::1]:4321`,
@@ -486,7 +492,7 @@ the text names the next step.
 | 303 | A page address with a good `?token=`: the answer sets the cookie and sends the browser to the address without the token. Pages only, never the API. |
 | 400 | The body lacks a field or holds the wrong shape; or a token exchange cannot build its redirect. |
 | 401 | The call lacks the session token, or carries a wrong one; or a page address holds a wrong or old `?token=`. |
-| 403 | The `Host` or another guard refused the request (two `Host` headers count as none); a `?token=` came to a forwarded name; writes stay off; the folder lies outside the root and the workspace; acu cannot read the folder; the `atlas.yaml` forms a symbolic link; the clone target passes through a link; or a setup call came to `acu serve`. |
+| 403 | The `Host` or another guard refused the request (two `Host` headers count as none); writes stay off; the folder lies outside the root and the workspace; acu cannot read the folder; the `atlas.yaml` forms a symbolic link; the clone target passes through a link; or a setup call came to `acu serve`. |
 | 404 | No such call, folder or file; `GET /data/atlas.json` before a project opens; or `/api/open` without `config` on a folder that holds no `atlas.yaml`. |
 | 409 | The file changed since the editor read it, no project shows yet, a job runs already (a save fails at once, too), or `atlas.yaml` exists already. |
 | 413 | The body exceeds 4 MB. |
