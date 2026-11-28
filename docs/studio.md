@@ -15,7 +15,9 @@ write `atlas.yaml` by hand. The studio does these jobs:
 `acu serve -c atlas.yaml` offers the same editor for one project, while its
 write tools work (see [`mcp.md`](mcp.md#start-the-server)). The editor works
 only in a browser that reaches acu through a loopback name, such as
-`127.0.0.1` or `localhost`. A browser on another computer never sees it.
+`127.0.0.1` or `localhost`. The browser also needs the session token from
+the address that acu prints. A browser on another computer sees the editor
+only through a forward that keeps the name and the port, such as `ssh -L`.
 `acu serve -d` serves a finished `atlas.json`. It has no config, so the
 editor stays off.
 
@@ -33,9 +35,11 @@ acu studio --root ~/code           # show only ~/code in the folder picker
 acu studio --workspace ~/clones    # clone repositories into ~/clones
 ```
 
-1. Run the command. It prints the address, by default
-   `http://127.0.0.1:4321/`.
-2. Open the address in a browser.
+1. Run the command. It prints the address with a session token, by
+   default `http://127.0.0.1:4321/?token=<token>`.
+2. Open that whole address in a browser. acu exchanges the token for a
+   cookie. Then it drops the token from the address bar (see
+   [The session token](#the-session-token)).
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -51,6 +55,173 @@ A project that you name on the command line opens and extracts at the start.
 The studio asks no trust question for it: the name on the command line counts
 as your trust. acu refuses an `atlas.yaml` that forms a symbolic link, as the
 folder picker does.
+
+## The session token
+
+`acu studio` and `acu serve` make a session token at start. Every call to
+the API under `/api/` and to the MCP server at `/mcp` must carry it. So
+another process or another user on the computer cannot send calls to the
+server, for example to open a folder with `trust: true`.
+
+1. acu makes the token from 32 random bytes of the operating system, and
+   writes it as 64 hex digits.
+2. The environment variable `ACU_TOKEN` fixes the token instead. It takes
+   32 to 512 characters, each a letter, a digit, `-`, `.`, `_` or `~`. An
+   empty value counts as unset. Any other value stops acu at start, and the
+   message says how to fix it. A fixed token lets an MCP client's config
+   work after a restart.
+3. Every acu command reads `ACU_TOKEN` at start and removes it from its own
+   environment. So the adapters, build scripts and git that acu runs never
+   inherit the token.
+4. acu prints the address with the token. A second line names the header
+   for MCP clients. For `acu serve` on a loopback address, a third line
+   names the `Host` rule (see
+   [Forwarded names](#forwarded-names-in-acu-serve)):
+
+   ```text
+   acu: serving the studio at http://127.0.0.1:4321/?token=<token> and MCP at http://127.0.0.1:4321/mcp, no project open yet  (Ctrl-C stops)
+   acu: open the address above, with its token; an MCP client sends the header "Authorization: Bearer <token>"; for an MCP client's config, ACU_TOKEN fixes the token across restarts
+   ```
+
+5. A page address with a good `?token=` answers 303. The answer sends the
+   browser to the same path without the token. Other parts of the query
+   stay. acu reads the value percent-decoded. When the address holds
+   `token` more than once, the last one counts.
+6. The 303 sets this cookie:
+   `acu-token-<port>=<cookie value>; Path=/; HttpOnly; SameSite=Lax`.
+   - The cookie value differs from the token. acu makes it from 32 more
+     random bytes at each start, and writes it as 64 hex digits.
+   - The cookie carries no expiry, so it lasts for the browser session. A
+     browser that restores its session at start may keep it longer. No
+     script can read it.
+   - The name holds the port, because a browser sends a cookie of
+     `127.0.0.1` to every port. So two servers on one computer keep their
+     cookies apart.
+7. A wrong or old token in the address answers 401 with "acu: the address
+   holds a wrong or old token; open the address that acu printed last". No
+   cookie follows.
+8. A token in the address at a name other than the server's own, such as
+   a forwarded name or a LAN name on `0.0.0.0`, gets the 303 to the
+   address without the token, and no cookie. acu does not compare the
+   token there. The API refuses that name anyway, and the map shows
+   without the token.
+9. A call to `/api/` must carry the cookie or the header
+   `Authorization: Bearer <token>`. The token itself in the cookie does not
+   count. A call without either answers 401 with "acu: the request lacks
+   the session token; open the address with ?token= that acu printed, or
+   send the header Authorization: Bearer <token>".
+10. A call to `/mcp` must carry `Authorization: Bearer <token>`. The cookie
+    does not open `/mcp`. So a page in the browser never reaches the MCP
+    tools.
+11. A call to `/mcp` without a good bearer token answers 401 with "acu: the
+    MCP request lacks the session token; send the header Authorization:
+    Bearer <token> with the token that acu printed".
+    - The answer carries `WWW-Authenticate: Bearer realm="acu"`.
+    - A sent but wrong token adds `, error="invalid_token"`.
+    - The header names no sign-in server. A client that looks for one
+      under `/.well-known/oauth-*` gets 404.
+12. acu compares the token and the cookie value in a time that does not
+    depend on where they differ.
+13. The viewer's page carries the API mark
+    (`<meta name="acu-api" content="1" />`) only when the request names the
+    server's own `Host` and carries the cookie or the token. A page without
+    the mark never calls the API, so the browser logs no refused request.
+14. In `acu studio`, `/data/atlas.json` needs the cookie too, because it
+    holds the open project. Without it, the studio page shows "acu refused
+    the map data: this page lacks the session token, or holds an old one.
+    Open the address that acu printed last, with its ?token= part. If this
+    message stays, let the browser keep cookies for this address."
+15. `acu serve` keeps its pages and `/data/atlas.json` open without a
+    token, so that it can share a map. With writes on, a page at the
+    server's own `Host` without the cookie carries a second mark,
+    `<meta name="acu-api" content="token" />`. Its viewer calls no API.
+    In place of the Edit button, it shows "Editor off: this page lacks the
+    session token. Open the address that acu printed. If this note stays,
+    let the browser keep cookies for this address." `acu serve` with
+    writes off shows no note, because it has no editor.
+16. After acu restarts, the old cookie no longer counts. A call from an
+    open editor then answers 401, and the editor shows "acu: the session
+    ended, because acu restarted or the browser dropped the cookie. Keep
+    this tab open: open the address that acu printed in a new tab, then
+    come back here and try again." The editor keeps the text that you have
+    not saved. The new tab sets the new cookie under the same name, so the
+    old tab sends it too. The revision check of a save still applies.
+17. On a forwarded name (see `--allow-host` below), the map and its data
+    show, but the editor does not. For the editor, forward the same port to
+    the same name, such as `ssh -L 4321:127.0.0.1:4321 host`, and open the
+    printed address.
+
+`acu mcp` speaks over standard input and output and needs no token.
+[`mcp.md`](mcp.md#connect-a-client) shows how an MCP client sends the
+header.
+
+## Forwarded names in acu serve
+
+On a loopback address, `acu serve` answers only a `Host` that names the
+server itself: `127.0.0.1`, `localhost` or `[::1]` with its port, or the
+address that it listens on. So a web page that points a foreign name at your
+computer (DNS rebinding) reads neither the pages nor the data.
+
+Another `Host` gets 403 with "acu: the server answers only requests for its
+own address; open it at the address that acu printed, or start acu serve
+again with --allow-host <the Host received> for a forwarded name". The
+message names the `Host` that acu received. Copy that value into
+`--allow-host`. acu prints the rule at start:
+
+```text
+acu: pages answer only this server's own names on port 4321; for a forwarded name, start acu serve again with --allow-host <name[:port]>
+```
+
+A forward that keeps the name and the port needs nothing more. For example,
+`ssh -L 4321:127.0.0.1:4321 host` lets the browser on your computer open
+`http://127.0.0.1:4321/?token=<token>`, editor included.
+
+A forward that changes the port or the name needs `--allow-host`:
+
+```sh
+# On the remote computer:
+acu serve -c atlas.yaml --allow-host localhost:9000
+# On your computer:
+ssh -L 9000:127.0.0.1:4321 host
+```
+
+GitHub Codespaces forwards a port over HTTPS. It may send its forwarded
+name as the `Host`, such as `<codespace>-4321.app.github.dev`. If so, give
+that name without a port:
+
+```sh
+acu serve -c atlas.yaml --allow-host <codespace>-4321.app.github.dev
+```
+
+If the page answers 403, the message names the `Host` that acu received.
+Give that value instead.
+
+1. Give the name as the browser sends it in `Host`, with or without a
+   port: `localhost:9000`, `myhost.example:8080`, `[fd00::1]:4321`,
+   `[fd00::1]` or `x-4321.app.github.dev`. `--help` shows the form as
+   `NAME[:PORT]`.
+2. acu writes the value in lower case. A name may hold letters, digits,
+   `-`, `.` and `_`. acu writes an IPv4-mapped address in hex groups, as a
+   browser does, such as `[::ffff:a00:1]`. It refuses port 0, a port that
+   holds anything but digits, and characters that no host name holds.
+3. A value with a port matches a `Host` with that port. A browser leaves out
+   the default port, 80 or 443. So a value that ends in `:80` or `:443` also
+   matches a `Host` of the same name without a port. A value without a port
+   matches only a `Host` without a port.
+4. The option may repeat. acu sorts the names, drops repeats, and lists
+   them in the start-up line.
+5. A forwarded name reaches the pages and `/data/atlas.json` only. The API
+   and `/mcp` keep their own names. So the editor and MCP clients work only
+   through the server's own names.
+6. On an address that other computers can reach, such as `0.0.0.0:4321`,
+   the pages and the data answer any name, and `--allow-host` changes
+   nothing. acu then says: "acu: 0.0.0.0:4321 answers any name, so
+   --allow-host changes nothing; drop it, or listen on a loopback address".
+7. `acu studio` takes no `--allow-host`.
+
+A forward may rewrite the printed address to its own name. acu then drops
+`?token=` from the address with a 303 and sets no cookie, and the map
+shows. The editor needs the server's own address.
 
 ## Set up a project
 
@@ -292,7 +463,9 @@ In a list save, acu keeps comments by these rules:
 ## The API
 
 The editor talks to acu through a JSON API under `/api/`. The tests and other
-local tools may use it too.
+local tools may use it too. Each call needs the session token, in the
+cookie or as `Authorization: Bearer <token>` (see
+[The session token](#the-session-token)).
 
 | Call | Body | Answer |
 | --- | --- | --- |
@@ -316,8 +489,10 @@ the text names the next step.
 | --- | --- |
 | 200 | Done. |
 | 202 | A job started; read `GET /api/job` for its progress. |
-| 400 | The body lacks a field or holds the wrong shape. |
-| 403 | The guards refused the request; writes stay off; the folder lies outside the root and the workspace; acu cannot read the folder; the `atlas.yaml` forms a symbolic link; the clone target passes through a link; or a setup call came to `acu serve`. |
+| 303 | A page address with a good `?token=`: the answer sets the cookie and sends the browser to the address without the token. Pages only, never the API. |
+| 400 | The body lacks a field or holds the wrong shape; or a token exchange cannot build its redirect. |
+| 401 | The call lacks the session token, or carries a wrong one; or a page address holds a wrong or old `?token=`. |
+| 403 | The `Host` or another guard refused the request (two `Host` headers count as none); writes stay off; the folder lies outside the root and the workspace; acu cannot read the folder; the `atlas.yaml` forms a symbolic link; the clone target passes through a link; or a setup call came to `acu serve`. |
 | 404 | No such call, folder or file; `GET /data/atlas.json` before a project opens; or `/api/open` without `config` on a folder that holds no `atlas.yaml`. |
 | 409 | The file changed since the editor read it, no project shows yet, a job runs already (a save fails at once, too), or `atlas.yaml` exists already. |
 | 413 | The body exceeds 4 MB. |
@@ -328,18 +503,38 @@ the text names the next step.
 
 ## Security
 
-The studio listens on a loopback address, but a web page in your browser
-could still try to reach it. These guards stop that:
+The studio listens on a loopback address, but a web page in your browser,
+or another process on your computer, could still try to reach it. These
+guards stop that.
+
+For a call to `/api/` or `/mcp`, acu checks them in this order: the `Host`,
+then the `Origin`, then the token, then the rest. So a request that names
+another site in `Origin` gets 403, with or without a token. A preflight
+from another site gets 403 too.
 
 1. **Host.** The API answers only a `Host` of `127.0.0.1:<port>`,
    `localhost:<port>`, `[::1]:<port>`, or the address that acu listens on,
-   with the port that the system gave (so `--addr 127.0.0.1:0` works). In
-   `acu studio` the rule covers the viewer's pages, the map's data and the
-   API. `acu serve` applies it to the API only, so a map behind a forwarded
-   port still shows. This blocks DNS rebinding. acu checks the guards before
-   it reads a request's body.
+   with the port that the system gave (so `--addr 127.0.0.1:0` works).
+   Another `Host` gets 403. This blocks DNS rebinding. acu checks the
+   guards before it reads a request's body.
+   - In `acu studio`, the rule covers the viewer's pages, the map's data
+     and the API.
+   - In `acu serve` on a loopback address, the rule also covers every page
+     and the data. `--allow-host <name[:port]>` admits a forwarded name for
+     the pages and the data (see
+     [Forwarded names](#forwarded-names-in-acu-serve)). The API and `/mcp`
+     keep their own names. `/mcp` and the API share one list of names.
+   - In `acu serve` on an address that other computers can reach, the pages
+     and the data answer any name. The API keeps the rule.
 2. **Origin.** A request that sends `Origin` must name one of those hosts.
-3. **Changing calls.** Every POST needs all of these:
+   Another `Origin` gets 403.
+3. **Token.** Every API call needs the cookie or
+   `Authorization: Bearer <token>`. In `acu studio`, the map's data needs
+   the cookie or the token too. Every call to `/mcp` needs
+   `Authorization: Bearer <token>`. The cookie does not count there. A call
+   without a good token gets 401. See
+   [The session token](#the-session-token).
+4. **Changing calls.** Every POST needs all of these:
    - the header `X-Acu-Studio: 1`;
    - the content type `application/json`, with parameters such as `charset`
      allowed;
@@ -350,15 +545,23 @@ could still try to reach it. These guards stop that:
    A page on another site cannot set the custom header without a preflight.
    acu refuses every cross-site preflight (`OPTIONS`) with 403, and never
    sends an `Access-Control-Allow-*` header.
-4. **Responses.** The viewer's pages and the API send
+5. **Responses.** The viewer's pages and the API send
    `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and
    `Content-Security-Policy: frame-ancestors 'none'`, so no other site can
    frame the studio.
-5. **MCP.** `/mcp` answers through the MCP library. The library checks
-   `Host` and `Origin` itself, with its own list, which also accepts
-   `http://[::1]:<port>`. It sends none of the headers in guard 4. The
-   custom-header and Fetch-Metadata rules of guard 3 do not apply to it.
-6. **Folder picker.** acu resolves each path (`..` and symbolic links
+6. **MCP.** `/mcp` answers through the MCP library.
+   - Before the library reads the request, acu checks the `Host` and the
+     `Origin` (403 each, without `WWW-Authenticate`), then the bearer token
+     (401). This order matches the API's.
+   - The library then checks `Host` and `Origin` again, with the same list
+     as guard 1. Each name in it holds the port: `localhost:<port>`,
+     `127.0.0.1:<port>`, `[::1]:<port>` and the listening address. So
+     `/mcp` refuses a loopback name with another port.
+   - The library's answers carry none of the headers in guard 5. acu's own
+     403 and 401 answers carry them.
+   - The custom-header and Fetch-Metadata rules of guard 4 do not apply to
+     `/mcp`.
+7. **Folder picker.** acu resolves each path (`..` and symbolic links
    included) before it checks it. A path must lie inside the root or the
    workspace. The picker lists folders only, never files. It hides names
    that start with a dot, and `node_modules`, `target`, `vendor`, `dist`,
@@ -371,15 +574,15 @@ could still try to reach it. These guards stop that:
    swaps for a link after the check cannot send those calls elsewhere.
    Just before the adapters start, acu checks that the path still leads to
    the open folder. On Windows, the picker takes paths.
-7. **Clone address.** acu accepts an `https://` address with a plain host
+8. **Clone address.** acu accepts an `https://` address with a plain host
    name and a path of plain names. It refuses anything else: another
    protocol, a user name, a query, `..`, a leading `-`.
-8. **Clone target.** acu refuses a target when a folder between the
+9. **Clone target.** acu refuses a target when a folder between the
    workspace and the target forms a symbolic link or holds a git
    repository. It also refuses a target whose real path leaves the
    workspace.
-9. **Trust.** Opening a picked folder needs `trust: true`, because
-   extraction runs the project's build tools.
+10. **Trust.** Opening a picked folder needs `trust: true`, because
+    extraction runs the project's build tools.
 
 acu runs the clone in these steps:
 
@@ -404,28 +607,76 @@ acu runs the clone in these steps:
    Ctrl-C stopped halfway never opens later as a good one. Ctrl-C stops a
    running clone's group.
 
-[`research/notes/live-service.md`](research/notes/live-service.md) gives the
-sources for each guard.
+[`research/notes/live-service.md`](research/notes/live-service.md) and
+[`research/notes/session-secret.md`](research/notes/session-secret.md) give
+the sources for each guard.
+
+### Decisions on the token and the Host
+
+1. `--allow-host` admits a forwarded name for the pages and the data only.
+   A forwarded name never reaches the API or `/mcp`. So acu needs no rule
+   for an `https://` `Origin`.
+2. After the token exchange, acu answers with a redirect that drops the
+   token from the address. Jupyter does not redirect.
+3. The cookie holds a random value of its own, not the token. The cookie
+   opens `/api/` and the studio's data only. `/mcp` takes only the bearer
+   token. So a server that reads the cookie cannot call the MCP tools.
+4. The cookie takes `SameSite=Lax`, not `Strict`. A first visit can come
+   from a link in a web terminal or a chat page, which counts as another
+   site. With `Strict`, the browser could then leave the cookie out of the
+   request after the 303. With `Lax`, a write from another site still
+   meets the `Origin`, Fetch Metadata and `X-Acu-Studio` guards.
+5. `Lax` has a cost. A link on another site sends the cookie with a
+   top-level GET, such as a link to `/api/config`. The answer goes to the
+   person's own tab, and the other site cannot read it. So every GET call
+   of the API must change nothing. Today `state`, `config` and `job` only
+   read. A new call that changes something must take POST.
 
 ## Limits
 
 1. One job runs at a time. acu refuses a second job with status 409; start
    it again after the first ends.
-2. The studio holds no session token yet. Any process on your computer can
-   call the API, and so can another user on a shared machine. Run the studio
-   only on a computer that you alone use. Issue #42 adds a session secret,
-   as Jupyter uses.
+2. The session token and the cookie keep out a caller that lacks them.
+   Some callers can still learn one of them:
+   - A browser sends a cookie of `127.0.0.1` to every port, not only to
+     acu's (RFC 6265, section 8.5). A hostile server on another local port
+     learns the cookie value when your browser visits that port. The
+     `SameSite` attribute does not help, because every port of one host
+     counts as the same site. With the cookie, such a server can call
+     `/api/`, though not `/mcp`, which takes only the token. In
+     `acu studio`, `/api/` can clone a repository, open it with
+     `trust: true` and extract it. Extraction runs the project's build
+     tools, so such a server can run code as you. Issue #50 proposes to
+     keep the credential in storage that the browser keeps apart by port.
+   - acu prints the token on standard error. Any process that can read
+     that output learns it. The token also stays in your shell history if
+     you type it into a command.
+   - acu removes `ACU_TOKEN` from its own environment. The shell that
+     started acu still holds it if you exported it.
+   - A fixed `ACU_TOKEN` in an MCP client's config goes to whatever process
+     holds the port while acu does not run. A random token per start
+     avoids this.
+   - The 303 drops the token from the address bar. The first address may
+     still stay in the browser's history.
+
+   So run the studio on a computer that you alone use. Visit no untrusted
+   local server while it runs. Open `http://127.0.0.1:<port>/`, as acu
+   prints it, not `localhost`. A cookie belongs to one host name. So the
+   cookie that `127.0.0.1` set does not go to `localhost`, and a page at
+   `localhost` lacks it. And `localhost` may lead to another process that
+   listens on `[::1]`.
 3. A local user who owns a folder under the root can still swap that
    folder for a symbolic link in one short window: after acu's last check
-   and before the adapters and the editor take the path (see guard 6). On
+   and before the adapters and the editor take the path (see guard 7). On
    Windows, the picker takes paths, so the swap can fall anywhere between
-   the check and the use. Limit 2 covers both cases: use the studio only on
-   a computer that you alone use.
-4. `acu serve` checks the `Host` of API calls only. On a loopback address, a
-   page that uses DNS rebinding can read the served map's data and pages.
-   For private code, use `acu studio`, or an address and port that a hostile
-   page cannot guess. Issue #43 tracks a `Host` check for `acu serve`, with
-   an option for forwarded names.
+   the check and the use. The token does not stop a swap on the disk: use
+   the studio only on a computer that you alone use.
+4. `acu serve` keeps its pages and `/data/atlas.json` open without a token,
+   because it shares maps. Any process on your computer, and any user on a
+   shared machine, can read the served map. On a loopback address, the
+   `Host` rule still keeps out a web page that uses DNS rebinding. For a
+   map of private code on a shared machine, use `acu studio`, whose data
+   needs the token.
 5. The MCP server at `/mcp` follows the open project: after you open another
    project or extract again, its tools read the new map. Before a project
    opens, every tool answers that no project shows yet.

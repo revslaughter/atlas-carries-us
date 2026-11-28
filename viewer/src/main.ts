@@ -24,7 +24,7 @@
  * @packageDocumentation
  */
 
-import { loadState } from "./api";
+import { lacksToken, loadState } from "./api";
 import { back, debug, fwd, go, start } from "./app";
 import { wireEditor } from "./editor";
 import { Model } from "./model";
@@ -58,6 +58,10 @@ function storedTheme(): string | null {
     return null;
   }
 }
+
+/** What the page says when acu refuses the data for want of the session token. */
+const TOKEN_REFUSED =
+  "acu refused the map data: this page lacks the session token, or holds an old one. Open the address that acu printed last, with its ?token= part. If this message stays, let the browser keep cookies for this address.";
 
 /**
  * Starts the viewer: sets the theme, waits for the fonts (at most 2.5
@@ -106,6 +110,10 @@ async function boot() {
   let doc: AtlasDoc;
   try {
     const res = await fetch("data/atlas.json");
+    if (res.status === 401) {
+      loading.textContent = TOKEN_REFUSED;
+      return;
+    }
     if (!res.ok) throw new Error(String(res.status));
     doc = await res.json();
   } catch {
@@ -144,6 +152,7 @@ async function boot() {
   buildSearch();
   wireSearch();
   if (server) wireEditor(server);
+  else if (lacksToken()) document.getElementById("tokenNote")!.hidden = false;
   (window as any).atlas = { model: M, go, tour, debug };
 }
 

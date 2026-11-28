@@ -14,6 +14,7 @@ mod adapter;
 mod assemble;
 mod config;
 mod mcp;
+mod secret;
 mod site;
 mod studio;
 
@@ -72,6 +73,11 @@ enum Cmd {
         /// can reach. Without it, they work on a loopback address only.
         #[arg(long)]
         allow_remote_writes: bool,
+        /// On a loopback address, also show the map's pages and data to this
+        /// forwarded name, with its port unless the browser sends none, such
+        /// as myhost.example:8080. May repeat.
+        #[arg(long, value_name = "NAME[:PORT]", value_parser = studio::parse_allow_host)]
+        allow_host: Vec<String>,
     },
     /// Run the MCP server over standard input and output, for desktop clients.
     Mcp {
@@ -136,15 +142,21 @@ struct McpArgs {
 }
 
 /// Parses the command line and runs it; a failure exits with status 1.
+/// First it reads `ACU_TOKEN` and removes it from acu's environment, for
+/// every command, while acu runs one thread only. So no adapter, build
+/// script or git that acu starts inherits the token.
 fn main() {
-    if let Err(e) = run(Cli::parse()) {
+    let token = std::env::var(secret::ENV);
+    std::env::remove_var(secret::ENV);
+    if let Err(e) = run(Cli::parse(), token) {
         eprintln!("acu: {e:#}");
         std::process::exit(1);
     }
 }
 
-/// Runs the command that the command line names.
-fn run(cli: Cli) -> Result<()> {
+/// Runs the command that the command line names. `token` holds what
+/// `ACU_TOKEN` held at start, for `serve` and `studio`.
+fn run(cli: Cli, token: Result<String, std::env::VarError>) -> Result<()> {
     match cli.cmd {
         Cmd::Extract { input, out, pretty } => {
             let doc = extract(&input.config)?;
@@ -172,14 +184,22 @@ fn run(cli: Cli) -> Result<()> {
             addr,
             mcp,
             allow_remote_writes,
+            mut allow_host,
         } => {
+            let secret = secret::Secret::from_value(token).map_err(anyhow::Error::msg)?;
+            if !allow_host.is_empty() && !addr.ip().is_loopback() {
+                eprintln!("acu: {addr} answers any name, so --allow-host changes nothing; drop it, or listen on a loopback address");
+            }
+            allow_host.sort();
+            allow_host.dedup();
             let why = serve_writes(mcp.read_only, addr, allow_remote_writes);
             if why == Some(mcp::atlas::REMOTE) && input.data.is_none() {
                 eprintln!("acu: {addr} lets other computers reach the server, so the MCP write tools stay off; add --allow-remote-writes to turn them on");
             }
             let atlas = Arc::new(open_atlas(&input, &mcp, why)?);
             let live = Arc::new(mcp::Live::of(atlas));
-            let studio = studio::Studio::new(live, studio::Mode::Serve, addr, None, None);
+            let studio = studio::Studio::new(live, studio::Mode::Serve, addr, None, None, secret)
+                .with_allow_hosts(allow_host);
             tokio::runtime::Runtime::new()?.block_on(site::serve(Arc::new(studio)))
         }
         Cmd::Studio {
@@ -188,6 +208,7 @@ fn run(cli: Cli) -> Result<()> {
             root,
             workspace,
         } => {
+            let secret = secret::Secret::from_value(token).map_err(anyhow::Error::msg)?;
             if !addr.ip().is_loopback() {
                 bail!("the studio listens on a loopback address only, such as 127.0.0.1:4321; use acu serve to share a map");
             }
@@ -227,6 +248,7 @@ fn run(cli: Cli) -> Result<()> {
                 addr,
                 Some(root),
                 Some(workspace),
+                secret,
             );
             tokio::runtime::Runtime::new()?.block_on(site::serve(Arc::new(studio)))
         }
@@ -461,5 +483,21 @@ mod tests {
         assert!(Cli::try_parse_from(["acu", "mcp", "-d", "a.json", "--root", "x"]).is_ok());
         assert!(Cli::try_parse_from(["acu", "serve", "--allow-remote-writes"]).is_ok());
         assert!(Cli::try_parse_from(["acu", "studio", "some/folder", "--root", "/"]).is_ok());
+        let Ok(Cli {
+            cmd: Cmd::Serve { allow_host, .. },
+        }) = Cli::try_parse_from([
+            "acu",
+            "serve",
+            "--allow-host",
+            "A.example:80",
+            "--allow-host",
+            "b.example:81",
+        ])
+        else {
+            panic!("serve with --allow-host parses");
+        };
+        assert_eq!(allow_host, ["a.example:80", "b.example:81"]);
+        assert!(Cli::try_parse_from(["acu", "serve", "--allow-host", "no pe:80"]).is_err());
+        assert!(Cli::try_parse_from(["acu", "studio", "--allow-host", "a.example:80"]).is_err());
     }
 }

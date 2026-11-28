@@ -12,7 +12,6 @@ pub mod read;
 pub mod write;
 pub mod yaml;
 
-use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -426,37 +425,19 @@ pub async fn serve_stdio(atlas: Arc<Atlas>) -> Result<()> {
 }
 
 /// Makes the streamable HTTP service that `acu serve` mounts at `/mcp`. It
-/// accepts only requests for the address it listens on, so a web page on
-/// another site cannot reach it. It also returns a function that closes its
-/// open streams, for when the server shuts down.
+/// accepts only requests whose `Host` holds one of `hosts`, each a name and
+/// a port, and whose `Origin`, when sent, names one of them, so a web page
+/// on another site cannot reach it. The studio's guard uses the same list.
+/// It also returns a function that closes its open streams, for when the
+/// server shuts down.
 pub fn http_service(
     live: Arc<Live>,
-    addr: SocketAddr,
+    hosts: Vec<String>,
 ) -> (
     StreamableHttpService<Server, LocalSessionManager>,
     impl FnOnce() + Send + 'static,
 ) {
-    let port = addr.port();
-    let mut hosts = vec![
-        "localhost".to_string(),
-        "127.0.0.1".to_string(),
-        "::1".to_string(),
-    ];
-    let ip = addr.ip().to_string();
-    if !hosts.contains(&ip) {
-        hosts.push(ip.clone());
-    }
-    let host = if addr.is_ipv6() {
-        format!("[{ip}]")
-    } else {
-        ip
-    };
-    let origins = vec![
-        format!("http://localhost:{port}"),
-        format!("http://127.0.0.1:{port}"),
-        format!("http://[::1]:{port}"),
-        format!("http://{host}:{port}"),
-    ];
+    let origins: Vec<String> = hosts.iter().map(|h| format!("http://{h}")).collect();
     let config = StreamableHttpServerConfig::default()
         .with_allowed_hosts(hosts)
         .with_allowed_origins(origins)

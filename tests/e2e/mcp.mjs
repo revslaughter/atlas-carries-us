@@ -14,6 +14,7 @@
 
 import { chromium } from "playwright";
 import { spawn, spawnSync } from "node:child_process";
+import { request } from "node:http";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -248,7 +249,9 @@ async function httpRun(name) {
   const config = copyConfig(name, name + "-http");
   const port = 20000 + Math.floor(Math.random() * 20000);
   const addr = `127.0.0.1:${port}`;
-  const child = spawn(acu, ["serve", "-c", config, "--addr", addr], { stdio: ["ignore", "ignore", "pipe"] });
+  const child = spawn(acu, ["serve", "-c", config, "--addr", addr, "--allow-host", "Fwd.Example:9999"], {
+    stdio: ["ignore", "ignore", "pipe"],
+  });
   try {
     await httpSession(name, child, addr);
   } finally {
@@ -261,19 +264,61 @@ async function httpSession(name, child, addr) {
   let stderr = "";
   await new Promise((res, rej) => {
     const t = setTimeout(() => rej(new Error("acu serve did not start:\n" + stderr)), 120000);
+    // Wait for all three start lines in full; standard error arrives in pieces.
     child.stderr.on("data", d => {
       stderr += d;
-      if (stderr.includes("serving the map")) {
+      if (/serving the map at [^\n]*\n[^\n]*Bearer [0-9a-f]{64}[^\n]*\n[^\n]*--allow-host[^\n]*\n/.test(stderr)) {
         clearTimeout(t);
         res();
       }
     });
     child.on("exit", () => rej(new Error("acu serve stopped:\n" + stderr)));
   });
+  const token = stderr.match(/\?token=([0-9a-f]{64}) /)?.[1] ?? "";
+  check(token !== "", `${name} over HTTP: acu serve prints the address with the token`, stderr);
+  check(
+    stderr.includes(" and fwd.example:9999;"),
+    `${name} over HTTP: the start line names the forwarded name`,
+    stderr,
+  );
+
+  // The Host rule of acu serve on a loopback address (issue #43).
+  const [hostName, port] = addr.split(":");
+  /** Sends one GET with any Host, which fetch cannot set, and returns the status and body. */
+  const asHost = (h, path, headers = {}) =>
+    new Promise((ok, fail) => {
+      const req = request({ host: hostName, port: Number(port), path, headers: { ...headers, Host: h } }, res => {
+        let body = "";
+        res.on("data", d => (body += d));
+        res.on("end", () => ok({ status: res.statusCode, body }));
+      });
+      req.on("error", fail);
+      req.end();
+    });
+  const evil = await asHost("evil.example", "/");
+  check(
+    evil.status === 403 && evil.body.includes("--allow-host evil.example"),
+    `${name} over HTTP: a page for a foreign Host gets 403 with the flag to add`,
+    evil.body,
+  );
+  // With the token: the mark still stays off, because the API refuses that name.
+  const fwd = await asHost("fwd.example:9999", "/", { Authorization: `Bearer ${token}` });
+  check(
+    fwd.status === 200 && !fwd.body.includes("acu-api"),
+    `${name} over HTTP: an allowed name sees the map, without the API mark`,
+    fwd.status,
+  );
+  const fwdData = await asHost("fwd.example:9999", "/data/atlas.json");
+  check(fwdData.status === 200, `${name} over HTTP: an allowed name reads the data`, fwdData.status);
+  const fwdApi = await asHost("fwd.example:9999", "/api/state", { Authorization: `Bearer ${token}` });
+  check(fwdApi.status === 403, `${name} over HTTP: an allowed name reaches no API call, token or not`, fwdApi.status);
+  const otherPort = await asHost("fwd.example:9998", "/");
+  check(otherPort.status === 403, `${name} over HTTP: the allowed name with another port gets 403`, otherPort.status);
+  const auth = { authorization: `Bearer ${token}` };
   const url = `http://${addr}/mcp`;
   let session = null;
   const post = async (msg, answer = true) => {
-    const headers = { "content-type": "application/json", accept: "application/json, text/event-stream" };
+    const headers = { ...auth, "content-type": "application/json", accept: "application/json, text/event-stream" };
     if (session) headers["mcp-session-id"] = session;
     headers["mcp-protocol-version"] = "2025-06-18";
     const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(msg) });
@@ -290,17 +335,26 @@ async function httpSession(name, child, addr) {
   check(init.result?.serverInfo?.name === "acu", `${name} over HTTP: initialize names acu`, JSON.stringify(init));
   await post({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }, false);
 
-  // A page on another site must not reach the server.
+  // A client without the token must not reach the server.
+  const bare = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 8, method: "tools/list", params: {} }),
+  });
+  check(bare.status === 401, `${name} over HTTP: a client without the token gets 401 (status ${bare.status})`);
+
+  // A page on another site must not reach the server, even with the token.
   const foreign = await fetch(url, {
     method: "POST",
     headers: {
+      ...auth,
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
       origin: "http://evil.example",
     },
     body: JSON.stringify({ jsonrpc: "2.0", id: 9, method: "tools/list", params: {} }),
   });
-  check(foreign.status >= 400, `${name} over HTTP: a foreign origin gets refused (status ${foreign.status})`);
+  check(foreign.status === 403, `${name} over HTTP: a foreign origin gets 403 (status ${foreign.status})`);
 
   const draft = await post({
     jsonrpc: "2.0",
@@ -327,8 +381,25 @@ async function httpSession(name, child, addr) {
   const errors = [];
   page.on("console", m => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", e => errors.push(String(e)));
+  // Without the token, the map shows with a note in place of the editor,
+  // and the page calls no API.
+  const calls = [];
+  const onRequest = r => calls.push(new URL(r.url()).pathname);
+  page.on("request", onRequest);
   await page.goto(`http://${addr}/`);
   await page.waitForFunction(() => window.atlas, null, { timeout: 15000 });
+  page.off("request", onRequest);
+  check(await page.isVisible("#tokenNote"), `${name} over HTTP: without the token, the note replaces the editor`);
+  check(await page.isHidden("#editBtn"), `${name} over HTTP: without the token, the Edit button stays hidden`);
+  check(
+    !calls.some(c => c.startsWith("/api/")),
+    `${name} over HTTP: without the token, the page calls no API`,
+    calls.join("\n"),
+  );
+  await page.goto(`http://${addr}/?token=${token}`);
+  await page.waitForFunction(() => window.atlas, null, { timeout: 15000 });
+  check(await page.isHidden("#tokenNote"), `${name} over HTTP: with the token, the note stays hidden`);
+  check(await page.isVisible("#editBtn"), `${name} over HTTP: with the token, the Edit button shows`);
   await page.click("#tourBtn");
   await page.waitForTimeout(300);
   const card = (await page.locator("#tour").textContent()) ?? "";

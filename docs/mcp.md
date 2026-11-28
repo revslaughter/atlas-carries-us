@@ -15,7 +15,7 @@ labels it until a person checks it.
 | `acu serve -c atlas.yaml --read-only` | HTTP | off |
 | `acu mcp -c atlas.yaml --read-only` | Standard input and output | off |
 | `acu serve -d atlas.json`, `acu mcp -d atlas.json` | Either | off |
-| `acu serve -c atlas.yaml --addr 0.0.0.0:4321` | HTTP, reachable from other computers | off, unless `--allow-remote-writes` |
+| `acu serve -c atlas.yaml --addr 192.168.1.5:4321` | HTTP, reachable from other computers | off, unless `--allow-remote-writes` |
 | `acu studio` | HTTP at `/mcp`, beside the studio ([`studio.md`](studio.md)) | on, once a project opens |
 
 1. Both commands run the adapters first, as `acu extract` does, so the tools
@@ -24,16 +24,28 @@ labels it until a person checks it.
    it, to `/mcp` on that address. On an address that other computers can
    reach (any address but a loopback one), anyone on the network could call
    the write tools, so they stay off and `acu` says so.
-   `--allow-remote-writes` turns them on there.
+   `--allow-remote-writes` turns them on there. For a client on another
+   computer, give the computer's own address, such as
+   `--addr 192.168.1.5:4321`. On `0.0.0.0`, `/mcp` and the API answer only
+   a `Host` of `127.0.0.1`, `localhost`, `[::1]` or `0.0.0.0`, each with
+   the port. So a client on another computer gets 403. A container that
+   listens on `0.0.0.0` still works when the host forwards the same port
+   number, such as `-p 127.0.0.1:4321:4321`, and the client opens
+   `127.0.0.1:4321`.
    `acu serve -c` also offers the studio's editor at the same address
    ([`studio.md`](studio.md)); its saves and the write tools share one path.
 3. `acu mcp` writes the protocol to standard output and every message to
    standard error. Start it from a client, not by hand.
-4. `acu studio` mounts the same server at `/mcp`. The server follows the
+4. Over HTTP, every call to `/mcp` needs the session token. `acu serve` and
+   `acu studio` print it at start (see "Connect a client" below).
+   `acu mcp` needs no token: only the client that started it can reach its
+   standard input. Over HTTP, the token goes only in the header
+   `Authorization: Bearer <token>`.
+5. `acu studio` mounts the same server at `/mcp`. The server follows the
    project that the studio has open: after you open another project or
    extract again, the tools read the new map. Before a project opens, every
    tool answers that no project shows yet.
-5. With `-d`, no config stands behind the map, so the write tools stay off.
+6. With `-d`, no config stands behind the map, so the write tools stay off.
    `read_source` reads files from the folder that `--root` names, else from
    the current folder. The map's paths start at the root of the mapped
    repository, so pass that folder:
@@ -58,7 +70,95 @@ read a JSON entry of this shape; give absolute paths:
 ```
 
 A client that connects over HTTP takes the address of a running
-`acu serve`: `http://127.0.0.1:4321/mcp`.
+`acu serve`, `http://127.0.0.1:4321/mcp`, and the session token.
+
+1. Start `acu serve`. It prints lines like these:
+
+   ```text
+   acu: serving the map at http://127.0.0.1:4321/?token=<token> and MCP at http://127.0.0.1:4321/mcp, writes on  (Ctrl-C stops)
+   acu: open the address above, with its token; an MCP client sends the header "Authorization: Bearer <token>"; for an MCP client's config, ACU_TOKEN fixes the token across restarts
+   acu: pages answer only this server's own names on port 4321; for a forwarded name, start acu serve again with --allow-host <name[:port]>
+   ```
+
+2. Give the client the header `Authorization: Bearer <token>`. `/mcp`
+   takes only this header. The viewer's cookie does not open it.
+3. A call without the header, or with a wrong token, gets status 401. The
+   error reads "acu: the MCP request lacks the session token; send the
+   header Authorization: Bearer <token> with the token that acu printed".
+   - The answer carries `WWW-Authenticate: Bearer realm="acu"`.
+   - A sent but wrong token adds `, error="invalid_token"`.
+   - acu offers no sign-in. A client that looks for one under
+     `/.well-known/oauth-*` gets 404. Give the token by hand.
+4. A foreign `Host` or `Origin` gets 403 before acu looks at the token.
+   That answer carries no `WWW-Authenticate`.
+   - A client that runs on Node, such as Claude Code, the VS Code
+     extension host or Cursor, sends no `Origin`, so this check passes it.
+   - A client that runs in a browser page, such as MCP Inspector in its
+     direct mode, sends the page's `Origin` and gets 403. Use its proxy
+     mode instead.
+   - `/mcp` compares the port of the `Host`. A forward such as `ssh -L`
+     must keep the same port number on both ends.
+5. Use `http://127.0.0.1:<port>/mcp`, as acu prints it, in a client's
+   config. The name `localhost` may lead to another process that listens
+   on `[::1]`.
+
+acu makes a new random token at each start: 32 random bytes, written as 64
+hex digits. So a client config that holds the token stops working after a
+restart. To keep one token, set the environment variable `ACU_TOKEN` for
+`acu serve`. It takes 32 to 512 characters, each a letter, a digit, `-`,
+`.`, `_` or `~`. An empty value counts as unset. acu refuses any other
+value and does not start.
+
+Set the variable on the command line of `acu serve` alone, not with
+`export`. Then only that one process gets it. acu removes it from its own
+environment at start, so the adapters and the tools that they run never
+inherit it. An exported variable would stay in your shell, and every other
+program that the shell starts would inherit it.
+
+```sh
+# Once, both lines: drop any old file, then write a file only you can read.
+rm -f ~/.acu-token
+(umask 077; openssl rand -hex 32 > ~/.acu-token)
+# Each start:
+ACU_TOKEN="$(cat ~/.acu-token)" acu serve -c atlas.yaml
+```
+
+Claude Code adds the server with the header:
+
+```sh
+claude mcp add --transport http atlas http://127.0.0.1:4321/mcp \
+  --header "Authorization: Bearer $(cat ~/.acu-token)"
+```
+
+Keep the default scope. `--scope project` writes the header, with the
+token, into `.mcp.json`, a file that projects commit.
+
+VS Code reads `.vscode/mcp.json`. An input keeps the token out of the
+file:
+
+```json
+{
+  "inputs": [
+    {
+      "id": "acu-token",
+      "type": "promptString",
+      "description": "acu session token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "atlas": {
+      "type": "http",
+      "url": "http://127.0.0.1:4321/mcp",
+      "headers": { "Authorization": "Bearer ${input:acu-token}" }
+    }
+  }
+}
+```
+
+Keep the token out of a file that you commit. A fixed token in a client's
+config goes to whatever process holds the port while acu does not run. So
+use a fixed token only on a computer that you alone use.
 
 ### A local open model
 
@@ -70,7 +170,8 @@ A client that connects over HTTP takes the address of a running
 2. Pick an MCP client that can use that runner as its model. Choose one
    that lists tool calling for local models.
 3. Add `acu mcp -c atlas.yaml` to the client as above, or point it at
-   `http://127.0.0.1:4321/mcp` while `acu serve` runs.
+   `http://127.0.0.1:4321/mcp` while `acu serve` runs, with the header
+   `Authorization: Bearer <token>`.
 4. Ask a question, such as "How does a request reach its handler?". A good
    session starts with `overview`, then `search`, then `trace` or `symbol`.
 
@@ -163,10 +264,18 @@ keeps no other guide files yet, so the write tools change that one file.
 4. `--read-only` turns the write tools off. Clients then see eight tools.
    So does an address that other computers can reach, without
    `--allow-remote-writes`.
-5. The HTTP endpoint accepts only requests whose `Host` names the loopback
-   address or the address it listens on, and refuses a request whose
-   `Origin` names another site. A web page elsewhere cannot reach it.
-6. A write applies the config to the adapters' output from the start of the
+5. The HTTP endpoint accepts only requests whose `Host` names a loopback
+   name or the address it listens on, each with the server's port. It
+   refuses a request whose `Origin` names another site. So a web page
+   elsewhere cannot reach it.
+   `--allow-host` changes nothing here: a forwarded name reaches the map's
+   pages, never `/mcp`.
+6. Every HTTP call needs the session token as `Authorization: Bearer
+   <token>`. The viewer's cookie does not count. acu checks the `Host`,
+   the `Origin` and then the token, in the API's order, before the MCP
+   library reads the request. So another process or user on the computer
+   cannot call the tools without the token.
+7. A write applies the config to the adapters' output from the start of the
    run. After a change to `languages` or `entryPoints`, or to the code,
    restart the server.
 
@@ -174,8 +283,21 @@ keeps no other guide files yet, so the write tools change that one file.
 
 `tests/e2e/mcp.mjs` acts as a scripted client. It speaks JSON-RPC to
 `acu mcp` on the chi and Cobra examples, calls every tool, and checks the
-answers against facts of the code. It then drafts a tour step through
-`acu serve` over HTTP, opens the served map in Chromium, and checks for the
+answers against facts of the code. Then it runs `acu serve` with
+`--allow-host Fwd.Example:9999`, and reads the session token from its
+standard error. Over HTTP it checks these:
+
+1. A client without the token gets 401.
+2. A foreign `Origin` on `/mcp` gets exactly 403.
+3. A foreign `Host` gets 403, and the message holds the `--allow-host`
+   hint.
+4. The allowed name gets the page with 200, without the API mark, and its
+   data with 200.
+5. The allowed name gets 403 on `/api/`, even with the token.
+6. The allowed name with another port gets 403.
+
+It then drafts a tour step with `Authorization: Bearer <token>`, opens the
+served map in Chromium at `/?token=<token>`, and checks for the
 "Machine-drafted" label. `scripts/check.sh` runs it:
 
 ```sh
