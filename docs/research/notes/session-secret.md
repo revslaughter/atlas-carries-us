@@ -465,6 +465,8 @@ Notes:
 2. A person's `ACU_TOKEN` may hold less entropy. A length floor helps
    little against a chosen word. Print a line that says a random token
    needs no variable, and that `ACU_TOKEN` suits MCP client configs only.
+   (Shipped: the second start line ties `ACU_TOKEN` to an MCP client's
+   config.)
 
 ### 6.4 Where the token lives
 
@@ -527,7 +529,9 @@ Notes:
    ([MDN Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#samesitesamesite-value)).
 2. The viewer's page itself needs no token in `acu serve`. Its later
    fetches to `/api/` and `/data/atlas.json` go from the page's own origin,
-   so they carry the cookie. So the first visit works either way.
+   so they carry the cookie. (What shipped differs: the page carries the
+   API mark only with the cookie, so a page that lost the cookie after the
+   303 would show no editor. Point 3 removes that case.)
 3. acu chose `SameSite=Lax` in the end, so the first visit from a link
    keeps the cookie after the 303. `Lax` sends a cookie with a top-level
    GET that another site starts

@@ -62,8 +62,10 @@ docker run --rm -v "$PWD:/work" -p 4321:4321 acu serve -c atlas.yaml --addr 0.0.
 
 1. The image runs `acu` in `/work`. Mount your project there.
 2. Give `--addr 0.0.0.0:4321` so that the port reaches the host.
-3. Open <http://127.0.0.1:4321/>. The map's pages answer without a token.
-   The API and the MCP server need the session token that `acu` prints
+3. Open the address that `acu` prints. On `0.0.0.0` it prints
+   `http://127.0.0.1:4321/?token=<token>`, an address that a browser can
+   open. The map's pages also answer without a token. The API and the MCP
+   server need the session token that `acu` prints
    ([`docs/studio.md`](docs/studio.md#the-session-token)). On `0.0.0.0`,
    the write tools stay off without `--allow-remote-writes`, so the editor
    does not show.

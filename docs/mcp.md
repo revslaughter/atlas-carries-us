@@ -91,6 +91,13 @@ A client that connects over HTTP takes the address of a running
      `/.well-known/oauth-*` gets 404. Give the token by hand.
 4. A foreign `Host` or `Origin` gets 403 before acu looks at the token.
    That answer carries no `WWW-Authenticate`.
+   - A client that runs on Node, such as Claude Code, the VS Code
+     extension host or Cursor, sends no `Origin`, so this check passes it.
+   - A client that runs in a browser page, such as MCP Inspector in its
+     direct mode, sends the page's `Origin` and gets 403. Use its proxy
+     mode instead.
+   - `/mcp` compares the port of the `Host`. A forward such as `ssh -L`
+     must keep the same port number on both ends.
 5. Use `http://127.0.0.1:<port>/mcp`, as acu prints it, in a client's
    config. The name `localhost` may lead to another process that listens
    on `[::1]`.
@@ -122,6 +129,9 @@ Claude Code adds the server with the header:
 claude mcp add --transport http atlas http://127.0.0.1:4321/mcp \
   --header "Authorization: Bearer $(cat ~/.acu-token)"
 ```
+
+Keep the default scope. `--scope project` writes the header, with the
+token, into `.mcp.json`, a file that projects commit.
 
 VS Code reads `.vscode/mcp.json`. An input keeps the token out of the
 file:

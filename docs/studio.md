@@ -86,13 +86,19 @@ server, for example to open a folder with `trust: true`.
    `acu-token-<port>=<cookie value>; Path=/; HttpOnly; SameSite=Lax`.
    - The cookie value differs from the token. acu makes it from 32 more
      random bytes at each start, and writes it as 64 hex digits.
-   - The cookie lasts until the browser closes. No script can read it.
+   - The cookie carries no expiry, so it lasts for the browser session. A
+     browser that restores its session at start may keep it longer. No
+     script can read it.
    - The name holds the port, because a browser sends a cookie of
      `127.0.0.1` to every port. So two servers on one computer keep their
      cookies apart.
 7. A wrong or old token in the address answers 401 with "acu: the address
    holds a wrong or old token; open the address that acu printed last". No
-   cookie follows.
+   cookie follows. A token in the address of a forwarded name answers 403
+   with "acu: acu takes the token only at the server's own address; open
+   the address that acu printed, on the computer that runs acu". The API
+   refuses that name anyway, and the token should not pass through a
+   forward.
 8. A call to `/api/` must carry the cookie or the header
    `Authorization: Bearer <token>`. The token itself in the cookie does not
    count. A call without either answers 401 with "acu: the request lacks
@@ -110,20 +116,30 @@ server, for example to open a folder with `trust: true`.
       under `/.well-known/oauth-*` gets 404.
 11. acu compares the token and the cookie value in a time that does not
     depend on where they differ.
-12. The viewer's page carries the API mark (`<meta name="acu-api">`) only
-    when the request names the server's own `Host` and carries the cookie
-    or the token. A page without the mark never calls the API, so the
-    browser logs no refused request.
+12. The viewer's page carries the API mark
+    (`<meta name="acu-api" content="1" />`) only when the request names the
+    server's own `Host` and carries the cookie or the token. A page without
+    the mark never calls the API, so the browser logs no refused request.
 13. In `acu studio`, `/data/atlas.json` needs the cookie too, because it
     holds the open project. Without it, the studio page shows "acu refused
     the map data: this page lacks the session token, or holds an old one.
-    Open the address that acu printed last, with its ?token= part."
+    Open the address that acu printed last, with its ?token= part. If this
+    message stays, let the browser keep cookies for this address."
 14. `acu serve` keeps its pages and `/data/atlas.json` open without a
-    token, so that it can share a map. A page without the cookie shows the
-    map without the editor and calls no API. The same holds after a
-    restart, because the old cookie no longer counts: open the new address
-    that acu printed.
-15. On a forwarded name (see `--allow-host` below), the map and its data
+    token, so that it can share a map. With writes on, a page at the
+    server's own `Host` without the cookie carries a second mark,
+    `<meta name="acu-api" content="token" />`. Its viewer calls no API.
+    In place of the Edit button, it shows "Editor off: this page lacks the
+    session token. Open the address that acu printed." `acu serve` with
+    writes off shows no note, because it has no editor.
+15. After acu restarts, the old cookie no longer counts. A call from an
+    open editor then answers 401, and the editor shows "acu: the session
+    ended, because acu restarted or the browser dropped the cookie. Keep
+    this tab open: open the address that acu printed in a new tab, then
+    come back here and try again." The editor keeps the text that you have
+    not saved. The new tab sets the new cookie under the same name, so the
+    old tab sends it too. The revision check of a save still applies.
+16. On a forwarded name (see `--allow-host` below), the map and its data
     show, but the editor does not. For the editor, forward the same port to
     the same name, such as `ssh -L 4321:127.0.0.1:4321 host`, and open the
     printed address.
@@ -470,7 +486,7 @@ the text names the next step.
 | 303 | A page address with a good `?token=`: the answer sets the cookie and sends the browser to the address without the token. Pages only, never the API. |
 | 400 | The body lacks a field or holds the wrong shape; or a token exchange cannot build its redirect. |
 | 401 | The call lacks the session token, or carries a wrong one; or a page address holds a wrong or old `?token=`. |
-| 403 | The `Host` or another guard refused the request; writes stay off; the folder lies outside the root and the workspace; acu cannot read the folder; the `atlas.yaml` forms a symbolic link; the clone target passes through a link; or a setup call came to `acu serve`. |
+| 403 | The `Host` or another guard refused the request (two `Host` headers count as none); a `?token=` came to a forwarded name; writes stay off; the folder lies outside the root and the workspace; acu cannot read the folder; the `atlas.yaml` forms a symbolic link; the clone target passes through a link; or a setup call came to `acu serve`. |
 | 404 | No such call, folder or file; `GET /data/atlas.json` before a project opens; or `/api/open` without `config` on a folder that holds no `atlas.yaml`. |
 | 409 | The file changed since the editor read it, no project shows yet, a job runs already (a save fails at once, too), or `atlas.yaml` exists already. |
 | 413 | The body exceeds 4 MB. |
@@ -621,7 +637,11 @@ the sources for each guard.
      learns the cookie value when your browser visits that port. The
      `SameSite` attribute does not help, because every port of one host
      counts as the same site. With the cookie, such a server can call
-     `/api/`. It cannot call `/mcp`, which takes only the token.
+     `/api/`, though not `/mcp`, which takes only the token. In
+     `acu studio`, `/api/` can clone a repository, open it with
+     `trust: true` and extract it. Extraction runs the project's build
+     tools, so such a server can run code as you. Issue #50 proposes to
+     keep the credential in storage that the browser keeps apart by port.
    - acu prints the token on standard error. Any process that can read
      that output learns it. The token also stays in your shell history if
      you type it into a command.
@@ -635,9 +655,10 @@ the sources for each guard.
 
    So run the studio on a computer that you alone use. Visit no untrusted
    local server while it runs. Open `http://127.0.0.1:<port>/`, as acu
-   prints it, not `localhost`. A cookie of `127.0.0.1` does not go to
-   `localhost`. And `localhost` may lead to another process that listens
-   on `[::1]`.
+   prints it, not `localhost`. A cookie belongs to one host name. So the
+   cookie that `127.0.0.1` set does not go to `localhost`, and a page at
+   `localhost` lacks it. And `localhost` may lead to another process that
+   listens on `[::1]`.
 3. A local user who owns a folder under the root can still swap that
    folder for a symbolic link in one short window: after acu's last check
    and before the adapters and the editor take the path (see guard 7). On
